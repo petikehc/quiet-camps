@@ -1,0 +1,38 @@
+[project]
+name = "quiet-camps"
+version = "0.1.0"
+description = "Quiet Camps"
+readme = "README.md"
+authors = [
+    { name = "Peter A" }
+]
+requires-python = ">=3.14"
+dependencies = []
+
+[project.scripts]
+quiet-camps = "quiet_camps:main"
+
+[build-system]
+requires = ["uv_build>=0.12.23,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.414",
+    "pytest>=9.2.0",
+    "ruff>=0.17.5",
+]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+unfixable = ["F401"]
+
+[tool.pyright]
+include = ["src", "tests"]
+typeCheckingMode = "strict"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
