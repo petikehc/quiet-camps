@@ -13,6 +13,7 @@ dependencies = [
 
 [project.scripts]
 quiet-camps = "quiet_camps:main"
+qc = "quiet_camps.cli:main"
 
 [build-system]
 requires = ["uv_build>=0.12.23,<0.13.0"]
