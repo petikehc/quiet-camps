@@ -1,0 +1,554 @@
+{
+  "success": true,
+  "result": {
+    "name": "camping-and-vehicle-permits",
+    "resources": [
+      {
+        "id": "8298c635-b2a1-4528-92c9-0309409a70d4",
+        "name": "QPWS Permits - Camping - July 2026 to September 2026",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0025/443644/qpws-permits-camping-jul26-sep26.csv"
+      },
+      {
+        "id": "4c766245-7000-4555-8d23-5d594fade371",
+        "name": "QPWS Permits - Vehicle - July 2026 to September 2026",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0026/443645/qpws-permits-vehicle-jul26-sep26.csv"
+      },
+      {
+        "id": "6f27b0fe-0e04-49d5-866e-390cba87e934",
+        "name": "QPWS Permits - Camping - April 2026 to June 2026",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0029/434369/qpws-permits-camping-apr26-jun26.csv"
+      },
+      {
+        "id": "bc5bcae8-a7a6-47a2-8a6d-bcc31675b472",
+        "name": "QPWS Permits - Vehicle - April 2026 to June 2026",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0023/434372/qpws-permits-vehicle-apr26-jun26.csv"
+      },
+      {
+        "id": "c8eec263-9056-450d-9634-619cfe34b64f",
+        "name": " QPWS Permits - Camping - January 2026 to March 2026 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0020/425027/qpws-permits-camping-jan26-to-mar26.csv"
+      },
+      {
+        "id": "200e9909-f121-4194-adb0-1eb1c8bf4515",
+        "name": " QPWS Permits - Vehicle - January 2026 to March 2026 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0021/425028/qpws-permits-vehicle-jan26-to-mar26.csv"
+      },
+      {
+        "id": "cacaa7ff-c19f-4b52-8bf4-c6f326b560b0",
+        "name": "QPWS Permits - Camping - October 2025 to December 2025 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0033/418569/qpws-permits-camping-oct25-to-dec25.csv"
+      },
+      {
+        "id": "ac797ddd-0c0a-4f23-97cb-2bbd2d0648fa",
+        "name": "QPWS Permits - Vehicle - October 2025 to December 2025 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0025/418570/qpws-permits-vehicle-oct25-to-dec25.csv"
+      },
+      {
+        "id": "2e3b0860-f2d5-4be8-a0ca-5a172cdd03a7",
+        "name": "QPWS Permits - Camping - July 2025 to September 2025 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0026/411569/qpws-permits-camping-jul25-sep25.csv"
+      },
+      {
+        "id": "94d2c0a1-c483-496e-9c24-bd0d3090ca04",
+        "name": "QPWS Permits - Vehicle - July 2025 to September 2025 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0018/411570/qpws-permits-vehicle-jul25-sep25.csv"
+      },
+      {
+        "id": "9712da13-b350-43eb-a4fb-8e0d3f439f9a",
+        "name": "QPWS Permits - Vehicle - April 2025 to June 2025 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0023/401567/qpws-permits-vehicle-apr25-jun25.csv"
+      },
+      {
+        "id": "fd0b56e2-a45f-4642-bb96-a5fe563df312",
+        "name": "QPWS Permits - Camping - April 2025 to June 2025 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0025/401569/qpws-permits-camping-apr25-jun25.csv"
+      },
+      {
+        "id": "0794191d-31db-47b2-b6ec-8784655f5594",
+        "name": "QPWS Permits - Vehicle - February 2025 to March 2025 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0031/391963/qpws-permits-vehicle-feb25-mar25.csv"
+      },
+      {
+        "id": "85fe1fea-ff62-4c3e-b049-5dfda1be4136",
+        "name": "QPWS Permits - Camping - February 2025 to March 2025 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0030/391962/qpws-permits-camping-feb25-mar25.csv"
+      },
+      {
+        "id": "61b21a79-68d2-4d75-982e-f7bcecf761de",
+        "name": "QPWS Permits - Vehicle - January 2025",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0029/391961/qpws-permits-vehicle-jan25.csv"
+      },
+      {
+        "id": "28937bfa-7176-4c29-98a0-9bf2cef9ca6c",
+        "name": "QPWS Permits - Camping - January 2025",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0028/391960/qpws-permits-camping-jan25.csv"
+      },
+      {
+        "id": "45a56fff-dbb6-4477-8900-cabdf85f12ca",
+        "name": "QPWS Permits - Vehicle - October 2024 to December 2024 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0037/376858/qpws-permits-vehicle-oct24-dec24.csv"
+      },
+      {
+        "id": "af9f08f8-6ca9-4c9c-815c-c67b17db1ff0",
+        "name": "QPWS Permits - Camping - October 2024 to December 2024",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0036/376857/qpws-permits-camping-oct24-dec24.csv"
+      },
+      {
+        "id": "3b259657-a370-43ce-8068-b1b6472d8d86",
+        "name": "QPWS Permits - Vehicle - July 2024 to September 2024 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0028/359335/qpws-permits-vehicle-jul24-sep24.csv"
+      },
+      {
+        "id": "e9f2e38a-5a4d-4b34-8811-79f3c4223c40",
+        "name": "QPWS Permits - Camping - July 2024 to September 2024",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0027/359334/qpws-permits-camping-jul24-sep24.csv"
+      },
+      {
+        "id": "a9a5818f-28bd-4512-abfa-7abd085602ed",
+        "name": "QPWS Permits - Vehicle - April 2024 to June 2024 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0015/350430/qpws-permits-vehicle-apr24-jun24.csv"
+      },
+      {
+        "id": "39716cae-fc25-4844-982d-4881234fd7b4",
+        "name": "QPWS Permits - Camping - April 2024 to June 2024 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0023/350429/qpws-permits-camping-apr24-jun24.csv"
+      },
+      {
+        "id": "96a3a249-8e33-4efc-927f-c3bf1a08366a",
+        "name": "QPWS Permits - Vehicle - January 2024 to March 2024 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0026/341864/qpws-permits-vehicle-jan24-mar24.csv"
+      },
+      {
+        "id": "66846e5f-46c0-4e34-9529-da19aed383b9",
+        "name": "QPWS Permits - Camping - January 2024 to March 2024 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0025/341863/qpws-permits-camping-jan24-mar24.csv"
+      },
+      {
+        "id": "cfeaccf3-2838-4d73-917a-6d6c1c1419fa",
+        "name": "QPWS Permits - Vehicle - October 2023 to December 2023 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0026/332576/qpws-permits-vehicle-oct23-dec23.csv"
+      },
+      {
+        "id": "18a73711-ac24-4e30-8811-cb93c0f79ce2",
+        "name": "QPWS Permits - Camping - October 2023 to December 2023 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0027/332577/qpws-permits-camping-oct23-dec23.csv"
+      },
+      {
+        "id": "fe13bbd8-46c1-4160-9a0a-fc166fa0ae2d",
+        "name": "QPWS Permits - Vehicle - July 2023 to September 2023 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0022/326119/qpws-permits-vehicle-jul23-sep23.csv"
+      },
+      {
+        "id": "441b46b9-b180-4d54-990e-af09c3f22abe",
+        "name": "QPWS Permits - Camping - July 2023 to September 2023 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0021/326118/qpws-permits-camping-jul23-sep23.csv"
+      },
+      {
+        "id": "0db1c185-5492-4d73-8dbc-a0d53589b117",
+        "name": "QPWS Permits - Vehicle - April 2023 to June 2023 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0021/317721/qpws-permits-vehicles-apr23-jun23.csv"
+      },
+      {
+        "id": "ac8588e5-8598-42f1-a7a9-33e5d6af6658",
+        "name": "QPWS Permits - Camping - April 2023 to June 2023",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0020/317720/qpws-permits-camping-apr23-jun23.csv"
+      },
+      {
+        "id": "53750f99-dd0a-4bbc-8665-51d5b6624e0c",
+        "name": "QPWS Permits - Vehicle - January 2023 to March 2023 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0017/309401/qpws-permits-vehicles-jan23-mar23.csv"
+      },
+      {
+        "id": "c91a361a-f90f-4bad-b1b0-93c53dad635a",
+        "name": "QPWS Permits - Camping - January 2023 to March 2023 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0016/309400/qpws-permits-camping-jan23-mar23.csv"
+      },
+      {
+        "id": "1ae113e2-fde6-4d32-9c45-11a9cc3789af",
+        "name": "QPWS Permits - Vehicle - October 2022 to December 2022 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0030/299019/qpws-permits-vehicles-oct22-dec22.csv"
+      },
+      {
+        "id": "9ef2ce06-87d9-4832-b7dd-d4cb3154468f",
+        "name": "QPWS Permits - Camping - October 2022 to December 2022 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0022/299020/qpws-permits-camping-oct22-dec22.csv"
+      },
+      {
+        "id": "2925a092-9007-4582-bbc7-89346cfaaf3b",
+        "name": "QPWS Permits - Vehicle - July 2022 to September 2022 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0033/288348/qpws-permits-vehicle-jul22-sep22.csv"
+      },
+      {
+        "id": "00354820-80da-4a6d-8d74-765bec3735b7",
+        "name": "QPWS Permits - Camping - July 2022 to September 2022 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0032/288347/qpws-permits-camping-jul22-sep22.csv"
+      },
+      {
+        "id": "d606c9a0-42ff-4c77-bb64-2917917a3785",
+        "name": "QPWS Permits - Camping - April 2022 to June 2022 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0022/274801/qpws-permits-camping-apr22-jun22.csv"
+      },
+      {
+        "id": "974a9ec3-2454-4909-a0eb-273a143968de",
+        "name": "QPWS Permits - Vehicle - April 2022 to June 2022 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0023/274802/qpws-permits-vehicle-apr22-jun22.csv"
+      },
+      {
+        "id": "90ddea45-2d5b-4149-9c98-3ecc51379e00",
+        "name": "QPWS Permits - Camping - January 2022 to March 2022",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0039/265989/qpws-permits-camping-jan22-mar22.csv"
+      },
+      {
+        "id": "27df2104-834d-48e0-82c1-cf5dc53cd1d1",
+        "name": "QPWS Permits - Vehicle - January 2022 to March 2022 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0031/265990/qpws-permits-vehicle-jan22-mar22.csv"
+      },
+      {
+        "id": "f76683a5-3fee-4941-86df-16ad19290c78",
+        "name": "QPWS Permits - Camping - October 2021 to December 2021",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0020/257150/qpws-permits-camping-oct21-dec21.csv"
+      },
+      {
+        "id": "f2090831-408d-4bc7-beff-f1e1a7a8e5ea",
+        "name": "QPWS Permits - Vehicle - October 2021 to December 2021",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0028/257149/qpws-permits-vehicle-oct21-dec21.csv"
+      },
+      {
+        "id": "76eaf45e-b9b6-484d-8405-4affb0be81bb",
+        "name": "QPWS Permits - Camping - July 2021 to September 2021 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0017/250343/qpws-permits-camping-jul21-sep21.csv"
+      },
+      {
+        "id": "13759436-7886-443b-94b4-4add2b1e6582",
+        "name": "QPWS Permits - Vehicle - July 2021 to September 2021 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0018/250344/qpws-permits-vehicle-jul21-sep21.csv"
+      },
+      {
+        "id": "eae7fc97-7e71-4e54-81db-be02189a58cf",
+        "name": "QPWS Permits - Camping - April 2021 to June 2021",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0019/240751/qpws-permits-camping-apr21-jun21.csv"
+      },
+      {
+        "id": "f137cf93-bda1-450d-9e10-de09d7f81ef3",
+        "name": "QPWS Permits - Vehicle - April 2021 to June 2021 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0020/240752/qpws-permits-vehicle-apr21-jun21.csv"
+      },
+      {
+        "id": "e8ced6fc-9510-43e8-a760-acd90f8a1915",
+        "name": "QPWS Permits - Camping - January 2021 to March 2021 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0020/236207/qpws-permits-camping-jan21-mar21.csv"
+      },
+      {
+        "id": "adc971c9-47c1-41e7-bd7b-97573cd3559d",
+        "name": "QPWS Permits - Vehicle - January 2021 to March 2021 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0021/236208/qpws-permits-vehicle-jan21-mar21.csv"
+      },
+      {
+        "id": "1f374e84-1cdf-4a49-bd92-252d1ad7ad0b",
+        "name": "QPWS Permits - Camping - October 2020 to December 2020 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0015/224205/qpws-permits-camping-oct20-dec20.csv"
+      },
+      {
+        "id": "46e2cdfa-6ef1-4762-953e-8f5029f7f196",
+        "name": "QPWS Permits - Vehicle - October 2020 to December 2020 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0016/224206/qpws-permits-vehicle-oct20-dec20.csv"
+      },
+      {
+        "id": "bfb34359-2857-4ea1-ba5b-e825b9313199",
+        "name": "QPWS Permits - Camping - July 2020 to September 2020 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0022/214726/qpws-permits-camping-jul20-sep20.csv"
+      },
+      {
+        "id": "5ff99fc9-ddb3-4f50-8c3b-8851ddeff87c",
+        "name": "QPWS Permits - Vehicle - July 2020 to September 2020 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0023/214727/qpws-permits-vehicle-jul20-sep20.csv"
+      },
+      {
+        "id": "844515a1-e98c-426e-8616-3e18f38566d9",
+        "name": "QPWS Permits - Camping - April 2020 to June 2020 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0025/206188/qpws-permits-camping-apr20-jun20.csv"
+      },
+      {
+        "id": "3f1b1e72-4652-44a6-a81e-04649170fdaa",
+        "name": "QPWS Permits - Vehicle - April 2020 to June 2020 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0026/206189/qpws-permits-vehicle-apr20-jun20.csv"
+      },
+      {
+        "id": "ffa3be6b-ea8b-4210-8625-aba215c28fc6",
+        "name": "QPWS Permits - Camping - January 2020 to March 2020 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0024/109617/qpws-permits-camping-jan20-mar20.csv"
+      },
+      {
+        "id": "d2447145-a86d-4065-b5e7-b7640da5812b",
+        "name": "QPWS Permits - Vehicle - January 2020 to March 2020 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0026/109637/qpws-permits-vehicle-jan20-mar20.csv"
+      },
+      {
+        "id": "eb5c4c8e-858f-4f14-a342-0d7048eab9f2",
+        "name": "QPWS Permits - Camping - October 2019 to December 2019 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0023/109625/qpws-permits-camping-oct19-dec19.csv"
+      },
+      {
+        "id": "fea24013-c031-4fb2-a9c2-d5aade75fb39",
+        "name": "QPWS Permits - Vehicle - October 2019 to December 2019 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0025/109645/qpws-permits-vehicle-oct19-dec19.csv"
+      },
+      {
+        "id": "ebbad49b-7bcd-494a-9200-9d92369a303f",
+        "name": "QPWS Permits - Camping - July 2019 to September 2019 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0019/109621/qpws-permits-camping-jul19-sep19.csv"
+      },
+      {
+        "id": "daa7c725-4c28-4fb5-90c0-9f94e4c2ba74",
+        "name": "QPWS Permits - Vehicle - July 2019 to September 2019 ",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0024/109644/qpws-permits-vehicle-jul19-sep19.csv"
+      },
+      {
+        "id": "81bb6eac-7412-498c-9a1d-e82fec656b44",
+        "name": "QPWS Permits - Camping - April 2019 to June 2019",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0020/109613/qpws-permits-camping-apr19-jun19.csv"
+      },
+      {
+        "id": "f73fbc78-f352-4a34-bba8-69e64ce685e7",
+        "name": "QPWS Permits - Vehicle - April 2019 to June 2019",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0022/109633/qpws-permits-vehicle-apr19-jun19.csv"
+      },
+      {
+        "id": "dc75fb7c-b555-441b-b58a-c0a023e5b2d0",
+        "name": "QPWS Permits - Camping - January 2019 to March 2019",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0023/109616/qpws-permits-camping-jan19-mar19.csv"
+      },
+      {
+        "id": "a2a62564-4144-4a60-964d-7a064d34456e",
+        "name": "QPWS Permits - Vehicle - January 2019 to March 2019",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0025/109636/qpws-permits-vehicle-jan19-mar19.csv"
+      },
+      {
+        "id": "7c4762b1-db72-4dcc-b42c-b2fc498a1c9b",
+        "name": "QPWS Permits - Camping - October 2018 to December 2018",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0022/109624/qpws-permits-camping-oct18-dec18.csv"
+      },
+      {
+        "id": "a7b2d041-f66f-485b-b145-119bc3dee653",
+        "name": "QPWS Permits - Vehicle - October 2018 to December 2018",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0023/109643/qpws-permits-vehicle-oct18-dec18.csv"
+      },
+      {
+        "id": "3ea1d5e4-b5ee-49f5-8ddc-0624e7d87c25",
+        "name": "QPWS Permits - Camping - July 2018 to September 2018",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0018/109620/qpws-permits-camping-jul18-sep18.csv"
+      },
+      {
+        "id": "56b35e71-2e45-4469-a827-0e40e635902e",
+        "name": "QPWS Permits - Vehicle - July 2018 to September 2018",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0020/109640/qpws-permits-vehicle-jul18-sep18.csv"
+      },
+      {
+        "id": "908c06a5-31e2-4df7-9f56-f06d90059aa1",
+        "name": "QPWS Permits - Camping - April 2018 to June 2018",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0019/109612/qpws-permits-camping-apr18-jun18.csv"
+      },
+      {
+        "id": "77b5062d-296c-4c9b-9bd0-ff193b97934a",
+        "name": "QPWS Permits - Vehicle - April 2018 to June 2018",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0021/109632/qpws-permits-vehicle-apr18-jun18.csv"
+      },
+      {
+        "id": "ca2f7aea-362a-4797-a0dc-bdb1e35e8580",
+        "name": "QPWS Permits - Camping - January 2018 to Mar 2018",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0022/109615/qpws-permits-camping-jan18-mar18.csv"
+      },
+      {
+        "id": "110a260a-06d0-49ee-af0e-72667507ff59",
+        "name": "QPWS Permits - Vehicle - January 2018 to March 2018",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0024/109635/qpws-permits-vehicle-jan18-mar18.csv"
+      },
+      {
+        "id": "281d8ce9-c5df-4563-adeb-97757a5ede6a",
+        "name": "QPWS Permits - Camping - October 2017 to December 2017",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0021/109623/qpws-permits-camping-oct17-dec17.csv"
+      },
+      {
+        "id": "972b90d9-c8be-492a-b896-fcfd6143cc8d",
+        "name": "QPWS Permits - Vehicle - October 2017 to December 2017",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0022/109642/qpws-permits-vehicle-oct17-dec17.csv"
+      },
+      {
+        "id": "a343dc62-9406-46d6-92d2-f210249dd981",
+        "name": "QPWS Permits - Camping - July 2017 to September 2017",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0026/109619/qpws-permits-camping-jul17-sep17.csv"
+      },
+      {
+        "id": "e2f2a042-d654-4223-907e-2a928029e724",
+        "name": "QPWS Permits - Vehicle - July 2017 to September 2017",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0028/109639/qpws-permits-vehicle-jul17-sep17.csv"
+      },
+      {
+        "id": "158f7d5f-a174-4004-9469-90ec2bd71acb",
+        "name": "QPWS Permits - Camping - April 2017 to June 2017",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0018/109611/qpws-permits-camping-apr17-jun17.csv"
+      },
+      {
+        "id": "bc87afff-691a-4be2-9faf-9078ba573d3d",
+        "name": "QPWS Permits - Vehicle - April 2017 to June 2017",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0020/109631/qpws-permits-vehicle-apr17-jun17.csv"
+      },
+      {
+        "id": "900273d7-9a1c-46a4-b2be-bf3d95aedb0c",
+        "name": "QPWS Permits - Camping - January 2017 to March 2017",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0021/109614/qpws-permits-camping-jan17-mar17.csv"
+      },
+      {
+        "id": "bc027fa7-c26e-4bbd-8798-0e238e3a4eac",
+        "name": "QPWS Permits - Vehicle- January 2017 to March 2017",
+        "format": "CSV",
+        "url": "https://www.data.qld.gov.au/dataset/3347fd5b-d1cc-4096-b8b0-9a1549267b69/resource/bc027fa7-c26e-4bbd-8798-0e238e3a4eac/download/qpws-permits-vehicle-jan17-mar17.csv"
+      },
+      {
+        "id": "cb205d9b-8a41-490c-b090-b7fab2c0a41b",
+        "name": "QPWS Permits - Camping - October 2016 to December 2016",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0020/109622/qpws-permits-camping-oct16-dec16.csv"
+      },
+      {
+        "id": "6a8ea36f-f95b-4921-895f-c6239b9f83ce",
+        "name": "QPWS Permits - Vehicle - October 2016 to December 2016",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0021/109641/qpws-permits-vehicle-oct16-dec16.csv"
+      },
+      {
+        "id": "56159c91-30f7-493c-a6e9-58616daa1ba5",
+        "name": "QPWS Permits - Camping - July 2016 to September 2016",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0025/109618/qpws-permits-camping-jul16-sep16.csv"
+      },
+      {
+        "id": "3f88062f-7017-455e-9424-345776553776",
+        "name": "QPWS Permits - Vehicle - July 2016 to September 2016",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0027/109638/qpws-permits-vehicle-jul16-sep16.csv"
+      },
+      {
+        "id": "c1d1ff63-ebe4-49e7-8dd5-41be0dbf6948",
+        "name": "QPWS Permits - April 2016 to June 2016",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0025/109609/qpws-permits-apr2016-jun2016.csv"
+      },
+      {
+        "id": "a9c8fd69-14d2-4e48-bc4a-dc8c84e17d7d",
+        "name": "QPWS Permits – January 2016 to March 2016",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0025/109627/qpws-permits-jan2016-mar2016.csv"
+      },
+      {
+        "id": "0f355155-aac0-4b0b-aceb-51149e1cedd1",
+        "name": "QPWS Permits - October 2015 to December 2015",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0019/109630/qpws-permits-oct2015-dec2015.csv"
+      },
+      {
+        "id": "58294eaa-35cd-4a75-b3d0-285609331f7c",
+        "name": "QPWS Permits - July 2015 to September 2015",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0027/109629/qpws-permits-jul2015-sep2015.csv"
+      },
+      {
+        "id": "6486c7a2-1ac4-4b4a-9669-ee7da55ad947",
+        "name": "QPWS Permits - July 2014 to June 2015",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0026/109628/qpws-permits-jul2014-jun2015.csv"
+      },
+      {
+        "id": "cf7b81ec-0ecc-4ba3-8a40-bf26dfdbf223",
+        "name": "QPWS Permits - August 2013 to June 2014",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0017/109610/qpws-permits-aug2013-jun2014.csv"
+      },
+      {
+        "id": "932fb641-3400-41f4-9b5e-7b5aada3c6e6",
+        "name": "QPWS Permits - January 2011 to July 2013",
+        "format": "CSV",
+        "url": "https://data.des.qld.gov.au/__data/assets/file/0024/109626/qpws-permits-jan2011-jul2013.csv"
+      }
+    ]
+  }
+}
