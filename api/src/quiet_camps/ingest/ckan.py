@@ -19,7 +19,6 @@ class PackageShowResponse(TypedDict):
 
 
 def camping_csv_urls(package: PackageShowResponse) -> list[str]:
-
     return [
         resource["url"]
         for resource in package["result"]["resources"]
