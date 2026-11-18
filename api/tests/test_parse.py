@@ -4,7 +4,13 @@ from datetime import date
 
 import pytest
 
-from quiet_camps.ingest.parse import CampNight, each_night, parse_family_b, parse_family_c
+from quiet_camps.ingest.parse import (
+    CampNight,
+    each_night,
+    parse_family_a,
+    parse_family_b,
+    parse_family_c,
+)
 
 NIGHT = CampNight(
     night=date(2022, 7, 1),
@@ -187,3 +193,92 @@ def test_parse_family_c_is_lazy() -> None:
 
     assert next(nights) == FIRST
     assert next(nights) == SECOND  # both nights of the first booking, still without reading on
+
+
+# --- Family A (2011 to June 2016): one row per booking, mixed with vehicle permits ---
+
+OLD_LAYOUT = {  # 2011-2015 export
+    "STATE": "QLD",
+    "POSTCODE": "4556",
+    "BKNG_DATE": "14/03/2013",
+    "BKNG_TYPE": "PARK",
+    "ITEM_TYPE": "CAMPING",
+    "START_DATE": "29/03/2013",
+    "DAYS": "2",
+    "ADULTS": "4",
+    "CHILDREN": "3",
+    "LOCATION": "Cooloola Recreation Area",
+    "AREA_PERMT": "Teewah Beach camping area",
+}
+NEW_LAYOUT = {  # April to June 2016 export
+    "Postcode": "4556",
+    "State": "QLD",
+    "Booking Date": "14/03/2013",
+    "Item Type": "Camping",
+    "Start Date": "29/03/2013",
+    "Days": "2",
+    "Adults": "4",
+    "Children": "3",
+    "Location": "Cooloola Recreation Area",
+    "Area/Permit Type": "Teewah Beach camping area",
+}
+EASTER = CampNight(
+    night=date(2013, 3, 29),
+    park="Cooloola Recreation Area",
+    area="Teewah Beach camping area",
+    adults=4,
+    children=3,
+    infants=None,  # not recorded before July 2016
+    postcode="4556",
+    state="QLD",
+    booked_on=date(2013, 3, 14),
+    reservation_id=None,
+)
+EASTER_2 = dataclasses.replace(EASTER, night=date(2013, 3, 30))
+
+
+def without(row: dict[str, str], key: str) -> dict[str, str]:
+    return {k: v for k, v in row.items() if k != key}
+
+
+@pytest.mark.parametrize(
+    "row",
+    [
+        OLD_LAYOUT,
+        NEW_LAYOUT,
+        without(OLD_LAYOUT, "AREA_PERMT") | {"AREA_PERMIT": "Teewah Beach camping area"},
+        without(NEW_LAYOUT, "Area/Permit Type") | {"Area/Permit": "Teewah Beach camping area"},
+    ],
+    ids=["AREA_PERMT", "Area/Permit Type", "AREA_PERMIT", "Area/Permit"],
+)
+def test_each_family_a_layout_expands_a_booking_into_nights(row: dict[str, str]) -> None:
+    assert list(parse_family_a([row])) == [EASTER, EASTER_2]
+
+
+@pytest.mark.parametrize("item_type", ["SERVICE", "CAMPING_ADDON", "CREDIT", "Vehicle"])
+def test_rows_that_are_not_camping_are_skipped(item_type: str) -> None:
+    # Vehicle permits have no party size at all: they must be skipped before int("") fails.
+    vehicle = OLD_LAYOUT | {"ITEM_TYPE": item_type, "ADULTS": "", "CHILDREN": "", "DAYS": ""}
+
+    assert list(parse_family_a([vehicle])) == []
+
+
+def test_camping_rows_among_vehicle_rows_keep_their_order() -> None:
+    vehicle = OLD_LAYOUT | {"ITEM_TYPE": "SERVICE", "ADULTS": "", "CHILDREN": ""}
+    one_night = OLD_LAYOUT | {"DAYS": "1", "START_DATE": "1/04/2013"}
+
+    nights = list(parse_family_a([vehicle, OLD_LAYOUT, vehicle, one_night]))
+
+    assert [n.night for n in nights] == [date(2013, 3, 29), date(2013, 3, 30), date(2013, 4, 1)]
+
+
+def test_parse_family_a_is_lazy_even_when_skipping() -> None:
+    def rows() -> Iterator[dict[str, str]]:
+        yield OLD_LAYOUT | {"ITEM_TYPE": "SERVICE", "ADULTS": ""}
+        yield OLD_LAYOUT
+        raise AssertionError("read past the first camping row before it was asked for")
+
+    nights = parse_family_a(rows())
+
+    assert next(nights) == EASTER
+    assert next(nights) == EASTER_2

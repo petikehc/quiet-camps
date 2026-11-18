@@ -4,11 +4,15 @@ from datetime import date, timedelta
 
 from quiet_camps.ingest.clean import normalise, parse_date
 
+FAMILY_A_BOOKING_DATE_COLUMNS = ("booking date", "bkng date")
+FAMILY_A_AREA_COLUMNS = ("area/permit type", "area/permit", "area permit", "area permt")
+
 FAMILY_B_ID_COLUMNS = ("camping reservation unique id", "reservation number")
+
 FAMILY_C_ID_COLUMNS = ("bookingid", "itinerary id")
-ARRIVAL_COLUMNS = ("arrival date", "start date")
-PARK_COLUMNS = ("park name", "park")
-AREA_COLUMNS = ("camping area", "facility")
+FAMILY_C_ARRIVAL_COLUMNS = ("arrival date", "start date")
+FAMILY_C_PARK_COLUMNS = ("park name", "park")
+FAMILY_C_AREA_COLUMNS = ("camping area", "facility")
 
 
 @dataclass(frozen=True, slots=True)
@@ -19,7 +23,7 @@ class CampNight:
     area: str
     adults: int
     children: int
-    infants: int
+    infants: int | None
     postcode: str
     state: str
     reservation_id: str | None = None
@@ -50,6 +54,31 @@ def normalise_keys(row: dict[str, str]) -> dict[str, str]:
     return {normalise(k): v for k, v in row.items()}
 
 
+def parse_family_a(rows: Iterable[dict[str, str]]) -> Iterator[CampNight]:
+    for row in rows:
+        normalised = normalise_keys(row)
+
+        if normalised["item type"].casefold() != "camping":
+            continue
+
+        arrival = parse_date(normalised["start date"])
+        nights = int(normalised["days"])
+
+        for night in each_night(arrival, nights):
+            yield CampNight(
+                night=night,
+                booked_on=parse_date(require(normalised, FAMILY_A_BOOKING_DATE_COLUMNS)),
+                park=normalised["location"],
+                area=require(normalised, FAMILY_A_AREA_COLUMNS),
+                adults=int(normalised["adults"]),
+                children=int(normalised["children"]),
+                infants=None,
+                postcode=normalised["postcode"],
+                state=normalised["state"],
+                reservation_id=None,
+            )
+
+
 def parse_family_b(rows: Iterable[dict[str, str]]) -> Iterator[CampNight]:
     for row in rows:
         normalised = normalise_keys(row)
@@ -73,15 +102,15 @@ def parse_family_b(rows: Iterable[dict[str, str]]) -> Iterator[CampNight]:
 def parse_family_c(rows: Iterable[dict[str, str]]) -> Iterator[CampNight]:
     for row in rows:
         normalised = normalise_keys(row)
-        arrival = parse_date(require(normalised, ARRIVAL_COLUMNS))
+        arrival = parse_date(require(normalised, FAMILY_C_ARRIVAL_COLUMNS))
         departure = parse_date(normalised["departure date"])
 
         for night in each_night(arrival, (departure - arrival).days):
             yield CampNight(
                 night=night,
                 booked_on=parse_date(normalised["booking date"]),
-                park=require(normalised, PARK_COLUMNS),
-                area=require(normalised, AREA_COLUMNS),
+                park=require(normalised, FAMILY_C_PARK_COLUMNS),
+                area=require(normalised, FAMILY_C_AREA_COLUMNS),
                 adults=int(normalised["adults"]),
                 children=int(normalised["children"]),
                 infants=int(normalised["infants"]),
