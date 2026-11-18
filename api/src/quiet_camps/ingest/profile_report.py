@@ -8,6 +8,7 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import NamedTuple
 
+from quiet_camps.ingest.clean import normalise
 from quiet_camps.ingest.profile import detect_encoding, group_by_header, value_shapes
 
 TOP_SHAPES = 4
@@ -19,11 +20,6 @@ class NightsCheck(NamedTuple):
     one_row_per_night: int  # distinct, consecutive stay dates, one row each
     starts_in_this_file: int  # first stay date == start date (others began last quarter)
     unparsed_dates: int
-
-
-def normalise(name: str) -> str:
-    """Compare column names across variants: 'Stay Date', 'stay_date', 'STAY_DATE '."""
-    return name.strip().lower().replace("_", " ")
 
 
 @functools.cache  # the same few thousand date strings repeat millions of times

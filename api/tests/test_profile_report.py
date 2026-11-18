@@ -1,6 +1,7 @@
 from datetime import date
 
-from quiet_camps.ingest.profile_report import NightsCheck, check_nights, normalise, parse_day
+from quiet_camps.ingest.clean import normalise
+from quiet_camps.ingest.profile_report import NightsCheck, check_nights, parse_day
 
 
 def test_parse_day_accepts_short_days_and_a_midnight_time() -> None:

@@ -2,8 +2,7 @@ from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from datetime import date
 
-from quiet_camps.ingest.clean import parse_date
-from quiet_camps.ingest.profile_report import normalise
+from quiet_camps.ingest.clean import normalise, parse_date
 
 ID_COLUMNS = ("camping reservation unique id", "reservation number")
 
