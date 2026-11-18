@@ -8,6 +8,7 @@ import httpx
 from quiet_camps.ingest.ckan import PackageShowResponse, camping_csv_urls
 from quiet_camps.ingest.download import download_csv
 from quiet_camps.ingest.profile_report import profile
+from quiet_camps.ingest.quality_report import quality
 from quiet_camps.ingest.retry import retry
 
 PACKAGE_URL = "https://www.data.qld.gov.au/api/3/action/package_show"
@@ -95,12 +96,21 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     profile_parser.add_argument("--data-dir", type=Path, default=DEFAULT_DATA_DIR)
 
+    quality_parser = commands.add_parser(
+        "quality", help="Parse every CSV and report nights, repeats and missing values per file."
+    )
+    quality_parser.add_argument("--data-dir", type=Path, default=DEFAULT_DATA_DIR)
+
     args = parser.parse_args(argv)
     match args.command:
         case "download":
             return download_command(args.data_dir)
         case "profile":
             for line in profile(args.data_dir):
+                print(line, flush=True)
+            return 0
+        case "quality":
+            for line in quality(args.data_dir):
                 print(line, flush=True)
             return 0
         case _:
