@@ -1,10 +1,14 @@
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 
 from quiet_camps.ingest.clean import normalise, parse_date
 
-ID_COLUMNS = ("camping reservation unique id", "reservation number")
+FAMILY_B_ID_COLUMNS = ("camping reservation unique id", "reservation number")
+FAMILY_C_ID_COLUMNS = ("bookingid", "itinerary id")
+ARRIVAL_COLUMNS = ("arrival date", "start date")
+PARK_COLUMNS = ("park name", "park")
+AREA_COLUMNS = ("camping area", "facility")
 
 
 @dataclass(frozen=True, slots=True)
@@ -28,9 +32,27 @@ def first_present(row: dict[str, str], names: tuple[str, ...]) -> str | None:
     return None
 
 
+def require(row: dict[str, str], names: tuple[str, ...]) -> str:
+    fp = first_present(row, names)
+
+    if fp is None:
+        raise KeyError(f"none of {names} in row")
+
+    return fp
+
+
+def each_night(first: date, count: int) -> Iterator[date]:
+    for n in range(count):
+        yield first + timedelta(days=n)
+
+
+def normalise_keys(row: dict[str, str]) -> dict[str, str]:
+    return {normalise(k): v for k, v in row.items()}
+
+
 def parse_family_b(rows: Iterable[dict[str, str]]) -> Iterator[CampNight]:
     for row in rows:
-        normalised = {normalise(k): v for k, v in row.items()}
+        normalised = normalise_keys(row)
 
         cn = CampNight(
             night=parse_date(normalised["stay date"]),
@@ -42,7 +64,28 @@ def parse_family_b(rows: Iterable[dict[str, str]]) -> Iterator[CampNight]:
             infants=int(normalised["infants"]),
             postcode=normalised["postcode"],
             state=normalised["state"],
-            reservation_id=first_present(normalised, ID_COLUMNS),
+            reservation_id=first_present(normalised, FAMILY_B_ID_COLUMNS),
         )
 
         yield cn
+
+
+def parse_family_c(rows: Iterable[dict[str, str]]) -> Iterator[CampNight]:
+    for row in rows:
+        normalised = normalise_keys(row)
+        arrival = parse_date(require(normalised, ARRIVAL_COLUMNS))
+        departure = parse_date(normalised["departure date"])
+
+        for night in each_night(arrival, (departure - arrival).days):
+            yield CampNight(
+                night=night,
+                booked_on=parse_date(normalised["booking date"]),
+                park=require(normalised, PARK_COLUMNS),
+                area=require(normalised, AREA_COLUMNS),
+                adults=int(normalised["adults"]),
+                children=int(normalised["children"]),
+                infants=int(normalised["infants"]),
+                postcode=normalised["postcode"],
+                state=normalised["state"],
+                reservation_id=first_present(normalised, FAMILY_C_ID_COLUMNS),
+            )
