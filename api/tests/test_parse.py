@@ -4,6 +4,7 @@ from datetime import date
 
 import pytest
 
+from quiet_camps.ingest.clean import State
 from quiet_camps.ingest.parse import (
     CampNight,
     each_night,
@@ -20,7 +21,7 @@ NIGHT = CampNight(
     children=0,
     infants=0,
     postcode="4740",
-    state="Queensland",
+    state=State.QLD,
     booked_on=date(2021, 6, 27),
     reservation_id="1779925",
 )
@@ -153,7 +154,7 @@ FIRST = CampNight(
     children=2,
     infants=0,
     postcode="4000",
-    state="QLD",
+    state=State.QLD,
     booked_on=date(2025, 1, 2),
     reservation_id="12345678",
 )
@@ -230,7 +231,7 @@ EASTER = CampNight(
     children=3,
     infants=None,  # not recorded before July 2016
     postcode="4556",
-    state="QLD",
+    state=State.QLD,
     booked_on=date(2013, 3, 14),
     reservation_id=None,
 )
@@ -305,3 +306,9 @@ def test_parsers_clean_the_postcode() -> None:
     row = TITLE_CASE | {"Postcode": "810"}
 
     assert [n.postcode for n in parse_family_b([row])] == ["0810"]
+
+
+def test_parsers_clean_the_state() -> None:
+    row = TITLE_CASE | {"State": "Qld"}
+
+    assert [n.state for n in parse_family_b([row])] == [State.QLD]

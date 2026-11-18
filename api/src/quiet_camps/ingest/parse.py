@@ -2,7 +2,14 @@ from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from datetime import date, timedelta
 
-from quiet_camps.ingest.clean import clean_postcode, normalise, parse_count, parse_date
+from quiet_camps.ingest.clean import (
+    State,
+    clean_postcode,
+    clean_state,
+    normalise,
+    parse_count,
+    parse_date,
+)
 
 FAMILY_A_BOOKING_DATE_COLUMNS = ("booking date", "bkng date")
 FAMILY_A_AREA_COLUMNS = ("area/permit type", "area/permit", "area permit", "area permt")
@@ -25,7 +32,7 @@ class CampNight:
     children: int | None
     infants: int | None
     postcode: str | None
-    state: str
+    state: State
     reservation_id: str | None = None
 
 
@@ -63,6 +70,7 @@ def parse_family_a(rows: Iterable[dict[str, str]]) -> Iterator[CampNight]:
 
         arrival = parse_date(normalised["start date"])
         nights = int(normalised["days"])
+        postcode = clean_postcode(normalised["postcode"])
 
         for night in each_night(arrival, nights):
             yield CampNight(
@@ -73,8 +81,8 @@ def parse_family_a(rows: Iterable[dict[str, str]]) -> Iterator[CampNight]:
                 adults=parse_count(normalised["adults"]),
                 children=parse_count(normalised["children"]),
                 infants=None,
-                postcode=clean_postcode(normalised["postcode"]),
-                state=normalised["state"],
+                postcode=postcode,
+                state=clean_state(normalised["state"], postcode=postcode),
                 reservation_id=None,
             )
 
@@ -82,6 +90,7 @@ def parse_family_a(rows: Iterable[dict[str, str]]) -> Iterator[CampNight]:
 def parse_family_b(rows: Iterable[dict[str, str]]) -> Iterator[CampNight]:
     for row in rows:
         normalised = normalise_keys(row)
+        postcode = clean_postcode(normalised["postcode"])
 
         cn = CampNight(
             night=parse_date(normalised["stay date"]),
@@ -91,8 +100,8 @@ def parse_family_b(rows: Iterable[dict[str, str]]) -> Iterator[CampNight]:
             adults=parse_count(normalised["adults"]),
             children=parse_count(normalised["children"]),
             infants=parse_count(normalised["infants"]),
-            postcode=clean_postcode(normalised["postcode"]),
-            state=normalised["state"],
+            postcode=postcode,
+            state=clean_state(normalised["state"], postcode=postcode),
             reservation_id=first_present(normalised, FAMILY_B_ID_COLUMNS),
         )
 
@@ -104,6 +113,7 @@ def parse_family_c(rows: Iterable[dict[str, str]]) -> Iterator[CampNight]:
         normalised = normalise_keys(row)
         arrival = parse_date(require(normalised, FAMILY_C_ARRIVAL_COLUMNS))
         departure = parse_date(normalised["departure date"])
+        postcode = clean_postcode(normalised["postcode"])
 
         for night in each_night(arrival, (departure - arrival).days):
             yield CampNight(
@@ -114,7 +124,7 @@ def parse_family_c(rows: Iterable[dict[str, str]]) -> Iterator[CampNight]:
                 adults=parse_count(normalised["adults"]),
                 children=parse_count(normalised["children"]),
                 infants=parse_count(normalised["infants"]),
-                postcode=clean_postcode(normalised["postcode"]),
-                state=normalised["state"],
+                postcode=postcode,
+                state=clean_state(normalised["state"], postcode=postcode),
                 reservation_id=first_present(normalised, FAMILY_C_ID_COLUMNS),
             )

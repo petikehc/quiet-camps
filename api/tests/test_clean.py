@@ -2,7 +2,7 @@ from datetime import date
 
 import pytest
 
-from quiet_camps.ingest.clean import clean_postcode, parse_count, parse_date
+from quiet_camps.ingest.clean import State, clean_postcode, clean_state, parse_count, parse_date
 
 # Every date format the profile found, with the file it came from.
 
@@ -91,3 +91,74 @@ def test_parse_count_rejects_text_that_is_not_a_number() -> None:
 )
 def test_clean_postcode_keeps_only_australian_postcodes(text: str, expected: str | None) -> None:
     assert clean_postcode(text) == expected
+
+
+# --- State: about 5,000 spellings down to 8 states and territories, OVERSEAS and UNKNOWN ---
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("QLD", State.QLD),
+        ("Qld", State.QLD),
+        ("QUEENSLAND", State.QLD),
+        (" queensland ", State.QLD),
+        ("Q", State.QLD),
+        ("New  South Wales", State.NSW),  # double space
+        ("nsw", State.NSW),
+        ("Victoria", State.VIC),
+        ("South Australia", State.SA),
+        ("WA", State.WA),
+        ("Tasmania", State.TAS),
+        ("ACT", State.ACT),
+        ("Australian Capital Territory", State.ACT),
+        ("Northern Territory", State.NT),
+    ],
+)
+def test_state_names_and_abbreviations(text: str, expected: State) -> None:
+    assert clean_state(text, postcode=None) == expected
+
+
+def test_a_named_state_beats_the_postcode() -> None:
+    assert clean_state("NSW", postcode="4000") == State.NSW
+
+
+@pytest.mark.parametrize(
+    ("text", "postcode", "expected"),
+    [
+        ("", "4000", State.QLD),
+        ("Unknown", "2000", State.NSW),
+        ("Australia", "0810", State.NT),
+        ("", "2600", State.ACT),  # Canberra sits inside the NSW 2xxx block
+        ("", "2900", State.ACT),
+        ("", "3000", State.VIC),
+        ("", "5000", State.SA),
+        ("", "6000", State.WA),
+        ("", "7000", State.TAS),
+        ("", None, State.UNKNOWN),
+        ("unknown", None, State.UNKNOWN),
+    ],
+)
+def test_no_state_falls_back_to_the_postcode(
+    text: str, postcode: str | None, expected: State
+) -> None:
+    assert clean_state(text, postcode=postcode) == expected
+
+
+@pytest.mark.parametrize(
+    ("text", "postcode"),
+    [
+        ("Overseas", None),
+        ("Germany", None),
+        ("Bavaria", None),
+        ("Zurich", "8001"),  # a Swiss postcode is 4 digits too: don't read it as Victoria
+        ("Auckland", "1010"),
+    ],
+)
+def test_other_places_are_overseas(text: str, postcode: str | None) -> None:
+    assert clean_state(text, postcode=postcode) == State.OVERSEAS
+
+
+def test_state_is_a_string_enum() -> None:
+    assert State.QLD == "QLD"
+    assert f"{State.NSW}" == "NSW"
