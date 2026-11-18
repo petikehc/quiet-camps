@@ -5,6 +5,8 @@ from datetime import date
 from quiet_camps.ingest.clean import parse_date
 from quiet_camps.ingest.profile_report import normalise
 
+ID_COLUMNS = ("camping reservation unique id", "reservation number")
+
 
 @dataclass(frozen=True, slots=True)
 class CampNight:
@@ -20,16 +22,16 @@ class CampNight:
     reservation_id: str | None = None
 
 
+def first_present(row: dict[str, str], names: tuple[str, ...]) -> str | None:
+    for col in names:
+        if col in row:
+            return row[col]
+    return None
+
+
 def parse_family_b(rows: Iterable[dict[str, str]]) -> Iterator[CampNight]:
     for row in rows:
         normalised = {normalise(k): v for k, v in row.items()}
-
-        if "camping reservation unique id" in normalised:
-            reservation_id = normalised["camping reservation unique id"]
-        elif "reservation number" in normalised:
-            reservation_id = normalised["reservation number"]
-        else:
-            reservation_id = None
 
         cn = CampNight(
             night=parse_date(normalised["stay date"]),
@@ -41,7 +43,7 @@ def parse_family_b(rows: Iterable[dict[str, str]]) -> Iterator[CampNight]:
             infants=int(normalised["infants"]),
             postcode=normalised["postcode"],
             state=normalised["state"],
-            reservation_id=reservation_id,
+            reservation_id=first_present(normalised, ID_COLUMNS),
         )
 
         yield cn
