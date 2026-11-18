@@ -1,44 +1,8 @@
-from collections.abc import Iterator
-from pathlib import Path
-
-import pytest
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import Engine, create_engine, inspect, make_url, text
-from sqlalchemy.exc import OperationalError
+from sqlalchemy import Engine, inspect, text
 
-from quiet_camps.db.config import database_url
-
-ALEMBIC_INI = Path(__file__).parents[1] / "alembic.ini"
-TEST_DB = "quiet_camps_test"
 TABLES = {"park", "camping_area", "camp_night"}
-
-
-@pytest.fixture
-def test_db(monkeypatch: pytest.MonkeyPatch) -> Iterator[Engine]:
-    """A fresh, empty database for each test, so migrations never touch your loaded data."""
-    url = make_url(database_url())
-    admin = create_engine(url, isolation_level="AUTOCOMMIT")
-    try:
-        with admin.connect() as conn:
-            conn.execute(text(f"DROP DATABASE IF EXISTS {TEST_DB} WITH (FORCE)"))
-            conn.execute(text(f"CREATE DATABASE {TEST_DB}"))
-    except OperationalError as e:
-        pytest.fail(f"Postgres isn't reachable. Start it with `docker compose up -d --wait`.\n{e}")
-    finally:
-        admin.dispose()
-
-    test_url = url.set(database=TEST_DB)
-    # env.py asks database_url(), so this points Alembic at the test database.
-    monkeypatch.setenv("DATABASE_URL", test_url.render_as_string(hide_password=False))
-    engine = create_engine(test_url)
-    yield engine
-    engine.dispose()
-
-
-@pytest.fixture
-def alembic_cfg() -> Config:
-    return Config(ALEMBIC_INI)
 
 
 def tables(engine: Engine) -> set[str]:
