@@ -1,3 +1,4 @@
+import re
 from datetime import date, datetime, timedelta
 
 # Each format only matches its own shape ("%d/%m/%y" rejects "1/07/2016" and "%d/%m/%Y"
@@ -36,3 +37,22 @@ def parse_date(text: str) -> date:
             continue
 
     raise ValueError(f"unrecognised date: {text!r}")
+
+
+def parse_count(text: str) -> int | None:
+    """A party size. Blank means 'not recorded' (None); '0' means nobody (0)."""
+    value = text.strip()
+    if value == "":
+        return None
+    return int(value)
+
+
+def clean_postcode(text: str) -> str | None:
+    """An Australian postcode as 4 digits, or None for blanks, placeholders and overseas codes."""
+    value = text.strip()
+    # Not str.isdigit(): that also accepts superscripts, and the data has a '48⁷1'.
+    if not re.fullmatch(r"[0-9]{3,4}", value):
+        return None
+    if int(value) == 0:  # "0" is the export's placeholder for unknown or overseas
+        return None
+    return value.zfill(4)  # NT postcodes such as "810" lost their leading zero in Excel

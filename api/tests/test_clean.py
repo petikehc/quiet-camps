@@ -2,7 +2,7 @@ from datetime import date
 
 import pytest
 
-from quiet_camps.ingest.clean import parse_date
+from quiet_camps.ingest.clean import clean_postcode, parse_count, parse_date
 
 # Every date format the profile found, with the file it came from.
 
@@ -44,3 +44,50 @@ def test_anything_else_raises_value_error(text: str) -> None:
 def test_the_error_message_shows_the_bad_value() -> None:
     with pytest.raises(ValueError, match="not a date"):
         parse_date("not a date")
+
+
+# --- Blanks and truthiness: "" vs "0" vs None ---
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("3", 3),
+        ("0", 0),  # zero people is a real answer, not a missing one
+        (" 2 ", 2),
+        ("", None),  # blank: not recorded
+        ("  ", None),
+    ],
+)
+def test_parse_count(text: str, expected: int | None) -> None:
+    assert parse_count(text) == expected
+
+
+def test_zero_is_not_none() -> None:
+    # The truthiness trap: 0 and None are both falsy, so `x or None` or `if not x` mixes them up.
+    assert parse_count("0") is not None
+
+
+def test_parse_count_rejects_text_that_is_not_a_number() -> None:
+    with pytest.raises(ValueError, match="many"):
+        parse_count("many")
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("4000", "4000"),
+        ("4870 ", "4870"),  # trailing space
+        ("810", "0810"),  # Northern Territory: the leading zero was lost in Excel
+        ("0", None),  # placeholder for unknown or overseas
+        ("", None),
+        ("na", None),
+        ("O.S", None),
+        ("34", None),  # too short to be a postcode
+        ("40001", None),  # overseas
+        ("WS13DD", None),  # a UK postcode
+        ("48⁷1", None),  # a real value with a superscript 7: str.isdigit() says True
+    ],
+)
+def test_clean_postcode_keeps_only_australian_postcodes(text: str, expected: str | None) -> None:
+    assert clean_postcode(text) == expected

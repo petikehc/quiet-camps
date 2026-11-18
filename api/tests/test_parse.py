@@ -282,3 +282,26 @@ def test_parse_family_a_is_lazy_even_when_skipping() -> None:
 
     assert next(nights) == EASTER
     assert next(nights) == EASTER_2
+
+
+# --- Blanks reach the parsers (3c-ii) ---
+
+
+def test_family_a_blank_children_is_none_not_a_crash() -> None:
+    row = OLD_LAYOUT | {"CHILDREN": "", "DAYS": "1"}
+
+    assert [n.children for n in parse_family_a([row])] == [None]
+
+
+def test_family_b_row_with_no_party_size_still_counts_as_a_night() -> None:
+    row = TITLE_CASE | {"Adults": "", "Children": "", "Infants": ""}
+
+    assert list(parse_family_b([row])) == [
+        dataclasses.replace(NIGHT, adults=None, children=None, infants=None)
+    ]
+
+
+def test_parsers_clean_the_postcode() -> None:
+    row = TITLE_CASE | {"Postcode": "810"}
+
+    assert [n.postcode for n in parse_family_b([row])] == ["0810"]
