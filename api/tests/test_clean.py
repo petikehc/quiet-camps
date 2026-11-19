@@ -41,6 +41,22 @@ def test_anything_else_raises_value_error(text: str) -> None:
         parse_date(text)
 
 
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("07/04/0016", date(2016, 4, 7)),  # jan2016-mar2016, booked 7/03/2016
+        ("23/8/0015", date(2015, 8, 23)),  # jul2015-sep2015, booked 9/09/2015
+    ],
+)
+def test_a_year_typed_as_00yy_means_20yy(text: str, expected: date) -> None:
+    assert parse_date(text) == expected
+
+
+def test_a_00yy_date_that_does_not_exist_still_raises() -> None:
+    with pytest.raises(ValueError):
+        parse_date("31/02/0016")
+
+
 def test_the_error_message_shows_the_bad_value() -> None:
     with pytest.raises(ValueError, match="not a date"):
         parse_date("not a date")
