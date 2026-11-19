@@ -37,8 +37,27 @@ class CampingArea(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str]
     park_id: Mapped[int] = mapped_column(ForeignKey("park.id"))
+    # Set after each load by assign_campgrounds; None only in between.
+    campground_id: Mapped[int | None] = mapped_column(ForeignKey("campground.id"))
 
     park: Mapped[Park] = relationship(back_populates="areas")
+    campground: Mapped[Campground | None] = relationship(back_populates="areas")
+
+
+class Campground(Base):
+    """One place, under every name it has had: see quiet_camps.ingest.campgrounds."""
+
+    __tablename__ = "campground"
+    __table_args__ = (UniqueConstraint("park_key", "area_key"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    park_key: Mapped[str]
+    area_key: Mapped[str]
+    # The names from the most recent booking, for display.
+    name: Mapped[str]
+    park_name: Mapped[str]
+
+    areas: Mapped[list[CampingArea]] = relationship(back_populates="campground")
 
 
 class CampNight(Base):

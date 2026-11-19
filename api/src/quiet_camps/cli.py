@@ -6,6 +6,7 @@ from pathlib import Path
 import httpx
 import psycopg
 
+from quiet_camps.db.campgrounds import assign_campgrounds, campground_suggestions
 from quiet_camps.db.config import psycopg_conninfo
 from quiet_camps.db.load import load_all
 from quiet_camps.ingest.ckan import PackageShowResponse, camping_csv_urls
@@ -114,6 +115,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     load_parser.add_argument("--data-dir", type=Path, default=DEFAULT_DATA_DIR)
 
+    campgrounds_parser = commands.add_parser(
+        "campgrounds",
+        help="Group camping-area names into campgrounds (qc load does this too).",
+        description=(
+            "Group camping-area names into campgrounds, with the rules and the reviewed merges "
+            "in campground_merges.csv. With --suggest, list likely typos to review instead."
+        ),
+    )
+    campgrounds_parser.add_argument("--suggest", action="store_true")
+
     args = parser.parse_args(argv)
     match args.command:
         case "download":
@@ -130,6 +141,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             with psycopg.connect(psycopg_conninfo()) as conn:
                 for line in load_all(conn, args.data_dir):
                     print(line, flush=True)
+            return 0
+        case "campgrounds":
+            with psycopg.connect(psycopg_conninfo()) as conn:
+                if args.suggest:
+                    for line in campground_suggestions(conn):
+                        print(line)
+                else:
+                    print(f"{assign_campgrounds(conn):,} campgrounds")
             return 0
         case _:
             parser.error(f"unknown command {args.command}")

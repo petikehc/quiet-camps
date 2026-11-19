@@ -2,7 +2,7 @@ from alembic import command
 from alembic.config import Config
 from sqlalchemy import Engine, inspect, text
 
-TABLES = {"park", "camping_area", "camp_night"}
+TABLES = {"park", "camping_area", "camp_night", "campground"}
 
 
 def tables(engine: Engine) -> set[str]:
@@ -68,7 +68,12 @@ def test_constraints_follow_the_naming_convention(test_db: Engine, alembic_cfg: 
         )
     # Without a convention Postgres invents these (camping_area_pkey, ..._fkey, ..._key),
     # and a later migration has to guess them to drop or change one.
-    assert names == {"pk_camping_area", "fk_camping_area_park_id_park", "uq_camping_area_park_id"}
+    assert names == {
+        "pk_camping_area",
+        "fk_camping_area_park_id_park",
+        "fk_camping_area_campground_id_campground",
+        "uq_camping_area_park_id",
+    }
 
 
 def test_downgrade_leaves_nothing_behind(test_db: Engine, alembic_cfg: Config) -> None:
