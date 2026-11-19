@@ -5,11 +5,13 @@ from psycopg.rows import TupleRow
 
 from quiet_camps.ingest.campgrounds import Key, campground_key, load_merges, suggest_merges
 
-# Each campground shows the names from its most recently booked area.
+# Each campground shows the names from its most recently booked area, and that area's last
+# night is the campground's.
 SET_DISPLAY_NAMES = """
-UPDATE campground c SET name = latest.area, park_name = latest.park
+UPDATE campground c SET name = latest.area, park_name = latest.park, last_night = latest.last
 FROM (
-    SELECT DISTINCT ON (a.campground_id) a.campground_id, a.name AS area, p.name AS park
+    SELECT DISTINCT ON (a.campground_id)
+        a.campground_id, a.name AS area, p.name AS park, n.last
     FROM camping_area a
     JOIN park p ON p.id = a.park_id
     LEFT JOIN (SELECT area_id, max(night) AS last FROM camp_night GROUP BY area_id) n

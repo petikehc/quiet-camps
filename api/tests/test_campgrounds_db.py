@@ -56,6 +56,7 @@ def test_a_campground_shows_its_most_recent_names(conn: Conn) -> None:
     add_night(conn, new_id, date(2025, 1, 1))
     assign_campgrounds(conn, {})
     assert campground_of(conn)[OLD] == NEW
+    assert conn.execute("SELECT last_night FROM campground").fetchone() == (date(2025, 1, 1),)
 
 
 def test_running_it_again_keeps_the_same_campgrounds(conn: Conn) -> None:

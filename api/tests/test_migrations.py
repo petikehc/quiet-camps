@@ -2,7 +2,7 @@ from alembic import command
 from alembic.config import Config
 from sqlalchemy import Engine, inspect, text
 
-TABLES = {"park", "camping_area", "camp_night", "campground"}
+TABLES = {"park", "camping_area", "camp_night", "campground", "calendar_day"}
 
 
 def tables(engine: Engine) -> set[str]:
@@ -25,9 +25,9 @@ def test_upgrade_creates_the_tables_and_the_enum(test_db: Engine, alembic_cfg: C
     assert enum_types(test_db) == {"state"}
 
 
-def test_upgrade_creates_the_area_night_view(test_db: Engine, alembic_cfg: Config) -> None:
+def test_upgrade_creates_the_views(test_db: Engine, alembic_cfg: Config) -> None:
     command.upgrade(alembic_cfg, "head")
-    assert materialized_views(test_db) == {"area_night"}
+    assert materialized_views(test_db) == {"area_night", "campground_typical"}
 
 
 def test_area_night_has_one_row_per_area_and_night(test_db: Engine, alembic_cfg: Config) -> None:

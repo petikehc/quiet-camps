@@ -56,8 +56,20 @@ class Campground(Base):
     # The names from the most recent booking, for display.
     name: Mapped[str]
     park_name: Mapped[str]
+    # A third of campgrounds are retired sites or old names: search only recent ones.
+    last_night: Mapped[date | None]
 
     areas: Mapped[list[CampingArea]] = relationship(back_populates="campground")
+
+
+class CalendarDay(Base):
+    """Every night with its kind, from quiet_camps.ingest.day_kinds: "week 14 6", "easter +1"."""
+
+    __tablename__ = "calendar_day"
+
+    night: Mapped[date] = mapped_column(primary_key=True)
+    kind: Mapped[str] = mapped_column(index=True)
+    holiday: Mapped[str | None]
 
 
 class CampNight(Base):

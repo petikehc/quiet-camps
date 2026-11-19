@@ -4,7 +4,7 @@ from pathlib import Path
 import psycopg
 from psycopg.rows import TupleRow
 
-from quiet_camps.db.campgrounds import assign_campgrounds
+from quiet_camps.db.derived import refresh_derived
 from quiet_camps.ingest.files import camp_nights
 from quiet_camps.timing import timed
 
@@ -90,7 +90,5 @@ def load_all(conn: psycopg.Connection[TupleRow], data_dir: Path) -> Iterator[str
             files += 1
             yield f"{path.name:<42} {n:>9,} {current_timer.seconds:6.1f}s"
 
-        with timed() as campground_timer:
-            campgrounds = assign_campgrounds(conn)
-        yield f"{'campgrounds':<42} {campgrounds:>9,} {campground_timer.seconds:6.1f}s"
+        yield from refresh_derived(conn)
     yield f"total {nights:,} nights from {files} files in {total_timer.seconds:.1f}s"

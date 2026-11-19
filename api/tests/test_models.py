@@ -20,8 +20,14 @@ def unique_column_sets(t: Table) -> set[frozenset[str]]:
     return sets
 
 
-def test_four_tables() -> None:
-    assert set(models.Base.metadata.tables) == {"park", "camping_area", "camp_night", "campground"}
+def test_the_tables() -> None:
+    assert set(models.Base.metadata.tables) == {
+        "park",
+        "camping_area",
+        "camp_night",
+        "campground",
+        "calendar_day",
+    }
 
 
 def test_a_campground_is_unique_by_its_keys() -> None:

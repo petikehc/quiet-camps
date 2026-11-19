@@ -194,13 +194,15 @@ def test_load_all_loads_every_csv_and_reports_it(conn: Conn, tmp_path: Path) -> 
     assert "3 nights from 2 files" in lines[-1]
 
 
-def test_load_all_gives_every_area_a_campground(conn: Conn, tmp_path: Path) -> None:
+def test_load_all_rebuilds_campgrounds_and_the_views(conn: Conn, tmp_path: Path) -> None:
     row = f"576013,Camping,4507,QLD,1/02/2018,31/03/2018,31/03/2018,{POVERTY_CREEK},2,0,0"
     write_b(tmp_path / "q1.csv", row)
 
     lines = list(load_all(conn, tmp_path))
 
-    assert lines[-2].split()[:2] == ["campgrounds", "1"]
+    reported = {line.split()[0]: line.split()[1] for line in lines[1:-1]}
+    assert reported["campgrounds"] == "1"
+    assert reported["area_night"] == "1"
     unassigned = conn.execute("SELECT count(*) FROM camping_area WHERE campground_id IS NULL")
     assert unassigned.fetchone() == (0,)
 
