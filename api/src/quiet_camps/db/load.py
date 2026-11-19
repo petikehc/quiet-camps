@@ -1,10 +1,11 @@
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from pathlib import Path
 
 import psycopg
 from psycopg.rows import TupleRow
 
 from quiet_camps.ingest.files import camp_nights
+from quiet_camps.timing import timed
 
 COPY_CAMP_NIGHT = (
     "COPY camp_night (area_id, night, booked_on, adults, children, infants,"
@@ -54,6 +55,8 @@ def load_file(conn: psycopg.Connection[TupleRow], path: Path) -> int:
         # A generator runs once, and upserts can't run while COPY streams, so the file is
         # parsed twice: once for the areas, once for the rows. Memory stays flat.
         area_ids = ensure_areas(conn, ((n.park, n.area) for n in camp_nights(path)))
+
+        conn.execute("DELETE FROM camp_night WHERE source_file = %s", (path.name,))
         with conn.cursor() as cur, cur.copy(COPY_CAMP_NIGHT) as copy:
             for n in camp_nights(path):
                 copy.write_row(
@@ -72,3 +75,17 @@ def load_file(conn: psycopg.Connection[TupleRow], path: Path) -> int:
                 )
                 copied += 1
     return copied
+
+
+def load_all(conn: psycopg.Connection[TupleRow], data_dir: Path) -> Iterator[str]:
+    nights = 0
+    files = 0
+    with timed() as total_timer:
+        for path in sorted(data_dir.glob("*.csv")):
+            with timed() as current_timer:
+                n = load_file(conn, path)
+
+            nights += n
+            files += 1
+            yield f"{path.name:<42} {n:>9,} {current_timer.seconds:6.1f}s"
+    yield f"total {nights:,} nights from {files} files in {total_timer.seconds:.1f}s"

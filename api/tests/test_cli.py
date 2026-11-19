@@ -1,9 +1,11 @@
 from pathlib import Path
 
 import httpx
+import psycopg
 import pytest
+from psycopg.rows import TupleRow
 
-from quiet_camps.cli import download_all, fetch_package, is_transient
+from quiet_camps.cli import download_all, fetch_package, is_transient, main
 
 GOOD = "https://data.example.org/files/qpws-permits-camping-jul26-sep26.csv"
 MISSING = "https://data.example.org/files/qpws-permits-camping-gone.csv"
@@ -63,3 +65,23 @@ def test_fetch_package_rejects_an_unsuccessful_response() -> None:
     )
     with httpx.Client(transport=transport) as client, pytest.raises(RuntimeError):
         fetch_package(client)
+
+
+def test_qc_load_loads_into_the_database(
+    conn: psycopg.Connection[TupleRow], tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    header = (
+        "Reservation Number,Type,Postcode,State,Booking Date,Start Date,Stay Date,"
+        "Park,Facility,Adults,Children,Infants"
+    )
+    row = (
+        "576013,Camping,4507,QLD,1/02/2018,31/03/2018,31/03/2018,"
+        "Bribie Island NP,Poverty Creek,2,0,0"
+    )
+    (tmp_path / "q1.csv").write_text(f"{header}\r\n{row}\r\n", encoding="utf-8")
+
+    # The conn fixture points DATABASE_URL at the migrated test database.
+    assert main(["load", "--data-dir", str(tmp_path)]) == 0
+
+    assert "1 nights from 1 files" in capsys.readouterr().out
+    assert conn.execute("SELECT count(*) FROM camp_night").fetchone() == (1,)

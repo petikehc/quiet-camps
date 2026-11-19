@@ -4,7 +4,10 @@ from collections.abc import Sequence
 from pathlib import Path
 
 import httpx
+import psycopg
 
+from quiet_camps.db.config import psycopg_conninfo
+from quiet_camps.db.load import load_all
 from quiet_camps.ingest.ckan import PackageShowResponse, camping_csv_urls
 from quiet_camps.ingest.download import download_csv
 from quiet_camps.ingest.profile_report import profile
@@ -101,6 +104,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     quality_parser.add_argument("--data-dir", type=Path, default=DEFAULT_DATA_DIR)
 
+    load_parser = commands.add_parser(
+        "load",
+        help="Load every CSV into Postgres.",
+        description=(
+            "Load every CSV into Postgres, one transaction per file. A file's old rows are "
+            "replaced, so running it again changes nothing."
+        ),
+    )
+    load_parser.add_argument("--data-dir", type=Path, default=DEFAULT_DATA_DIR)
+
     args = parser.parse_args(argv)
     match args.command:
         case "download":
@@ -112,6 +125,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         case "quality":
             for line in quality(args.data_dir):
                 print(line, flush=True)
+            return 0
+        case "load":
+            with psycopg.connect(psycopg_conninfo()) as conn:
+                for line in load_all(conn, args.data_dir):
+                    print(line, flush=True)
             return 0
         case _:
             parser.error(f"unknown command {args.command}")

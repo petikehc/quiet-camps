@@ -7,7 +7,7 @@ from psycopg import sql
 from psycopg.rows import TupleRow
 
 from quiet_camps.db.config import psycopg_conninfo
-from quiet_camps.db.load import ensure_areas, load_file
+from quiet_camps.db.load import ensure_areas, load_all, load_file
 
 type Conn = psycopg.Connection[TupleRow]
 
@@ -155,3 +155,50 @@ def test_a_file_that_fails_part_way_leaves_nothing_behind(conn: Conn, tmp_path: 
     assert count(conn, "camp_night") == 0
     assert count(conn, "camping_area") == 0
     assert count(conn, "park") == 0
+
+
+def test_loading_a_file_again_replaces_its_rows(conn: Conn, tmp_path: Path) -> None:
+    row = f"576013,Camping,4507,QLD,1/02/2018,31/03/2018,{{night}},{POVERTY_CREEK},2,0,0"
+    path = write_b(tmp_path / "q1.csv", row.format(night="31/03/2018"))
+    load_file(conn, path)
+    # The publisher fixed the file: a night was added.
+    write_b(path, row.format(night="31/03/2018"), row.format(night="1/04/2018"))
+
+    assert load_file(conn, path) == 2
+    assert count(conn, "camp_night") == 2
+
+
+def test_reloading_one_file_leaves_the_other_files_alone(conn: Conn, tmp_path: Path) -> None:
+    row = f"576013,Camping,4507,QLD,1/02/2018,31/03/2018,{{night}},{POVERTY_CREEK},2,0,0"
+    q1 = write_b(tmp_path / "q1.csv", row.format(night="31/03/2018"))
+    load_file(conn, write_b(tmp_path / "q2.csv", row.format(night="1/04/2018")))
+    load_file(conn, q1)
+    load_file(conn, q1)
+
+    files = conn.execute("SELECT source_file FROM camp_night ORDER BY source_file").fetchall()
+    assert files == [("q1.csv",), ("q2.csv",)]
+
+
+def test_load_all_loads_every_csv_and_reports_it(conn: Conn, tmp_path: Path) -> None:
+    row = f"576013,Camping,4507,QLD,1/02/2018,31/03/2018,{{night}},{POVERTY_CREEK},2,0,0"
+    write_b(tmp_path / "q1.csv", row.format(night="31/03/2018"))
+    write_b(tmp_path / "q2.csv", row.format(night="1/04/2018"), row.format(night="2/04/2018"))
+    (tmp_path / "notes.txt").write_text("not a permit file")
+
+    lines = list(load_all(conn, tmp_path))
+
+    assert count(conn, "camp_night") == 3
+    # One line per file, in name order, with its night count; then a total.
+    assert [line.split()[:2] for line in lines[:2]] == [["q1.csv", "1"], ["q2.csv", "2"]]
+    assert lines[-1].startswith("total")
+    assert "3 nights from 2 files" in lines[-1]
+
+
+def test_load_all_twice_changes_nothing(conn: Conn, tmp_path: Path) -> None:
+    row = f"576013,Camping,4507,QLD,1/02/2018,31/03/2018,{{night}},{POVERTY_CREEK},2,0,0"
+    write_b(tmp_path / "q1.csv", row.format(night="31/03/2018"), row.format(night="1/04/2018"))
+    list(load_all(conn, tmp_path))
+    list(load_all(conn, tmp_path))
+
+    assert count(conn, "camp_night") == 2
+    assert count(conn, "camping_area") == 1
