@@ -13,7 +13,7 @@ experiment_router = APIRouter(prefix="/experiment")
 @experiment_router.get("/blocking-sleep")
 async def blocking_sleep() -> dict[str, float]:
     # Wrong on purpose: a sync wait inside async def holds the event loop's only thread.
-    time.sleep(SLEEP)
+    time.sleep(SLEEP)  # noqa: ASYNC251
     return {"slept": SLEEP}
 
 
