@@ -10,14 +10,19 @@ SEARCH = "/campgrounds/quiet"
 SATURDAY = {"arrive": "2027-03-13", "depart": "2027-03-14"}
 
 QUIET = "Quiet Creek camping area"
+TWIN = "Twin Hollow camping area"  # the same history as QUIET: a tie at 0
 MIDDLE = "Middle Creek camping area"
 BUSY = "Busy Beach camping area"
 
 
-def results(client: TestClient, **params: Any) -> list[dict[str, Any]]:
+def page(client: TestClient, **params: Any) -> dict[str, Any]:
     response = client.get(SEARCH, params={**SATURDAY, **params})
     assert response.status_code == 200
-    return response.json()["results"]
+    return response.json()
+
+
+def results(client: TestClient, **params: Any) -> list[dict[str, Any]]:
+    return page(client, **params)["results"]
 
 
 def names(client: TestClient, **params: Any) -> list[str]:
@@ -25,7 +30,11 @@ def names(client: TestClient, **params: Any) -> list[str]:
 
 
 def test_quietest_comes_first(seeded_client: TestClient) -> None:
-    assert names(seeded_client) == [QUIET, MIDDLE, BUSY]
+    found = results(seeded_client)
+
+    assert {c["name"] for c in found[:2]} == {QUIET, TWIN}
+    assert found[0]["id"] < found[1]["id"]  # a tie goes to the lower id
+    assert [c["name"] for c in found[2:]] == [MIDDLE, BUSY]
 
 
 def test_busyness_is_against_each_campgrounds_own_busy_nights(seeded_client: TestClient) -> None:
@@ -54,7 +63,7 @@ def test_park_narrows_the_search(seeded_client: TestClient) -> None:
 
 
 def test_limit_keeps_the_quietest(seeded_client: TestClient) -> None:
-    assert names(seeded_client, limit=2) == [QUIET, MIDDLE]
+    assert names(seeded_client, limit=3) == names(seeded_client)[:3]
 
 
 def test_q_matches_part_of_a_campground_name_in_any_case(seeded_client: TestClient) -> None:
@@ -71,6 +80,41 @@ def test_q_with_no_match_finds_nothing(seeded_client: TestClient) -> None:
 
 def test_q_and_park_must_both_match(seeded_client: TestClient) -> None:
     assert names(seeded_client, q="creek", park="Busy Coast National Park") == []
+
+
+def test_a_page_with_everything_has_no_next(seeded_client: TestClient) -> None:
+    assert page(seeded_client)["next"] is None
+
+
+def test_next_continues_where_the_page_ended(seeded_client: TestClient) -> None:
+    first = page(seeded_client, limit=3)
+    rest = page(seeded_client, limit=3, after=first["next"])
+
+    assert first["next"] is not None
+    assert [c["name"] for c in rest["results"]] == [BUSY]
+    assert rest["next"] is None
+
+
+def test_one_at_a_time_gives_the_same_order_through_a_tie(seeded_client: TestClient) -> None:
+    """Paging on busyness alone would skip or repeat TWIN after QUIET: both are 0."""
+    paged: list[str] = []
+    after = None
+    while True:
+        one = page(seeded_client, limit=1, **({} if after is None else {"after": after}))
+        paged += [c["name"] for c in one["results"]]
+        after = one["next"]
+        if after is None:
+            break
+
+    assert paged == names(seeded_client)
+
+
+def test_next_pages_keep_the_filters_sent_again(seeded_client: TestClient) -> None:
+    first = page(seeded_client, q="creek", limit=1)
+    second = page(seeded_client, q="creek", limit=1, after=first["next"])
+
+    assert [c["name"] for c in first["results"] + second["results"]] == [QUIET, MIDDLE]
+    assert second["next"] is None
 
 
 @pytest.mark.parametrize("wildcard", ["%%", "__"])

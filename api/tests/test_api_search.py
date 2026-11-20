@@ -24,7 +24,7 @@ def test_search_answers_with_a_list_of_results(client: TestClient) -> None:
     response = client.get(SEARCH, params=EASTER_2027)
 
     assert response.status_code == 200
-    assert response.json() == {"results": []}  # the test database is empty
+    assert response.json() == {"results": [], "next": None}  # the test database is empty
 
 
 def test_park_and_limit_are_accepted(client: TestClient) -> None:
@@ -54,6 +54,8 @@ def test_sixty_nights_is_allowed(client: TestClient) -> None:
         ({**EASTER_2027, "limit": 101}, "limit above 100"),
         ({**EASTER_2027, "q": "a"}, "q shorter than 2"),
         ({**EASTER_2027, "q": "a" * 101}, "q longer than 100"),
+        ({**EASTER_2027, "after": "not-a-cursor"}, "after isn't base64 JSON"),
+        ({**EASTER_2027, "after": "WzFd"}, "after is [1], not [busyness, id]"),
     ],
 )
 def test_bad_searches_are_422(client: TestClient, params: dict[str, Any], why: str) -> None:

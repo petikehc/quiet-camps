@@ -97,6 +97,7 @@ def seed_search_history(conn: Conn) -> None:
         tuesday = date.fromisocalendar(year, 10, 2)
         saturday = date.fromisocalendar(year, 10, 6)
         book(conn, RANGE, "Quiet Creek camping area", tuesday)  # open in March, empty Saturdays
+        book(conn, RANGE, "Twin Hollow camping area", tuesday)  # ties with Quiet Creek
         book(conn, RANGE, "Middle Creek camping area", saturday, sites=2)
         book(conn, COAST, "Busy Beach camping area", saturday, sites=10)
         book(conn, RANGE, "Closed Gorge camping area", date(year, 8, 13), sites=5)
@@ -106,6 +107,7 @@ def seed_search_history(conn: Conn) -> None:
         book(conn, RANGE, "Retired Ridge camping area", date.fromisocalendar(year, 10, 2))
     # The latest quarter isn't history yet; this night makes all of 2025 count.
     book(conn, RANGE, "Quiet Creek camping area", date(2026, 1, 15))
+    book(conn, RANGE, "Twin Hollow camping area", date(2026, 1, 15))
     list(refresh_derived(conn))
 
 
