@@ -2,6 +2,7 @@
 
 from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
 
 SEARCH = "/campgrounds/quiet"
@@ -54,3 +55,25 @@ def test_park_narrows_the_search(seeded_client: TestClient) -> None:
 
 def test_limit_keeps_the_quietest(seeded_client: TestClient) -> None:
     assert names(seeded_client, limit=2) == [QUIET, MIDDLE]
+
+
+def test_q_matches_part_of_a_campground_name_in_any_case(seeded_client: TestClient) -> None:
+    assert names(seeded_client, q="CREEK") == [QUIET, MIDDLE]  # still quietest first
+
+
+def test_q_matches_the_park_name_too(seeded_client: TestClient) -> None:
+    assert names(seeded_client, q="busy coast") == [BUSY]
+
+
+def test_q_with_no_match_finds_nothing(seeded_client: TestClient) -> None:
+    assert names(seeded_client, q="nowhere") == []
+
+
+def test_q_and_park_must_both_match(seeded_client: TestClient) -> None:
+    assert names(seeded_client, q="creek", park="Busy Coast National Park") == []
+
+
+@pytest.mark.parametrize("wildcard", ["%%", "__"])
+def test_q_wildcards_are_plain_characters(seeded_client: TestClient, wildcard: str) -> None:
+    """In LIKE, % is any text and _ any one character: unescaped, these would match everything."""
+    assert names(seeded_client, q=wildcard) == []

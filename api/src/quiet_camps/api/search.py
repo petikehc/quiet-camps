@@ -17,6 +17,7 @@ class SearchParams(BaseModel):
     arrive: date
     depart: date
     park: str | None = None
+    q: str | None = Field(None, min_length=2, max_length=100)  # part of a name or park name
     limit: int = Field(20, ge=1, le=100)
 
     @model_validator(mode="after")
@@ -58,5 +59,7 @@ async def quiet_campgrounds(
     params: Annotated[SearchParams, Query()],
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> SearchPage:
-    found = await search_quiet(session, params.arrive, params.depart, params.park, params.limit)
+    found = await search_quiet(
+        session, params.arrive, params.depart, params.park, params.q, params.limit
+    )
     return SearchPage(results=[QuietCampgroundOut.model_validate(c) for c in found])

@@ -52,6 +52,8 @@ def test_sixty_nights_is_allowed(client: TestClient) -> None:
         ({"arrive": "2027-01-01", "depart": "2027-03-03"}, "61 nights"),
         ({**EASTER_2027, "limit": 0}, "limit below 1"),
         ({**EASTER_2027, "limit": 101}, "limit above 100"),
+        ({**EASTER_2027, "q": "a"}, "q shorter than 2"),
+        ({**EASTER_2027, "q": "a" * 101}, "q longer than 100"),
     ],
 )
 def test_bad_searches_are_422(client: TestClient, params: dict[str, Any], why: str) -> None:

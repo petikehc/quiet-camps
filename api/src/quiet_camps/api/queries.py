@@ -23,6 +23,7 @@ JOIN campground_typical t ON t.kind = a.kind
 JOIN campground c ON c.id = t.campground_id
 WHERE c.last_night >= :active_since
   AND (CAST(:park AS text) IS NULL OR c.park_name = :park)
+  AND (CAST(:pattern AS text) IS NULL OR c.name ILIKE :pattern OR c.park_name ILIKE :pattern)
 GROUP BY c.id
 HAVING count(*) = (SELECT count(*) FROM asked) AND min(t.nights) >= :min_history
 ORDER BY busyness, c.id
@@ -44,16 +45,32 @@ class QuietCampground:
     location_flags: list[str]
 
 
+def contains(q: str) -> str:
+    """An ILIKE pattern for q anywhere, with q's own %, _ and \\ as plain characters."""
+    # Backslash is Postgres's default LIKE escape; escape it first, or it would double the rest.
+    escaped = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return f"%{escaped}%"
+
+
 async def search_quiet(
-    session: AsyncSession, arrive: date, depart: date, park: str | None, limit: int
+    session: AsyncSession,
+    arrive: date,
+    depart: date,
+    park: str | None,
+    q: str | None,
+    limit: int,
 ) -> list[QuietCampground]:
-    """Campgrounds that are usually quietest on the nights from arrive to depart (exclusive)."""
+    """Campgrounds that are usually quietest on the nights from arrive to depart (exclusive).
+
+    `q` narrows to names or park names containing it, ignoring case.
+    """
     result = await session.execute(
         SEARCH,
         {
             "arrive": arrive,
             "depart": depart,
             "park": park,
+            "pattern": None if q is None else contains(q),
             "limit": limit,
             "active_since": ACTIVE_SINCE,
             "min_history": MIN_HISTORY,

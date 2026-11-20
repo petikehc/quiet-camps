@@ -15,7 +15,7 @@ async def test_search_runs_against_the_migrated_schema(
 ) -> None:
     engine = create_async_engine(api_settings.database_url)
     async with async_sessionmaker(engine)() as session:
-        found = await search_quiet(session, date(2027, 3, 26), date(2027, 3, 29), None, 10)
+        found = await search_quiet(session, date(2027, 3, 26), date(2027, 3, 29), None, None, 10)
     await engine.dispose()
 
     assert found == []
