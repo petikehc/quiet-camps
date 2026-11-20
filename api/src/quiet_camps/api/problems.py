@@ -9,6 +9,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
+from quiet_camps.api.campground_service import CampgroundNotFound
+
 PROBLEM = "application/problem+json"
 
 
@@ -52,8 +54,14 @@ async def crash(request: Request, exc: Exception) -> JSONResponse:
     return problem(500, "Something went wrong on our side.")
 
 
+async def not_found(request: Request, exc: Exception) -> JSONResponse:
+    assert isinstance(exc, CampgroundNotFound)
+    return problem(404, str(exc))
+
+
 def add_problem_handlers(app: FastAPI) -> None:
     app.add_exception_handler(RequestValidationError, invalid_request)
     # Starlette's, not FastAPI's subclass: the router raises Starlette's for 404 and 405.
     app.add_exception_handler(HTTPException, http_error)
     app.add_exception_handler(Exception, crash)
+    app.add_exception_handler(CampgroundNotFound, not_found)

@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+from quiet_camps.api.campgrounds import campground_router
 from quiet_camps.api.experiment import experiment_router
 from quiet_camps.api.health import health_router
 from quiet_camps.api.problems import add_problem_handlers
@@ -14,7 +15,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(debug=settings.debug)
     add_problem_handlers(app)
     app.include_router(health_router)
+    # Routes match in the order added: /campgrounds/{campground_id} would claim /campgrounds/quiet.
     app.include_router(search_router)
+    app.include_router(campground_router)
     if settings.experiments:
         app.include_router(experiment_router)
     app.state.settings = settings
