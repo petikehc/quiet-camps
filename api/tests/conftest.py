@@ -8,7 +8,7 @@ from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
 from psycopg.rows import TupleRow
-from sqlalchemy import URL, Engine, create_engine, make_url, text
+from sqlalchemy import URL, Engine, create_engine, make_url, select, text
 from sqlalchemy.exc import OperationalError
 
 from quiet_camps.api.app import create_app
@@ -16,6 +16,7 @@ from quiet_camps.api.settings import Settings
 from quiet_camps.db.config import database_url, psycopg_conninfo
 from quiet_camps.db.derived import refresh_derived
 from quiet_camps.db.load import ensure_areas
+from quiet_camps.db.models import Campground
 
 type Conn = psycopg.Connection[TupleRow]
 
@@ -122,6 +123,17 @@ def seeded_settings() -> Iterator[Settings]:
         with psycopg.connect(psycopg_conninfo()) as conn:
             seed_search_history(conn)  # committed on leaving, so the app's connections see it
         yield Settings(database_url=url)
+
+
+@pytest.fixture(scope="session")
+def seeded_ids(seeded_settings: Settings) -> dict[str, int]:
+    """Each seeded campground's id by name, for URLs like /campgrounds/{id}."""
+    engine = create_engine(seeded_settings.database_url)
+    try:
+        with engine.connect() as conn:
+            return dict(conn.execute(select(Campground.name, Campground.id)).all())
+    finally:
+        engine.dispose()
 
 
 @pytest.fixture

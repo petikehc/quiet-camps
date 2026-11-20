@@ -5,7 +5,6 @@ from datetime import date
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, select
 
 from quiet_camps.api.app import create_app
 from quiet_camps.api.campground_service import CampgroundSource
@@ -19,17 +18,8 @@ RETIRED = "Retired Ridge camping area"
 RANGE = "Test Range National Park"
 
 
-def campground_id(settings: Settings, name: str) -> int:
-    engine = create_engine(settings.database_url)
-    try:
-        with engine.connect() as conn:
-            return conn.execute(select(Campground.id).where(Campground.name == name)).scalar_one()
-    finally:
-        engine.dispose()
-
-
-def test_a_campground_by_id(seeded_client: TestClient, seeded_settings: Settings) -> None:
-    quiet = campground_id(seeded_settings, QUIET)
+def test_a_campground_by_id(seeded_client: TestClient, seeded_ids: dict[str, int]) -> None:
+    quiet = seeded_ids[QUIET]
 
     response = seeded_client.get(f"/campgrounds/{quiet}")
 
@@ -49,9 +39,9 @@ def test_a_campground_by_id(seeded_client: TestClient, seeded_settings: Settings
 
 
 def test_a_retired_campground_is_found_but_not_active(
-    seeded_client: TestClient, seeded_settings: Settings
+    seeded_client: TestClient, seeded_ids: dict[str, int]
 ) -> None:
-    retired = campground_id(seeded_settings, RETIRED)
+    retired = seeded_ids[RETIRED]
 
     body = seeded_client.get(f"/campgrounds/{retired}").json()
 

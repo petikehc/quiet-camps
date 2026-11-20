@@ -6,8 +6,11 @@ from datetime import date, timedelta
 import pytest
 
 from quiet_camps.api.campground_service import (
+    CalendarNight,
+    CampgroundCalendar,
     CampgroundDetail,
     CampgroundNotFound,
+    campground_calendar,
     get_campground,
 )
 from quiet_camps.db.locations import ACTIVE_SINCE
@@ -71,5 +74,39 @@ def test_never_booked_is_retired() -> None:
 def test_an_unknown_id_is_not_found() -> None:
     with pytest.raises(CampgroundNotFound) as raised:
         detail(campground(campground_id=7), campground_id=8)
+
+    assert raised.value.campground_id == 8
+
+
+class FakeCalendar:
+    """Satisfies CalendarSource: the nights of one campground, any year."""
+
+    def __init__(self, campground_id: int, nights: list[CalendarNight]) -> None:
+        self.campground_id = campground_id
+        self.nights = nights
+
+    async def calendar(self, campground_id: int, year: int) -> list[CalendarNight]:
+        return self.nights if campground_id == self.campground_id else []
+
+
+NEW_YEAR = CalendarNight(
+    night=date(2025, 1, 1),
+    kind="new year",
+    holiday="christmas",
+    typical_sites=9.0,
+    busyness=0.9,
+    sites=11,
+)
+
+
+def test_a_calendar_is_its_nights() -> None:
+    found = asyncio.run(campground_calendar(FakeCalendar(7, [NEW_YEAR]), 7, 2025))
+
+    assert found == CampgroundCalendar(campground_id=7, year=2025, nights=[NEW_YEAR])
+
+
+def test_no_nights_means_no_campground() -> None:
+    with pytest.raises(CampgroundNotFound) as raised:
+        asyncio.run(campground_calendar(FakeCalendar(7, [NEW_YEAR]), 8, 2025))
 
     assert raised.value.campground_id == 8

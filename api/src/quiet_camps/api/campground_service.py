@@ -47,3 +47,34 @@ async def get_campground(source: CampgroundSource, campground_id: int) -> Campgr
         location_source=campground.location_source,
         location_flags=campground.location_flags,
     )
+
+
+@dataclass(frozen=True, kw_only=True)
+class CalendarNight:
+    night: date
+    kind: str  # its kind of night: "week 10 6", "easter +1"
+    holiday: str | None
+    typical_sites: float | None  # None: usually closed then, or too little history
+    busyness: float | None
+    sites: int | None  # booked; None once the history ends (the latest quarter, the future)
+
+
+@dataclass(frozen=True, kw_only=True)
+class CampgroundCalendar:
+    campground_id: int
+    year: int
+    nights: list[CalendarNight]
+
+
+class CalendarSource(Protocol):
+    async def calendar(self, campground_id: int, year: int) -> list[CalendarNight]: ...
+
+
+async def campground_calendar(
+    source: CalendarSource, campground_id: int, year: int
+) -> CampgroundCalendar:
+    nights = await source.calendar(campground_id, year)
+    # The route only asks for years the calendar holds, so no nights means no campground.
+    if not nights:
+        raise CampgroundNotFound(campground_id)
+    return CampgroundCalendar(campground_id=campground_id, year=year, nights=nights)
