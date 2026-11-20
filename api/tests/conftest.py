@@ -5,10 +5,13 @@ import psycopg
 import pytest
 from alembic import command
 from alembic.config import Config
+from fastapi.testclient import TestClient
 from psycopg.rows import TupleRow
 from sqlalchemy import Engine, create_engine, make_url, text
 from sqlalchemy.exc import OperationalError
 
+from quiet_camps.api.app import create_app
+from quiet_camps.api.settings import Settings
 from quiet_camps.db.config import database_url, psycopg_conninfo
 
 ALEMBIC_INI = Path(__file__).parents[1] / "alembic.ini"
@@ -48,3 +51,16 @@ def conn(test_db: Engine, alembic_cfg: Config) -> Iterator[psycopg.Connection[Tu
     command.upgrade(alembic_cfg, "head")
     with psycopg.connect(psycopg_conninfo()) as connection:
         yield connection
+
+
+@pytest.fixture
+def api_settings(test_db: Engine) -> Settings:
+    """Settings pointing the API at the empty test database."""
+    return Settings(database_url=test_db.url.render_as_string(hide_password=False))
+
+
+@pytest.fixture
+def client(api_settings: Settings) -> Iterator[TestClient]:
+    # `with` keeps one event loop for every request; pooled async connections belong to a loop.
+    with TestClient(create_app(api_settings)) as client:
+        yield client
