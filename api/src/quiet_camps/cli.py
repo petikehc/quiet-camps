@@ -1,15 +1,18 @@
 import argparse
+import json
 import time
 from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 
 import httpx
 import psycopg
 
 from quiet_camps.db.campgrounds import campground_suggestions
 from quiet_camps.db.config import psycopg_conninfo
-from quiet_camps.db.derived import refresh_derived
+from quiet_camps.db.derived import refresh_derived, refresh_locations
 from quiet_camps.db.load import load_all
+from quiet_camps.db.locations import OSM_FILE, PARKS_FILE, has_sources, location_report
 from quiet_camps.ingest.ckan import PackageShowResponse, camping_csv_urls
 from quiet_camps.ingest.download import download_csv
 from quiet_camps.ingest.profile_report import profile
@@ -21,7 +24,20 @@ PACKAGE_ID = "camping-and-vehicle-permits"
 USER_AGENT = "quiet-camps/0.1 (learning project)"
 # src/quiet_camps/cli.py → repo root. Works because uv installs the package in editable mode.
 DEFAULT_DATA_DIR = Path(__file__).resolve().parents[3] / "data" / "raw"
+DEFAULT_LOCATIONS_DIR = DEFAULT_DATA_DIR.parent / "locations"
 PAUSE_BETWEEN_DOWNLOADS = 0.5
+
+OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+# Every named campsite in Queensland; `out geom` adds the outline of those drawn as an area.
+OVERPASS_QUERY = """[out:json][timeout:180];
+area["ISO3166-2"="AU-QLD"]->.qld;
+nwr["tourism"="camp_site"]["name"](area.qld);
+out geom;"""
+PARKS_URL = (
+    "https://spatial-gis.information.qld.gov.au/arcgis/rest/services/Environment/"
+    "ParksTerrestrialProtectedAreas/MapServer/10/query"
+)
+PARKS_PAGE = 1000
 
 
 def is_transient(exc: Exception) -> bool:
@@ -43,6 +59,68 @@ def fetch_package(client: httpx.Client) -> PackageShowResponse:
     if not package["success"]:
         raise RuntimeError(f"CKAN package_show failed for {PACKAGE_ID}")
     return package
+
+
+@retry(attempts=4, delay=10.0, retry_if=is_transient)
+def fetch_osm_camp_sites(client: httpx.Client) -> dict[str, Any]:
+    response = client.post(OVERPASS_URL, data={"data": OVERPASS_QUERY}, timeout=240)
+    response.raise_for_status()
+    return response.json()
+
+
+@retry(attempts=4, delay=2.0, retry_if=is_transient)
+def fetch_park_outlines_page(client: httpx.Client, offset: int) -> dict[str, Any]:
+    params: dict[str, str | float] = {
+        "where": "1=1",
+        "outFields": "objectid,estatename,esttype,latitude,longitude,gazareaha",
+        "outSR": 4326,  # longitude and latitude, as GeoJSON wants
+        "maxAllowableOffset": 0.001,  # simplify to about 100 m: 2 MB instead of 100+
+        "geometryPrecision": 5,
+        "orderByFields": "objectid",
+        "resultOffset": offset,
+        "resultRecordCount": PARKS_PAGE,
+        "f": "geojson",
+    }
+    response = client.get(PARKS_URL, params=params)
+    response.raise_for_status()
+    return response.json()
+
+
+def fetch_park_outlines(client: httpx.Client) -> dict[str, Any]:
+    """Every protected area, one page at a time."""
+    features: list[Any] = []
+    while True:
+        page = fetch_park_outlines_page(client, len(features))
+        features += page["features"]
+        if len(page["features"]) < PARKS_PAGE:
+            return {"type": "FeatureCollection", "features": features}
+
+
+def fetch_locations(locations_dir: Path) -> None:
+    locations_dir.mkdir(parents=True, exist_ok=True)
+    with httpx.Client(
+        headers={"User-Agent": USER_AGENT}, follow_redirects=True, timeout=60
+    ) as client:
+        camps = fetch_osm_camp_sites(client)
+        (locations_dir / OSM_FILE).write_text(json.dumps(camps), encoding="utf-8")
+        print(f"{len(camps['elements'])} OSM campsites (© OpenStreetMap contributors, ODbL)")
+        parks = fetch_park_outlines(client)
+        (locations_dir / PARKS_FILE).write_text(json.dumps(parks), encoding="utf-8")
+        print(f"{len(parks['features'])} park outlines (© State of Queensland, CC BY 4.0)")
+
+
+def locations_command(locations_dir: Path, fetch: bool, sample: int) -> int:
+    if fetch:
+        fetch_locations(locations_dir)
+    if not has_sources(locations_dir):
+        print(f"No location files in {locations_dir}: run `qc locations --fetch` first.")
+        return 1
+    with psycopg.connect(psycopg_conninfo()) as conn:
+        for line in refresh_locations(conn, locations_dir):
+            print(line)
+        for line in location_report(conn, sample):
+            print(line)
+    return 0
 
 
 def download_all(
@@ -121,14 +199,32 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="Rebuild campgrounds, the calendar and the views (qc load does this too).",
         description=(
             "Rebuild what's derived from the loaded nights: campgrounds (after editing "
-            "campground_merges.csv), the calendar of holiday nights, area_night and "
-            "campground_typical."
+            "campground_merges.csv), the calendar of holiday nights, area_night, "
+            "campground_typical and, once downloaded, the locations."
         ),
     )
     commands.add_parser(
         "campgrounds",
         help="List likely typos among campground names, as rows for campground_merges.csv.",
     )
+
+    locations = commands.add_parser(
+        "locations",
+        help="Locate campgrounds from OSM campsites and park outlines, and list what needs a look.",
+        description=(
+            "Match every campground to an OpenStreetMap campsite (ODbL) inside its park "
+            "(Queensland protected areas, CC BY 4.0), or fall back to the park's centre. "
+            "Reviewed fixes go in location_overrides.csv. qc load and qc refresh re-run "
+            "the matching from the downloaded files."
+        ),
+    )
+    locations.add_argument(
+        "--fetch", action="store_true", help="Download the OSM campsites and park outlines first."
+    )
+    locations.add_argument(
+        "--sample", type=int, default=0, metavar="N", help="Also list N clean matches to check."
+    )
+    locations.add_argument("--locations-dir", type=Path, default=DEFAULT_LOCATIONS_DIR)
 
     args = parser.parse_args(argv)
     match args.command:
@@ -146,12 +242,18 @@ def main(argv: Sequence[str] | None = None) -> int:
             with psycopg.connect(psycopg_conninfo()) as conn:
                 for line in load_all(conn, args.data_dir):
                     print(line, flush=True)
+                for line in refresh_locations(conn, DEFAULT_LOCATIONS_DIR):
+                    print(line, flush=True)
             return 0
         case "refresh":
             with psycopg.connect(psycopg_conninfo()) as conn:
                 for line in refresh_derived(conn):
                     print(line, flush=True)
+                for line in refresh_locations(conn, DEFAULT_LOCATIONS_DIR):
+                    print(line, flush=True)
             return 0
+        case "locations":
+            return locations_command(args.locations_dir, args.fetch, args.sample)
         case "campgrounds":
             with psycopg.connect(psycopg_conninfo()) as conn:
                 for line in campground_suggestions(conn):

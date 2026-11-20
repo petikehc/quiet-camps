@@ -1,11 +1,13 @@
 from collections.abc import Iterator
 from datetime import date
+from pathlib import Path
 
 import psycopg
 from psycopg import sql
 from psycopg.rows import TupleRow
 
 from quiet_camps.db.campgrounds import assign_campgrounds
+from quiet_camps.db.locations import has_sources, locate_campgrounds
 from quiet_camps.ingest.day_kinds import day_kinds
 from quiet_camps.timing import timed
 
@@ -48,3 +50,13 @@ def refresh_derived(conn: psycopg.Connection[TupleRow]) -> Iterator[str]:
             row = conn.execute(sql.SQL("SELECT count(*) FROM {}").format(name)).fetchone()
         rows = row[0] if row else 0
         yield f"{view:<42} {rows:>9,} {t.seconds:6.1f}s"
+
+
+def refresh_locations(conn: psycopg.Connection[TupleRow], locations_dir: Path) -> Iterator[str]:
+    """Re-locate every campground from the downloaded files. Run after refresh_derived."""
+    if not has_sources(locations_dir):
+        yield f"{'locations':<42} skipped: run `qc locations --fetch` first"
+        return
+    with timed() as t:
+        n = len(locate_campgrounds(conn, locations_dir))
+    yield f"{'locations':<42} {n:>9,} {t.seconds:6.1f}s"

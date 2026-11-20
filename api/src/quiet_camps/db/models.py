@@ -1,6 +1,8 @@
 from datetime import date
+from typing import Any
 
-from sqlalchemy import ForeignKey, MetaData, String, UniqueConstraint
+from sqlalchemy import BigInteger, ForeignKey, MetaData, String, UniqueConstraint
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 from quiet_camps.ingest.clean import State
@@ -59,7 +61,37 @@ class Campground(Base):
     # A third of campgrounds are retired sites or old names: search only recent ones.
     last_night: Mapped[date | None]
 
+    # Where it is, from quiet_camps.ingest.locations. None until `qc locations` has run.
+    lat: Mapped[float | None]
+    lon: Mapped[float | None]
+    location_source: Mapped[str | None]  # osm, park_osm, park_qld or manual
+    # Why the location needs a look (weak_name, tie, rejected_osm...); empty when it's clean.
+    location_flags: Mapped[list[str]] = mapped_column(ARRAY(String), server_default="{}")
+    # The OSM campsite matched, or the one rejected (with the rejected_osm flag).
+    osm_type: Mapped[str | None]
+    osm_id: Mapped[int | None] = mapped_column(BigInteger)
+    osm_name: Mapped[str | None]
+    match_score: Mapped[float | None]
+    # GeoJSON, for the campgrounds OSM draws as an area.
+    osm_outline: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    park_outline_id: Mapped[int | None] = mapped_column(ForeignKey("park_outline.id"))
+
     areas: Mapped[list[CampingArea]] = relationship(back_populates="campground")
+    park_outline: Mapped[ParkOutline | None] = relationship()
+
+
+class ParkOutline(Base):
+    """A protected area's boundary (Queensland Government, CC BY 4.0), simplified to ~100 m."""
+
+    __tablename__ = "park_outline"
+
+    # The service's objectid: the table is replaced on every run, so it only has to be unique.
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=False)
+    name: Mapped[str]
+    kind: Mapped[str]  # NP, CP, SF...
+    area_ha: Mapped[float]
+    # GeoJSON Polygon or MultiPolygon, [lon, lat], ready for a map.
+    geometry: Mapped[dict[str, Any]] = mapped_column(JSONB)
 
 
 class CalendarDay(Base):

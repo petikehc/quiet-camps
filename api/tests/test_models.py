@@ -27,6 +27,7 @@ def test_the_tables() -> None:
         "camp_night",
         "campground",
         "calendar_day",
+        "park_outline",
     }
 
 
