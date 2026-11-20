@@ -8,7 +8,12 @@ authors = [
 ]
 requires-python = ">=3.14"
 dependencies = [
+    "alembic>=1.20.1",
+    "holidays>=0.109",
     "httpx>=0.28.1",
+    "psycopg[binary]>=3.3.9",
+    "rapidfuzz>=3.14.6",
+    "sqlalchemy>=2.1.9",
 ]
 
 [project.scripts]

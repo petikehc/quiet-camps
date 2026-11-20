@@ -3,7 +3,8 @@ from datetime import date, datetime, timedelta
 from enum import StrEnum
 
 # Each format only matches its own shape ("%d/%m/%y" rejects "1/07/2016" and "%d/%m/%Y"
-# rejects "01/07/15"), so the order doesn't matter.
+# rejects "01/07/15"), so the order doesn't matter. "%d/%m/%Y" does accept "07/04/0016" as
+# the year 16: a typo in a few 2015-16 rows, which parse_date moves to 2016.
 DATE_FORMATS = ("%d/%m/%Y", "%d/%m/%y", "%d-%b-%y")
 EXCEL_EPOCH = date(1899, 12, 30)
 # Only serials between 2000-01-01 and 2049-12-31 count as dates, so "4000" isn't 15 Dec 1910.
@@ -33,9 +34,13 @@ def parse_date(text: str) -> date:
 
     for date_format in DATE_FORMATS:
         try:
-            return datetime.strptime(value, date_format).date()
+            parsed = datetime.strptime(value, date_format).date()
         except ValueError:
             continue
+
+        if parsed.year < 100:
+            return parsed.replace(year=parsed.year + 2000)
+        return parsed
 
     raise ValueError(f"unrecognised date: {text!r}")
 

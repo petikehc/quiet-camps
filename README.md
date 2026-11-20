@@ -9,6 +9,8 @@ A learning project with Python (FastAPI, SQLAlchemy, Postgres) and React, built 
 ## Data and attribution
 
 - Camping permits: [Camping and vehicle permits](https://www.data.qld.gov.au/dataset/camping-and-vehicle-permits), © State of Queensland, licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+- Campground locations: © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, available under the [Open Database Licence](https://opendatacommons.org/licenses/odbl/).
+- Park outlines: [Protected areas of Queensland](https://www.data.qld.gov.au/dataset/protected-areas-of-queensland-series), © State of Queensland, licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 - The data shows **past bookings**, not live availability. "Quiet" means quiet compared with that campground's own history.
 
 This project is not affiliated with or endorsed by Queensland Parks and Wildlife Service or the Queensland Government.

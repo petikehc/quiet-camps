@@ -1,0 +1,217 @@
+from datetime import date
+from pathlib import Path
+
+import psycopg
+import pytest
+from psycopg import sql
+from psycopg.rows import TupleRow
+
+from quiet_camps.db.config import psycopg_conninfo
+from quiet_camps.db.load import ensure_areas, load_all, load_file
+
+type Conn = psycopg.Connection[TupleRow]
+
+# A family B (one row per night) file, as in test_files.py.
+HEADER_B = (
+    "Reservation Number,Type,Postcode,State,Booking Date,Start Date,Stay Date,"
+    "Park,Facility,Adults,Children,Infants"
+)
+POVERTY_CREEK = "Bribie Island NP,Poverty Creek"
+
+
+def count(conn: Conn, table: str) -> int:
+    # A table name can't be a %s parameter, so sql.Identifier quotes it safely instead.
+    row = conn.execute(sql.SQL("SELECT count(*) FROM {}").format(sql.Identifier(table))).fetchone()
+    assert row is not None
+    return row[0]
+
+
+def test_every_pair_gets_an_id(conn: Conn) -> None:
+    pairs = [("Bribie Island", "Gallagher Point"), ("Bribie Island", "Poverty Creek")]
+    ids = ensure_areas(conn, pairs)
+    assert set(ids) == set(pairs)
+    assert len(set(ids.values())) == 2
+    assert count(conn, "park") == 1
+    assert count(conn, "camping_area") == 2
+
+
+def test_the_ids_are_the_rows_in_the_database(conn: Conn) -> None:
+    ids = ensure_areas(conn, [("Bribie Island", "Poverty Creek")])
+    row = conn.execute(
+        "SELECT p.name, a.name FROM camping_area a JOIN park p ON p.id = a.park_id WHERE a.id = %s",
+        (ids[("Bribie Island", "Poverty Creek")],),
+    ).fetchone()
+    assert row == ("Bribie Island", "Poverty Creek")
+
+
+def test_the_same_area_name_in_two_parks_is_two_areas(conn: Conn) -> None:
+    ids = ensure_areas(conn, [("Park A", "Beach camping"), ("Park B", "Beach camping")])
+    assert ids[("Park A", "Beach camping")] != ids[("Park B", "Beach camping")]
+
+
+def test_repeats_in_the_input_are_fine(conn: Conn) -> None:
+    pairs = [("Bribie Island", "Poverty Creek")] * 3
+    assert len(ensure_areas(conn, pairs)) == 1
+    assert count(conn, "camping_area") == 1
+
+
+def test_a_second_call_returns_the_same_ids_and_adds_nothing(conn: Conn) -> None:
+    pairs = [("Bribie Island", "Poverty Creek"), ("Moreton Island", "The Wrecks")]
+    first = ensure_areas(conn, pairs)
+    # One new area in a park that already exists, as the next file might bring.
+    second = ensure_areas(conn, [*pairs, ("Moreton Island", "Ben-Ewa")])
+    assert {pair: second[pair] for pair in pairs} == first
+    assert count(conn, "park") == 2
+    assert count(conn, "camping_area") == 3
+
+
+def test_names_with_quotes_are_data_not_sql(conn: Conn) -> None:
+    # Real park names have apostrophes. A name glued into the SQL string would break here.
+    ids = ensure_areas(conn, [("K'gari (Fraser Island)", "Central Station")])
+    assert ("K'gari (Fraser Island)", "Central Station") in ids
+
+
+def test_nothing_in_nothing_out(conn: Conn) -> None:
+    assert ensure_areas(conn, []) == {}
+    assert count(conn, "park") == 0
+
+
+def test_the_caller_owns_the_transaction(conn: Conn) -> None:
+    # The loader decides when to commit, so a failed file can roll back its areas too.
+    ensure_areas(conn, [("Bribie Island", "Poverty Creek")])
+    conn.rollback()
+    assert count(conn, "park") == 0
+    assert count(conn, "camping_area") == 0
+
+
+def write_b(path: Path, *rows: str) -> Path:
+    path.write_text("\r\n".join([HEADER_B, *rows]) + "\r\n", encoding="utf-8-sig")
+    return path
+
+
+def test_load_file_copies_every_night_with_its_area_and_file(conn: Conn, tmp_path: Path) -> None:
+    path = write_b(
+        tmp_path / "q1.csv",
+        f"576013,Camping,4507,QLD,1/02/2018,31/03/2018,31/03/2018,{POVERTY_CREEK},2,1,0",
+        f"576013,Camping,4507,QLD,1/02/2018,31/03/2018,1/04/2018,{POVERTY_CREEK},2,1,0",
+        "601222,Camping,,NSW,3/03/2018,1/04/2018,1/04/2018,Moreton Island NP,The Wrecks,,,",
+    )
+
+    assert load_file(conn, path) == 3
+
+    rows = conn.execute(
+        "SELECT p.name, a.name, n.night, n.booked_on, n.adults, n.children, n.infants,"
+        " n.postcode, n.state::text, n.reservation_id, n.source_file"
+        " FROM camp_night n"
+        " JOIN camping_area a ON a.id = n.area_id JOIN park p ON p.id = a.park_id"
+        " ORDER BY n.night, p.name"
+    ).fetchall()
+    bribie = ("Bribie Island NP", "Poverty Creek")
+    assert rows == [
+        (*bribie, date(2018, 3, 31), date(2018, 2, 1), 2, 1, 0, "4507", "QLD", "576013", "q1.csv"),
+        (*bribie, date(2018, 4, 1), date(2018, 2, 1), 2, 1, 0, "4507", "QLD", "576013", "q1.csv"),
+        # Blanks arrive as NULL, not 0 or "".
+        (
+            *("Moreton Island NP", "The Wrecks", date(2018, 4, 1), date(2018, 3, 3)),
+            *(None, None, None, None, "NSW", "601222", "q1.csv"),
+        ),
+    ]
+
+
+def test_load_file_commits(conn: Conn, tmp_path: Path) -> None:
+    path = write_b(
+        tmp_path / "q1.csv",
+        f"576013,Camping,4507,QLD,1/02/2018,31/03/2018,31/03/2018,{POVERTY_CREEK},2,0,0",
+    )
+    load_file(conn, path)
+
+    # A second connection only sees committed rows.
+    with psycopg.connect(psycopg_conninfo()) as other:
+        assert count(other, "camp_night") == 1
+
+
+def test_two_files_share_the_park_and_area(conn: Conn, tmp_path: Path) -> None:
+    row = f"576013,Camping,4507,QLD,1/02/2018,31/03/2018,{{night}},{POVERTY_CREEK},2,0,0"
+    load_file(conn, write_b(tmp_path / "q1.csv", row.format(night="31/03/2018")))
+    load_file(conn, write_b(tmp_path / "q2.csv", row.format(night="1/04/2018")))
+
+    assert count(conn, "camping_area") == 1
+    assert count(conn, "camp_night") == 2
+
+
+def test_a_file_that_fails_part_way_leaves_nothing_behind(conn: Conn, tmp_path: Path) -> None:
+    # Make the database reject the last night, after the areas and the first nights went in.
+    conn.execute("ALTER TABLE camp_night ADD CONSTRAINT test_no_huge_parties CHECK (adults < 50)")
+    conn.commit()
+    path = write_b(
+        tmp_path / "q1.csv",
+        f"576013,Camping,4507,QLD,1/02/2018,31/03/2018,31/03/2018,{POVERTY_CREEK},2,0,0",
+        "601222,Camping,4000,QLD,3/03/2018,1/04/2018,1/04/2018,Moreton Island NP,The Wrecks,99,0,0",
+    )
+
+    with pytest.raises(psycopg.errors.CheckViolation):
+        load_file(conn, path)
+
+    assert count(conn, "camp_night") == 0
+    assert count(conn, "camping_area") == 0
+    assert count(conn, "park") == 0
+
+
+def test_loading_a_file_again_replaces_its_rows(conn: Conn, tmp_path: Path) -> None:
+    row = f"576013,Camping,4507,QLD,1/02/2018,31/03/2018,{{night}},{POVERTY_CREEK},2,0,0"
+    path = write_b(tmp_path / "q1.csv", row.format(night="31/03/2018"))
+    load_file(conn, path)
+    # The publisher fixed the file: a night was added.
+    write_b(path, row.format(night="31/03/2018"), row.format(night="1/04/2018"))
+
+    assert load_file(conn, path) == 2
+    assert count(conn, "camp_night") == 2
+
+
+def test_reloading_one_file_leaves_the_other_files_alone(conn: Conn, tmp_path: Path) -> None:
+    row = f"576013,Camping,4507,QLD,1/02/2018,31/03/2018,{{night}},{POVERTY_CREEK},2,0,0"
+    q1 = write_b(tmp_path / "q1.csv", row.format(night="31/03/2018"))
+    load_file(conn, write_b(tmp_path / "q2.csv", row.format(night="1/04/2018")))
+    load_file(conn, q1)
+    load_file(conn, q1)
+
+    files = conn.execute("SELECT source_file FROM camp_night ORDER BY source_file").fetchall()
+    assert files == [("q1.csv",), ("q2.csv",)]
+
+
+def test_load_all_loads_every_csv_and_reports_it(conn: Conn, tmp_path: Path) -> None:
+    row = f"576013,Camping,4507,QLD,1/02/2018,31/03/2018,{{night}},{POVERTY_CREEK},2,0,0"
+    write_b(tmp_path / "q1.csv", row.format(night="31/03/2018"))
+    write_b(tmp_path / "q2.csv", row.format(night="1/04/2018"), row.format(night="2/04/2018"))
+    (tmp_path / "notes.txt").write_text("not a permit file")
+
+    lines = list(load_all(conn, tmp_path))
+
+    assert count(conn, "camp_night") == 3
+    # One line per file, in name order, with its night count; then a total.
+    assert [line.split()[:2] for line in lines[:2]] == [["q1.csv", "1"], ["q2.csv", "2"]]
+    assert lines[-1].startswith("total")
+    assert "3 nights from 2 files" in lines[-1]
+
+
+def test_load_all_rebuilds_campgrounds_and_the_views(conn: Conn, tmp_path: Path) -> None:
+    row = f"576013,Camping,4507,QLD,1/02/2018,31/03/2018,31/03/2018,{POVERTY_CREEK},2,0,0"
+    write_b(tmp_path / "q1.csv", row)
+
+    lines = list(load_all(conn, tmp_path))
+
+    reported = {line.split()[0]: line.split()[1] for line in lines[1:-1]}
+    assert reported["campgrounds"] == "1"
+    assert reported["area_night"] == "1"
+    unassigned = conn.execute("SELECT count(*) FROM camping_area WHERE campground_id IS NULL")
+    assert unassigned.fetchone() == (0,)
+
+
+def test_load_all_twice_changes_nothing(conn: Conn, tmp_path: Path) -> None:
+    row = f"576013,Camping,4507,QLD,1/02/2018,31/03/2018,{{night}},{POVERTY_CREEK},2,0,0"
+    write_b(tmp_path / "q1.csv", row.format(night="31/03/2018"), row.format(night="1/04/2018"))
+    list(load_all(conn, tmp_path))
+    list(load_all(conn, tmp_path))
+
+    assert count(conn, "camp_night") == 2
+    assert count(conn, "camping_area") == 1
