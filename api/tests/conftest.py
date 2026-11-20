@@ -60,7 +60,9 @@ def api_settings(test_db: Engine) -> Settings:
 
 
 @pytest.fixture
-def client(api_settings: Settings) -> Iterator[TestClient]:
+def client(api_settings: Settings, alembic_cfg: Config) -> Iterator[TestClient]:
+    """The API on the test database, migrated to head and empty."""
+    command.upgrade(alembic_cfg, "head")
     # `with` keeps one event loop for every request; pooled async connections belong to a loop.
     with TestClient(create_app(api_settings)) as client:
         yield client
