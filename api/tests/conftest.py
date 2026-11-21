@@ -145,6 +145,12 @@ def seed_search_history(conn: Conn) -> None:
     book(conn, RANGE, "Twin Hollow camping area", date(2026, 1, 15))
     seed_lead_times(conn)
     list(refresh_derived(conn))
+    # One campground matched to an OpenStreetMap object, as `qc locations` would; after
+    # refresh_derived, which creates the campground rows.
+    conn.execute(
+        "UPDATE campground SET osm_type = 'way', osm_id = 4242 WHERE name = %s",
+        ("Quiet Creek camping area",),
+    )
 
 
 @pytest.fixture(scope="session")

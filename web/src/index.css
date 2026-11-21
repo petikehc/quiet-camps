@@ -176,6 +176,16 @@ button[type='submit'] {
   margin-bottom: 1.5rem;
 }
 
+.selected-campground {
+  margin: -0.75rem 0 1.5rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--text);
+  border-radius: 6px;
+  background: var(--surface);
+  font-size: 0.875rem;
+}
+
 .map-canvas {
   height: 380px;
   border-radius: 8px;

@@ -2,6 +2,7 @@ import { getRouteApi } from '@tanstack/react-router'
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { fieldErrors } from '../api/errors'
 import { ResultsTable, type QuietCampground } from './ResultsTable'
+import { SelectedCampground } from './SelectedCampground'
 import { SearchForm } from './SearchForm'
 import { useQuietSearch } from './useQuietSearch'
 
@@ -19,6 +20,7 @@ export function SearchPage() {
   const rows = useMemo(() => search.data?.pages.flatMap((page) => page.results) ?? noRows, [search.data])
   // Shared by the map and the list: picking in one highlights (and brings into view) the other.
   const [selected, setSelected] = useState<{ id: number; from: 'map' | 'list' }>()
+  const selectedRow = rows.find((r) => r.id === selected?.id) // gone when a new search drops it
 
   return (
     <>
@@ -33,6 +35,7 @@ export function SearchPage() {
           fitKey={JSON.stringify(filters)}
         />
       </Suspense>
+      {selectedRow && <SelectedCampground campground={selectedRow} />}
       {search.isPending && <p role="status">Searching…</p>}
       {search.isError && <SearchError error={search.error} />}
       {search.isSuccess && rows.length === 0 && (

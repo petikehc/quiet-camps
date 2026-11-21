@@ -250,6 +250,10 @@ export interface components {
             lon: number | null;
             /** Name */
             name: string;
+            /** Osm Id */
+            osm_id: number | null;
+            /** Osm Type */
+            osm_type: string | null;
             /** Park Name */
             park_name: string;
             /** Typical Sites */

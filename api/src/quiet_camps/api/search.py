@@ -70,6 +70,10 @@ class QuietCampgroundOut(BaseModel):
     lon: float | None
     location_source: str | None
     location_flags: list[str]
+    # The OpenStreetMap object it was matched to (node, way or relation), or the match that was
+    # rejected when location_flags has rejected_osm. None when nothing on the map matched.
+    osm_type: str | None
+    osm_id: int | None
 
 
 class SearchPage(BaseModel):

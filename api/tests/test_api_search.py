@@ -17,6 +17,8 @@ RESULT_FIELDS = {
     "lon",
     "location_source",
     "location_flags",
+    "osm_type",
+    "osm_id",
 }
 
 

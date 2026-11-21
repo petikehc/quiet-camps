@@ -58,6 +58,13 @@ def test_a_campground_with_too_little_history_is_left_out(seeded_client: TestCli
     assert "Thin Creek camping area" not in names(seeded_client)
 
 
+def test_a_result_names_the_openstreetmap_object_it_matched(seeded_client: TestClient) -> None:
+    by_name = {c["name"]: c for c in results(seeded_client)}
+
+    assert (by_name[QUIET]["osm_type"], by_name[QUIET]["osm_id"]) == ("way", 4242)
+    assert (by_name[BUSY]["osm_type"], by_name[BUSY]["osm_id"]) == (None, None)  # no match
+
+
 def test_park_narrows_the_search(seeded_client: TestClient) -> None:
     assert names(seeded_client, park="Busy Coast National Park") == [BUSY]
 

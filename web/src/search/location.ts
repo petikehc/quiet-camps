@@ -18,6 +18,14 @@ const REASONS: Record<string, string> = {
   rejected_osm: 'A match on the map failed a check',
 }
 
+// The OpenStreetMap object a campground was matched to, to check the match against the map.
+export function osmLink(c: QuietCampground): { href: string; label: string } | undefined {
+  if (c.osm_type === null || c.osm_id === null) return undefined
+  const href = `https://www.openstreetmap.org/${c.osm_type}/${c.osm_id}`
+  const rejected = c.location_flags.includes('rejected_osm')
+  return { href, label: rejected ? 'The rejected match on OpenStreetMap' : 'On OpenStreetMap' }
+}
+
 export function locationNote(c: QuietCampground): { certainty: Certainty; reasons: string[] } {
   // `reviewed` means someone checked it by hand: a reason to trust it, not to look again.
   const reasons = c.location_flags.filter((f) => f !== 'reviewed').map((f) => REASONS[f] ?? f)

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { locationNote } from './location'
+import { locationNote, osmLink } from './location'
 import type { QuietCampground } from './ResultsTable'
 
 const camp = (overrides: Partial<QuietCampground>): QuietCampground => ({
@@ -13,7 +13,27 @@ const camp = (overrides: Partial<QuietCampground>): QuietCampground => ({
   lon: 148.5,
   location_source: 'osm',
   location_flags: [],
+  osm_type: null,
+  osm_id: null,
   ...overrides,
+})
+
+describe('osmLink', () => {
+  it('links to the matched OpenStreetMap object', () => {
+    expect(osmLink(camp({ osm_type: 'node', osm_id: 6839356357 }))).toEqual({
+      href: 'https://www.openstreetmap.org/node/6839356357',
+      label: 'On OpenStreetMap',
+    })
+  })
+
+  it('says when the object is a match that was rejected', () => {
+    const link = osmLink(camp({ osm_type: 'way', osm_id: 1, location_flags: ['rejected_osm'] }))
+    expect(link?.label).toBe('The rejected match on OpenStreetMap')
+  })
+
+  it('has no link without a match', () => {
+    expect(osmLink(camp({}))).toBeUndefined()
+  })
 })
 
 describe('locationNote', () => {
