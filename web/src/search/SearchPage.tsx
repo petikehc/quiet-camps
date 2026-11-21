@@ -14,7 +14,8 @@ const noRows: QuietCampground[] = []
 const ResultsMap = lazy(() => import('./ResultsMap').then((m) => ({ default: m.ResultsMap })))
 
 export function SearchPage() {
-  const filters = route.useSearch()
+  const { review, ...filters } = route.useSearch()
+  const reviewing = review === 'locations'
   const search = useQuietSearch(filters)
   // A new array only when a page arrives; the table rebuilds its rows when this changes.
   const rows = useMemo(() => search.data?.pages.flatMap((page) => page.results) ?? noRows, [search.data])
@@ -33,9 +34,10 @@ export function SearchPage() {
           selectedId={selected?.id}
           onSelect={(id) => setSelected({ id, from: 'map' })}
           fitKey={JSON.stringify(filters)}
+          review={reviewing}
         />
       </Suspense>
-      {selectedRow && <SelectedCampground campground={selectedRow} />}
+      {selectedRow && <SelectedCampground campground={selectedRow} review={reviewing} />}
       {search.isPending && <p role="status">Searching…</p>}
       {search.isError && <SearchError error={search.error} />}
       {search.isSuccess && rows.length === 0 && (

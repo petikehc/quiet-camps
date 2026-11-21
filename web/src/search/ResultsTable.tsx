@@ -2,7 +2,7 @@ import { getRouteApi, Link } from '@tanstack/react-router'
 import { createColumnHelper, tableFeatures, useTable } from '@tanstack/react-table'
 import { useEffect, useRef } from 'react'
 import type { components } from '../api/schema'
-import { locationNote } from './location'
+import { shownLocation } from './location'
 
 export type QuietCampground = components['schemas']['QuietCampgroundOut']
 
@@ -55,13 +55,22 @@ function CampgroundLink({ id, name }: { id: number; name: string }) {
   )
 }
 
-// The same reasons the map's pin shows on hover, for a campground whose location isn't exact.
+// The same notes the map's pin shows on hover. Campers see "approx. location" for a park-centre
+// dot; the review view marks every location that isn't exact with ⚠ and the reasons.
 function LocationMark({ campground }: { campground: QuietCampground }) {
-  const { certainty, reasons } = locationNote(campground)
+  const review = searchRoute.useSearch().review === 'locations'
+  const { certainty, notes } = shownLocation(campground, review)
   if (certainty === 'exact') return null
-  const text = `Location: ${reasons.join('. ')}`
+  const text = notes.join('. ')
+  if (!review) {
+    return (
+      <span className="location-mark" title={text}>
+        {certainty === 'park' ? 'approx. location' : 'not on the map'}
+      </span>
+    )
+  }
   return (
-    <span className="location-mark" role="img" aria-label={text} title={text}>
+    <span className="location-mark" role="img" aria-label={`Location: ${text}`} title={text}>
       ⚠
     </span>
   )

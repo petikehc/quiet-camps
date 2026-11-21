@@ -8,7 +8,7 @@ import type { TooltipAt } from '../charts/pointer'
 import { heatBin } from '../charts/scales'
 import { Tooltip } from '../charts/Tooltip'
 import { useDarkMode } from '../useDarkMode'
-import { locationNote, type Certainty } from './location'
+import { shownLocation, type Certainty } from './location'
 import type { QuietCampground } from './ResultsTable'
 
 // MapLibre parses tiles in a web worker it loads from a file beside its own module. Vite moves
@@ -34,10 +34,11 @@ type Props = {
   selectedId: number | undefined
   onSelect: (id: number) => void
   fitKey: string // a new key (new filters) fits the map to the results once
+  review: boolean // ?review=locations: rings for matches that need a check
 }
 
 // React owns the <div>; MapLibre owns everything drawn inside it. Effects pass data across.
-export function ResultsMap({ rows, selectedId, onSelect, fitKey }: Props) {
+export function ResultsMap({ rows, selectedId, onSelect, fitKey, review }: Props) {
   const container = useRef<HTMLDivElement>(null)
   const map = useRef<maplibregl.Map>(undefined)
   const fitted = useRef<string>(undefined) // the fitKey the map was last fitted to
@@ -89,8 +90,9 @@ export function ResultsMap({ rows, selectedId, onSelect, fitKey }: Props) {
 
   useEffect(() => {
     if (!ready || !map.current) return
-    map.current.getSource<maplibregl.GeoJSONSource>(SOURCE)?.setData(features(rows, selectedId))
-  }, [ready, rows, selectedId])
+    const data = features(rows, selectedId, review)
+    map.current.getSource<maplibregl.GeoJSONSource>(SOURCE)?.setData(data)
+  }, [ready, rows, selectedId, review])
 
   // Fit to the results once per search, not on every page the infinite scroll adds.
   useEffect(() => {
@@ -120,32 +122,43 @@ export function ResultsMap({ rows, selectedId, onSelect, fitKey }: Props) {
       />
       {hover && (
         <Tooltip at={hover.at}>
-          <PinDetails row={hover.row} />
+          <PinDetails row={hover.row} review={review} />
         </Tooltip>
       )}
       <ul className="legend map-legend">
         <HeatKeys />
+        {!review && (
+          <li>
+            <span className="pin pin-park" /> Exact spot unknown: shown at the park's centre
+          </li>
+        )}
       </ul>
-      <ul className="legend map-legend">
-        <li>
-          <span className="pin pin-exact" /> Located
-        </li>
-        <li>
-          <span className="pin pin-check" /> Location needs a check
-        </li>
-        <li>
-          <span className="pin pin-park" /> Park centre only
-        </li>
-      </ul>
+      {review && (
+        <ul className="legend map-legend" aria-label="Reviewing locations">
+          <li>
+            <span className="pin pin-exact" /> Located
+          </li>
+          <li>
+            <span className="pin pin-check" /> Location needs a check
+          </li>
+          <li>
+            <span className="pin pin-park" /> Park centre only
+          </li>
+        </ul>
+      )}
     </div>
   )
 }
 
-function features(rows: QuietCampground[], selectedId: number | undefined): FeatureCollection {
+function features(
+  rows: QuietCampground[],
+  selectedId: number | undefined,
+  review: boolean,
+): FeatureCollection {
   return {
     type: 'FeatureCollection',
     features: rows.flatMap((r) => {
-      const { certainty } = locationNote(r)
+      const { certainty } = shownLocation(r, review)
       if (r.lat === null || r.lon === null) return []
       const selected = r.id === selectedId
       return [
@@ -207,16 +220,17 @@ function addLayers(map: maplibregl.Map) {
   })
 }
 
-function PinDetails({ row }: { row: QuietCampground }) {
-  const { reasons } = locationNote(row)
+function PinDetails({ row, review }: { row: QuietCampground; review: boolean }) {
+  const { notes } = shownLocation(row, review)
   return (
     <>
       <strong>{row.name}</strong>
       <div>{row.park_name}</div>
       <div>Usually {Math.round(row.busyness * 100)}% busy</div>
-      {reasons.map((reason) => (
-        <div key={reason} className="muted">
-          ⚠ {reason}
+      {notes.map((note) => (
+        <div key={note} className="muted">
+          {review && '⚠ '}
+          {note}
         </div>
       ))}
     </>

@@ -19,6 +19,13 @@ export function parseFilters(search: Record<string, unknown>, today = new Date()
   }
 }
 
+// Not a filter (filters go to the API): ?review=locations shows how sure each location is.
+export type View = { review?: 'locations' }
+
+export function parseView(search: Record<string, unknown>): View {
+  return search.review === 'locations' ? { review: 'locations' } : {}
+}
+
 export function addDays(day: string, days: number): string {
   const [year, month, date] = day.split('-').map(Number)
   // UTC, so a daylight-saving change can't move the date.

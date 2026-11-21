@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { locationNote, osmLink } from './location'
+import { locationNote, osmLink, shownLocation } from './location'
 import type { QuietCampground } from './ResultsTable'
 
 const camp = (overrides: Partial<QuietCampground>): QuietCampground => ({
@@ -18,21 +18,65 @@ const camp = (overrides: Partial<QuietCampground>): QuietCampground => ({
   ...overrides,
 })
 
+const rejected = camp({
+  location_source: 'park_qld',
+  location_flags: ['rejected_osm'],
+  osm_type: 'way',
+  osm_id: 1,
+})
+
 describe('osmLink', () => {
-  it('links to the matched OpenStreetMap object', () => {
-    expect(osmLink(camp({ osm_type: 'node', osm_id: 6839356357 }))).toEqual({
-      href: 'https://www.openstreetmap.org/node/6839356357',
-      label: 'On OpenStreetMap',
-    })
+  it('links to the matched OpenStreetMap object, for everyone', () => {
+    const matched = camp({ osm_type: 'node', osm_id: 6839356357 })
+    const link = { href: 'https://www.openstreetmap.org/node/6839356357', label: 'On OpenStreetMap' }
+    expect(osmLink(matched, false)).toEqual(link)
+    expect(osmLink(matched, true)).toEqual(link)
   })
 
-  it('says when the object is a match that was rejected', () => {
-    const link = osmLink(camp({ osm_type: 'way', osm_id: 1, location_flags: ['rejected_osm'] }))
-    expect(link?.label).toBe('The rejected match on OpenStreetMap')
+  it('shows a rejected match only to a reviewer, and says it was rejected', () => {
+    expect(osmLink(rejected, false)).toBeUndefined()
+    expect(osmLink(rejected, true)?.label).toBe('The rejected match on OpenStreetMap')
   })
 
   it('has no link without a match', () => {
-    expect(osmLink(camp({}))).toBeUndefined()
+    expect(osmLink(camp({}), true)).toBeUndefined()
+  })
+})
+
+describe('shownLocation', () => {
+  const flagged = camp({ location_flags: ['shared_point'] })
+
+  it('shows campers a flagged match as the campground’s own spot, with no notes', () => {
+    expect(shownLocation(flagged, false)).toEqual({ certainty: 'exact', notes: [] })
+  })
+
+  it('shows a reviewer the flagged match and why', () => {
+    expect(shownLocation(flagged, true)).toEqual({
+      certainty: 'check',
+      notes: ['Shares its point with another campground'],
+    })
+  })
+
+  it('tells campers in plain words when only the park is known', () => {
+    expect(shownLocation(rejected, false)).toEqual({
+      certainty: 'park',
+      notes: ['Exact spot unknown: shown in the middle of Mackay Highlands Great Walk'],
+    })
+  })
+
+  it('keeps every reason for a reviewer of a park-centre point', () => {
+    expect(shownLocation(rejected, true).notes).toEqual([
+      'Shown at the middle of its park',
+      'A match on the map failed a check',
+    ])
+  })
+
+  it('says when a campground is not on the map', () => {
+    const lost = camp({ lat: null, lon: null, location_source: null })
+    expect(shownLocation(lost, false)).toEqual({
+      certainty: 'none',
+      notes: ['Not on the map: no location found'],
+    })
   })
 })
 

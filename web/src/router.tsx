@@ -7,7 +7,7 @@ import {
 import { CampgroundPage } from './campground/CampgroundPage'
 import { parseYear } from './campground/year'
 import { Layout } from './Layout'
-import { parseFilters, type Filters } from './search/filters'
+import { parseFilters, parseView, type Filters, type View } from './search/filters'
 import { SearchPage } from './search/SearchPage'
 
 // Code-based routes: with a page or two, one file reads more easily than generated file routes.
@@ -18,7 +18,10 @@ const searchRoute = createRoute({
   path: '/',
   // SearchSchemaInput: a link may leave filters out (parseFilters fills in the coming weekend),
   // but the page always gets them all.
-  validateSearch: (search: Partial<Filters> & SearchSchemaInput) => parseFilters(search),
+  validateSearch: (search: Partial<Filters & View> & SearchSchemaInput) => ({
+    ...parseFilters(search),
+    ...parseView(search),
+  }),
   component: SearchPage,
 })
 

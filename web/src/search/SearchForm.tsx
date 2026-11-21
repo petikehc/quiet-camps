@@ -12,12 +12,13 @@ export function SearchForm({ filters }: { filters: Filters }) {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
     void navigate({
-      search: {
+      // From the previous search, so the park filter and the review view stay.
+      search: (prev) => ({
+        ...prev,
         arrive: String(form.get('arrive')),
         depart: String(form.get('depart')),
         q: String(form.get('q')).trim() || undefined,
-        park: filters.park,
-      },
+      }),
     })
   }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addDays, parseFilters } from './filters'
+import { addDays, parseFilters, parseView } from './filters'
 
 const wednesday = new Date(2026, 10, 18) // months count from 0: 18 Nov 2026
 
@@ -43,6 +43,17 @@ describe('parseFilters', () => {
     const filters = parseFilters({ q: '   ', park: { name: 'x' } }, wednesday)
     expect(filters.q).toBeUndefined()
     expect(filters.park).toBeUndefined()
+  })
+})
+
+describe('parseView', () => {
+  it('turns on the location review', () => {
+    expect(parseView({ review: 'locations' })).toEqual({ review: 'locations' })
+  })
+
+  it('ignores anything else', () => {
+    expect(parseView({ review: 'everything' })).toEqual({})
+    expect(parseView({})).toEqual({})
   })
 })
 

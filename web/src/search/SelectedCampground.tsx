@@ -1,15 +1,16 @@
 import { getRouteApi, Link } from '@tanstack/react-router'
-import { locationNote, osmLink } from './location'
+import { osmLink, shownLocation } from './location'
 import type { QuietCampground } from './ResultsTable'
 
 const route = getRouteApi('/')
 
 // The campground picked on the map or in the list. A tooltip vanishes with the pointer, so
-// the links (its page, and its OpenStreetMap object to check the location) live here.
-export function SelectedCampground({ campground }: { campground: QuietCampground }) {
+// the links (its page, and its OpenStreetMap object) live here.
+export function SelectedCampground(props: { campground: QuietCampground; review: boolean }) {
+  const { campground, review } = props
   const { arrive } = route.useSearch()
-  const { reasons } = locationNote(campground)
-  const osm = osmLink(campground)
+  const { notes } = shownLocation(campground, review)
+  const osm = osmLink(campground, review)
 
   return (
     <aside className="selected-campground" aria-label="Selected campground">
@@ -21,9 +22,10 @@ export function SelectedCampground({ campground }: { campground: QuietCampground
         <strong>{campground.name}</strong>
       </Link>{' '}
       <span className="muted">{campground.park_name}</span>
-      {reasons.map((reason) => (
-        <div key={reason} className="muted">
-          ⚠ {reason}
+      {notes.map((note) => (
+        <div key={note} className="muted">
+          {review && '⚠ '}
+          {note}
         </div>
       ))}
       {osm && (
