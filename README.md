@@ -19,9 +19,19 @@ This project is not affiliated with or endorsed by Queensland Parks and Wildlife
 
 ```sh
 docker compose up -d   # Postgres 18
+
+cd api
+uv run alembic upgrade head
+uv run qc download && uv run qc load   # the permits from data.qld.gov.au
+uv run qc locations --fetch            # campground locations from OSM and park outlines
+uv run uvicorn quiet_camps.api.app:create_app --factory --port 8000
+
+cd ../web
+pnpm install && pnpm dev               # http://localhost:5173
 ```
 
-More to come.
+The API documents itself at http://localhost:8000/docs. The web client's types are
+generated from that contract: see [web/README.md](web/README.md).
 
 ## How it was built
 

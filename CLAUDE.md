@@ -5,7 +5,7 @@ Find Queensland campgrounds that are usually quiet on your dates, from public QP
 ## Layout
 
 - `api/`: uv project, src layout (`src/quiet_camps/`), tests in `api/tests/`
-- `web/`: Vite + React + TypeScript (later)
+- `web/`: Vite + React + TypeScript (pnpm); `src/api/schema.d.ts` is generated from `api/openapi.json`
 - `docker-compose.yml`: Postgres 18
 - `docs/adr/`: architecture decisions (copy `0000-template.md`)
 
@@ -14,6 +14,8 @@ Find Queensland campgrounds that are usually quiet on your dates, from public QP
 ```sh
 uv run ruff check && uv run ruff format --check && uv run pyright && uv run pytest
 ```
+
+In `web/`: `pnpm typecheck && pnpm lint && pnpm api:check`. After an API change: `uv run qc openapi` in `api/`, then `pnpm api:types` in `web/`.
 
 `docker compose up -d --wait` from the repo root starts Postgres. The migration tests need it; they use their own `quiet_camps_test` database. `uv run alembic upgrade head` migrates the local database.
 

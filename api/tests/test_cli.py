@@ -5,6 +5,7 @@ import psycopg
 import pytest
 from psycopg.rows import TupleRow
 
+from quiet_camps.api.openapi import openapi_document
 from quiet_camps.cli import download_all, fetch_package, is_transient, main
 
 GOOD = "https://data.example.org/files/qpws-permits-camping-jul26-sep26.csv"
@@ -85,3 +86,11 @@ def test_qc_load_loads_into_the_database(
 
     assert "1 nights from 1 files" in capsys.readouterr().out
     assert conn.execute("SELECT count(*) FROM camp_night").fetchone() == (1,)
+
+
+def test_openapi_writes_the_document(tmp_path: Path) -> None:
+    output = tmp_path / "openapi.json"
+
+    assert main(["openapi", "--output", str(output)]) == 0
+
+    assert output.read_text() == openapi_document()

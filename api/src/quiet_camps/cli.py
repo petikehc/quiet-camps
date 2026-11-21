@@ -8,6 +8,7 @@ from typing import Any
 import httpx
 import psycopg
 
+from quiet_camps.api.openapi import OPENAPI_FILE, openapi_document
 from quiet_camps.db.campgrounds import campground_suggestions
 from quiet_camps.db.config import psycopg_conninfo
 from quiet_camps.db.derived import refresh_derived, refresh_locations
@@ -226,6 +227,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     locations.add_argument("--locations-dir", type=Path, default=DEFAULT_LOCATIONS_DIR)
 
+    openapi = commands.add_parser(
+        "openapi",
+        help="Write the API's OpenAPI document, for the web client's generated types.",
+        description=(
+            "Write api/openapi.json from the app. Commit it, then run `pnpm api:types` in web/: "
+            "a test fails while the committed file differs from the app."
+        ),
+    )
+    openapi.add_argument("--output", type=Path, default=OPENAPI_FILE)
+
     args = parser.parse_args(argv)
     match args.command:
         case "download":
@@ -254,6 +265,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         case "locations":
             return locations_command(args.locations_dir, args.fetch, args.sample)
+        case "openapi":
+            args.output.write_text(openapi_document())
+            print(f"wrote {args.output}")
+            return 0
         case "campgrounds":
             with psycopg.connect(psycopg_conninfo()) as conn:
                 for line in campground_suggestions(conn):
