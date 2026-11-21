@@ -13,6 +13,20 @@ export class ApiError extends Error {
   }
 }
 
+// An openapi-fetch call's data, or its error thrown as an ApiError.
+export async function unwrap<T>(
+  request: Promise<{ data?: T; error?: Problem | ValidationProblem; response: Response }>,
+): Promise<T> {
+  const { data, error, response } = await request
+  if (data === undefined) throw new ApiError(response.status, error)
+  return data
+}
+
+// A 4xx won't change on a retry, so only network errors and 5xx are retried.
+export function shouldRetry(failures: number, error: Error): boolean {
+  return !(error instanceof ApiError && error.status < 500) && failures < 3
+}
+
 export function fieldErrors(error: unknown): ValidationProblem['errors'] {
   if (error instanceof ApiError && error.problem && 'errors' in error.problem) {
     return error.problem.errors

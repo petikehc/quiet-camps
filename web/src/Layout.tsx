@@ -1,10 +1,12 @@
-import { Outlet } from '@tanstack/react-router'
+import { Link, Outlet } from '@tanstack/react-router'
 
 export function Layout() {
   return (
     <>
       <header className="site-header">
-        <h1>Quiet Camps</h1>
+        <h1>
+          <Link to="/">Quiet Camps</Link>
+        </h1>
         <p>Queensland campgrounds that are usually quiet on your dates.</p>
       </header>
       <main>

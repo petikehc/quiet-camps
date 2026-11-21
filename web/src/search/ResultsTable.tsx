@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router'
+import { getRouteApi, Link } from '@tanstack/react-router'
 import { createColumnHelper, tableFeatures, useTable } from '@tanstack/react-table'
 import type { components } from '../api/schema'
 
@@ -9,7 +9,10 @@ export type QuietCampground = components['schemas']['QuietCampgroundOut']
 const features = tableFeatures({})
 const column = createColumnHelper<typeof features, QuietCampground>()
 const columns = column.columns([
-  column.accessor('name', { header: 'Campground' }),
+  column.accessor('name', {
+    header: 'Campground',
+    cell: (info) => <CampgroundLink id={info.row.original.id} name={info.getValue()} />,
+  }),
   column.accessor('park_name', {
     header: 'Park',
     cell: (info) => (
@@ -28,6 +31,22 @@ const columns = column.columns([
   }),
   column.accessor('history', { header: 'Nights of history' }),
 ])
+
+const searchRoute = getRouteApi('/')
+
+// Opens the campground's calendar on the year of the searched dates.
+function CampgroundLink({ id, name }: { id: number; name: string }) {
+  const { arrive } = searchRoute.useSearch()
+  return (
+    <Link
+      to="/campgrounds/$campgroundId"
+      params={{ campgroundId: String(id) }}
+      search={{ year: Number(arrive.slice(0, 4)) }}
+    >
+      {name}
+    </Link>
+  )
+}
 
 export function ResultsTable({ rows }: { rows: QuietCampground[] }) {
   const table = useTable({ features, columns, data: rows, getRowId: (row) => String(row.id) })
