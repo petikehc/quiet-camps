@@ -15,7 +15,7 @@ Find Queensland campgrounds that are usually quiet on your dates, from public QP
 uv run ruff check && uv run ruff format --check && uv run pyright && uv run pytest
 ```
 
-In `web/`: `pnpm typecheck && pnpm lint && pnpm api:check`. After an API change: `uv run qc openapi` in `api/`, then `pnpm api:types` in `web/`.
+In `web/`: `pnpm typecheck && pnpm lint && pnpm test && pnpm api:check`. After an API change: `uv run qc openapi` in `api/`, then `pnpm api:types` in `web/`.
 
 `docker compose up -d --wait` from the repo root starts Postgres. The migration tests need it; they use their own `quiet_camps_test` database. `uv run alembic upgrade head` migrates the local database.
 

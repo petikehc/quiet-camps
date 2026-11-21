@@ -7,6 +7,7 @@ pnpm install
 pnpm dev         # http://localhost:5173, with /api proxied to the API on port 8000
 pnpm typecheck
 pnpm lint
+pnpm test        # Vitest
 pnpm build
 ```
 
