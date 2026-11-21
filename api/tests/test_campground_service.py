@@ -12,10 +12,14 @@ from quiet_camps.api.campground_service import (
     CampgroundNotFound,
     LeadCount,
     MonthSites,
+    NightCampers,
+    NoHistory,
+    YearCampground,
     campground_calendar,
     campground_lead_time,
     campground_years,
     get_campground,
+    year_campers,
 )
 from quiet_camps.db.locations import ACTIVE_SINCE
 from quiet_camps.db.models import Campground
@@ -252,3 +256,58 @@ def test_years_for_an_unknown_id_is_not_found() -> None:
 
     with pytest.raises(CampgroundNotFound):
         asyncio.run(campground_years(source, 8))
+
+
+class FakeYear:
+    """Satisfies YearSource: two campgrounds and their campers, one history end."""
+
+    def __init__(self, history_end: date | None, rows: list[NightCampers]) -> None:
+        self.end = history_end
+        self.rows = rows
+        self.asked: tuple[date, date] | None = None
+
+    async def history_end(self) -> date | None:
+        return self.end
+
+    async def booked_campgrounds(self, first: date, last: date) -> list[YearCampground]:
+        self.asked = (first, last)
+        return [
+            YearCampground(id=3, name="Hoop Pines", lat=-28.3, lon=152.7),
+            YearCampground(id=9, name="Teewah", lat=None, lon=None),
+        ]
+
+    async def campers_by_night(self, first: date, last: date) -> list[NightCampers]:
+        return self.rows
+
+
+def test_a_year_is_flat_campground_by_campground() -> None:
+    rows = [
+        NightCampers(campground_id=9, night=date(2025, 1, 2), campers=7),
+        NightCampers(campground_id=3, night=date(2025, 12, 31), campers=4),
+    ]
+
+    found = asyncio.run(year_campers(FakeYear(date(2025, 12, 31), rows), 2025))
+
+    assert (found.first_night, found.nights) == (date(2025, 1, 1), 365)
+    assert [c.id for c in found.campgrounds] == [3, 9]
+    assert len(found.values) == 2 * 365
+    assert found.values[364] == 4  # Hoop Pines, 31 December
+    assert found.values[365 + 1] == 7  # Teewah, 2 January
+    assert sum(found.values) == 11
+
+
+def test_the_year_history_ends_in_stops_there() -> None:
+    source = FakeYear(date(2026, 9, 30), [])
+
+    found = asyncio.run(year_campers(source, 2026))
+
+    assert found.nights == 273
+    assert source.asked == (date(2026, 1, 1), date(2026, 9, 30))
+
+
+@pytest.mark.parametrize("history_end", [date(2025, 12, 31), None])
+def test_a_year_after_the_history_has_none(history_end: date | None) -> None:
+    with pytest.raises(NoHistory) as raised:
+        asyncio.run(year_campers(FakeYear(history_end, []), 2026))
+
+    assert raised.value.year == 2026

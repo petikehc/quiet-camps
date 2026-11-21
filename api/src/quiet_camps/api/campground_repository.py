@@ -3,7 +3,13 @@ from datetime import date
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from quiet_camps.api.campground_service import CalendarNight, LeadCount, MonthSites
+from quiet_camps.api.campground_service import (
+    CalendarNight,
+    LeadCount,
+    MonthSites,
+    NightCampers,
+    YearCampground,
+)
 from quiet_camps.api.queries import MIN_HISTORY
 from quiet_camps.db.models import Campground
 
@@ -71,6 +77,26 @@ GROUP BY 1
 """)
 
 
+# Every campground with a booked night in [first, last], and its campers per night: the same
+# filter, so each campers row has its campground.
+BOOKED_CAMPGROUNDS = text("""
+SELECT c.id, c.name, c.lat, c.lon
+FROM campground c
+WHERE EXISTS (
+    SELECT 1 FROM area_night n JOIN camping_area a ON a.id = n.area_id
+    WHERE a.campground_id = c.id AND n.night BETWEEN :first AND :last
+)
+ORDER BY c.id
+""")
+CAMPERS_BY_NIGHT = text("""
+SELECT a.campground_id, n.night, sum(n.campers)::int AS campers
+FROM area_night n
+JOIN camping_area a ON a.id = n.area_id
+WHERE n.night BETWEEN :first AND :last
+GROUP BY 1, 2
+""")
+
+
 class CampgroundRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
@@ -102,3 +128,11 @@ class CampgroundRepository:
     async def monthly_sites(self, campground_id: int) -> list[MonthSites]:
         result = await self._session.execute(MONTHLY_SITES, {"campground_id": campground_id})
         return [MonthSites(**row) for row in result.mappings()]
+
+    async def booked_campgrounds(self, first: date, last: date) -> list[YearCampground]:
+        result = await self._session.execute(BOOKED_CAMPGROUNDS, {"first": first, "last": last})
+        return [YearCampground(**row) for row in result.mappings()]
+
+    async def campers_by_night(self, first: date, last: date) -> list[NightCampers]:
+        result = await self._session.execute(CAMPERS_BY_NIGHT, {"first": first, "last": last})
+        return [NightCampers(**row) for row in result.mappings()]

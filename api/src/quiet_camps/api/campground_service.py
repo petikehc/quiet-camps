@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Protocol
 
+from quiet_camps.api.errors import NotFound
 from quiet_camps.db.locations import ACTIVE_SINCE
 from quiet_camps.db.models import Campground
 
@@ -10,7 +11,7 @@ class CampgroundSource(Protocol):
     async def get(self, campground_id: int) -> Campground | None: ...
 
 
-class CampgroundNotFound(Exception):
+class CampgroundNotFound(NotFound):
     def __init__(self, campground_id: int) -> None:
         super().__init__(f"Campground not found: {campground_id}")
         self.campground_id = campground_id
@@ -210,3 +211,59 @@ async def campground_years(source: YearsSource, campground_id: int) -> Campgroun
         for year in range(first.year, until.year + 1)
     ]
     return CampgroundYears(campground_id=campground_id, through=until, years=years)
+
+
+class NoHistory(NotFound):
+    def __init__(self, year: int) -> None:
+        super().__init__(f"No history for {year} yet")
+        self.year = year
+
+
+@dataclass(frozen=True, kw_only=True)
+class YearCampground:
+    id: int
+    name: str
+    lat: float | None
+    lon: float | None
+
+
+@dataclass(frozen=True, kw_only=True)
+class NightCampers:
+    campground_id: int
+    night: date
+    campers: int
+
+
+@dataclass(frozen=True, kw_only=True)
+class YearCampers:
+    year: int
+    first_night: date
+    nights: int  # 365 or 366, fewer in the year the history ends
+    campgrounds: list[YearCampground]  # in id order
+    values: list[int]  # campers: values[campground * nights + night], row by row
+
+
+class YearSource(Protocol):
+    async def history_end(self) -> date | None: ...
+
+    async def booked_campgrounds(self, first: date, last: date) -> list[YearCampground]: ...
+
+    async def campers_by_night(self, first: date, last: date) -> list[NightCampers]: ...
+
+
+async def year_campers(source: YearSource, year: int) -> YearCampers:
+    first = date(year, 1, 1)
+    until = await source.history_end()
+    if until is None or until < first:
+        raise NoHistory(year)
+    last = min(date(year, 12, 31), until)
+    nights = (last - first).days + 1
+
+    campgrounds = await source.booked_campgrounds(first, last)
+    row = {c.id: i for i, c in enumerate(campgrounds)}
+    values = [0] * (len(campgrounds) * nights)  # a night without bookings has no row
+    for c in await source.campers_by_night(first, last):
+        values[row[c.campground_id] * nights + (c.night - first).days] = c.campers
+    return YearCampers(
+        year=year, first_night=first, nights=nights, campgrounds=campgrounds, values=values
+    )
