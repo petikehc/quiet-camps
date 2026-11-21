@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from quiet_camps.api.campground_service import (
     CalendarNight,
+    HolidayNight,
     LeadCount,
     MonthSites,
     NightCampers,
@@ -95,6 +96,11 @@ JOIN camping_area a ON a.id = n.area_id
 WHERE n.night BETWEEN :first AND :last
 GROUP BY 1, 2
 """)
+HOLIDAY_NIGHTS = text("""
+SELECT night, holiday FROM calendar_day
+WHERE night BETWEEN :first AND :last AND holiday IS NOT NULL
+ORDER BY night
+""")
 
 
 class CampgroundRepository:
@@ -136,3 +142,7 @@ class CampgroundRepository:
     async def campers_by_night(self, first: date, last: date) -> list[NightCampers]:
         result = await self._session.execute(CAMPERS_BY_NIGHT, {"first": first, "last": last})
         return [NightCampers(**row) for row in result.mappings()]
+
+    async def holiday_nights(self, first: date, last: date) -> list[HolidayNight]:
+        result = await self._session.execute(HOLIDAY_NIGHTS, {"first": first, "last": last})
+        return [HolidayNight(**row) for row in result.mappings()]

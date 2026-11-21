@@ -209,6 +209,15 @@ export interface components {
             /** Message */
             message: string;
         };
+        /** HolidayOut */
+        HolidayOut: {
+            /** Name */
+            name: string;
+            /** Night */
+            night: number;
+            /** Nights */
+            nights: number;
+        };
         /** LeadTimeGroupOut */
         LeadTimeGroupOut: {
             /** Booked By */
@@ -337,6 +346,8 @@ export interface components {
              * Format: date
              */
             first_night: string;
+            /** Holidays */
+            holidays: components["schemas"]["HolidayOut"][];
             /** Nights */
             nights: number;
             /** Values */

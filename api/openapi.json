@@ -224,6 +224,29 @@
         "title": "FieldError",
         "type": "object"
       },
+      "HolidayOut": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "night": {
+            "title": "Night",
+            "type": "integer"
+          },
+          "nights": {
+            "title": "Nights",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "night",
+          "nights"
+        ],
+        "title": "HolidayOut",
+        "type": "object"
+      },
       "LeadTimeGroupOut": {
         "properties": {
           "booked_by": {
@@ -600,6 +623,13 @@
             "title": "First Night",
             "type": "string"
           },
+          "holidays": {
+            "items": {
+              "$ref": "#/components/schemas/HolidayOut"
+            },
+            "title": "Holidays",
+            "type": "array"
+          },
           "nights": {
             "title": "Nights",
             "type": "integer"
@@ -621,7 +651,8 @@
           "first_night",
           "nights",
           "campgrounds",
-          "values"
+          "values",
+          "holidays"
         ],
         "title": "YearOut",
         "type": "object"
