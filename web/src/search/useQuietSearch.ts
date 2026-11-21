@@ -1,4 +1,4 @@
-import { useInfiniteQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { api } from '../api/client'
 import { unwrap } from '../api/errors'
 import type { Filters } from './filters'
@@ -18,5 +18,14 @@ export function useQuietSearch(filters: Filters) {
       ),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.next ?? undefined, // undefined: no more pages
+  })
+}
+
+// The whole search at once, for the map: independent of how far the list has paged.
+export function useQuietMap(filters: Filters) {
+  return useQuery({
+    queryKey: ['campgrounds', 'quiet', 'map', filters],
+    queryFn: ({ signal }) =>
+      unwrap(api.GET('/campgrounds/quiet/map', { params: { query: filters }, signal })),
   })
 }

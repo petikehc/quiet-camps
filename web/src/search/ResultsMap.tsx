@@ -94,7 +94,7 @@ export function ResultsMap({ rows, selectedId, onSelect, fitKey, review }: Props
     map.current.getSource<maplibregl.GeoJSONSource>(SOURCE)?.setData(data)
   }, [ready, rows, selectedId, review])
 
-  // Fit to the results once per search, not on every page the infinite scroll adds.
+  // Fit to the results once per search, so a refetch doesn't undo the reader's panning.
   useEffect(() => {
     if (!ready || !map.current || fitted.current === fitKey) return
     const located = rows.filter((r) => r.lat !== null && r.lon !== null)

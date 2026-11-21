@@ -4,7 +4,7 @@ import { fieldErrors } from '../api/errors'
 import { ResultsTable, type QuietCampground } from './ResultsTable'
 import { SelectedCampground } from './SelectedCampground'
 import { SearchForm } from './SearchForm'
-import { useQuietSearch } from './useQuietSearch'
+import { useQuietMap, useQuietSearch } from './useQuietSearch'
 
 // getRouteApi instead of importing the route: router.tsx imports this file, not the other way.
 const route = getRouteApi('/')
@@ -19,9 +19,13 @@ export function SearchPage() {
   const search = useQuietSearch(filters)
   // A new array only when a page arrives; the table rebuilds its rows when this changes.
   const rows = useMemo(() => search.data?.pages.flatMap((page) => page.results) ?? noRows, [search.data])
+  // The map shows every result, however far the list has paged.
+  const everything = useQuietMap(filters).data?.results ?? noRows
   // Shared by the map and the list: picking in one highlights (and brings into view) the other.
   const [selected, setSelected] = useState<{ id: number; from: 'map' | 'list' }>()
-  const selectedRow = rows.find((r) => r.id === selected?.id) // gone when a new search drops it
+  const rank = everything.findIndex((r) => r.id === selected?.id)
+  // Gone when a new search drops it. The list may not have loaded it yet; the map has.
+  const selectedRow = everything[rank] ?? rows.find((r) => r.id === selected?.id)
 
   return (
     <>
@@ -30,14 +34,20 @@ export function SearchPage() {
           empty box the same size keeps the table from jumping. */}
       <Suspense fallback={<div className="results-map map-canvas" />}>
         <ResultsMap
-          rows={rows}
+          rows={everything}
           selectedId={selected?.id}
           onSelect={(id) => setSelected({ id, from: 'map' })}
           fitKey={JSON.stringify(filters)}
           review={reviewing}
         />
       </Suspense>
-      {selectedRow && <SelectedCampground campground={selectedRow} review={reviewing} />}
+      {selectedRow && (
+        <SelectedCampground
+          campground={selectedRow}
+          rank={rank >= 0 ? { place: rank + 1, of: everything.length } : undefined}
+          review={reviewing}
+        />
+      )}
       {search.isPending && <p role="status">Searching…</p>}
       {search.isError && <SearchError error={search.error} />}
       {search.isSuccess && rows.length === 0 && (
