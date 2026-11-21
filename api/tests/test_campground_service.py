@@ -11,8 +11,10 @@ from quiet_camps.api.campground_service import (
     CampgroundDetail,
     CampgroundNotFound,
     LeadCount,
+    MonthSites,
     campground_calendar,
     campground_lead_time,
+    campground_years,
     get_campground,
 )
 from quiet_camps.db.locations import ACTIVE_SINCE
@@ -191,3 +193,62 @@ def test_lead_time_for_an_unknown_id_is_not_found() -> None:
 
     with pytest.raises(CampgroundNotFound):
         asyncio.run(campground_lead_time(source, 8))
+
+
+class FakeYears(FakeSource):
+    """Satisfies YearsSource: FakeSource's campgrounds, one history end, fixed months."""
+
+    def __init__(
+        self, *campgrounds: Campground, history_end: date | None, months: list[MonthSites]
+    ) -> None:
+        super().__init__(*campgrounds)
+        self.end = history_end
+        self.months = months
+
+    async def history_end(self) -> date | None:
+        return self.end
+
+    async def monthly_sites(self, campground_id: int) -> list[MonthSites]:
+        return self.months
+
+
+def year_sites(source: FakeYears) -> dict[int, list[int | None]]:
+    found = asyncio.run(campground_years(source, 7))
+    return {y.year: [m.sites for m in y.months] for y in found.years}
+
+
+def test_years_fill_months_between_the_first_booking_and_the_end_of_history() -> None:
+    months = [
+        MonthSites(month=date(2024, 11, 1), sites=3),
+        MonthSites(month=date(2025, 2, 1), sites=5),
+    ]
+    source = FakeYears(campground(), history_end=date(2025, 3, 31), months=months)
+
+    assert year_sites(source) == {
+        2024: [None] * 10 + [3, 0],
+        2025: [0, 5, 0] + [None] * 9,
+    }
+
+
+def test_years_leave_out_months_after_the_history() -> None:
+    months = [
+        MonthSites(month=date(2025, 3, 1), sites=1),
+        MonthSites(month=date(2025, 4, 1), sites=9),
+    ]
+    source = FakeYears(campground(), history_end=date(2025, 3, 31), months=months)
+
+    assert year_sites(source) == {2025: [None, None, 1] + [None] * 9}
+
+
+def test_years_without_history_are_empty() -> None:
+    later = [MonthSites(month=date(2025, 4, 1), sites=9)]  # only in the latest quarter
+
+    assert year_sites(FakeYears(campground(), history_end=date(2025, 3, 31), months=later)) == {}
+    assert year_sites(FakeYears(campground(), history_end=None, months=[])) == {}
+
+
+def test_years_for_an_unknown_id_is_not_found() -> None:
+    source = FakeYears(campground(), history_end=date(2025, 3, 31), months=[])
+
+    with pytest.raises(CampgroundNotFound):
+        asyncio.run(campground_years(source, 8))

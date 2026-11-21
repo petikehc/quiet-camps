@@ -3,7 +3,7 @@ from datetime import date
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from quiet_camps.api.campground_service import CalendarNight, LeadCount
+from quiet_camps.api.campground_service import CalendarNight, LeadCount, MonthSites
 from quiet_camps.api.queries import MIN_HISTORY
 from quiet_camps.db.models import Campground
 
@@ -60,6 +60,17 @@ GROUP BY 1, 2
 """)
 
 
+# Booked sites by month, from area_night like the calendar: the service decides which months
+# count as history.
+MONTHLY_SITES = text("""
+SELECT date_trunc('month', n.night)::date AS month, sum(n.sites)::int AS sites
+FROM area_night n
+JOIN camping_area a ON a.id = n.area_id
+WHERE a.campground_id = :campground_id
+GROUP BY 1
+""")
+
+
 class CampgroundRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
@@ -87,3 +98,7 @@ class CampgroundRepository:
             LEAD_COUNTS, {"campground_id": campground_id, "since": since, "until": until}
         )
         return [LeadCount(**row) for row in result.mappings()]
+
+    async def monthly_sites(self, campground_id: int) -> list[MonthSites]:
+        result = await self._session.execute(MONTHLY_SITES, {"campground_id": campground_id})
+        return [MonthSites(**row) for row in result.mappings()]

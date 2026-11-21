@@ -154,3 +154,59 @@ async def campground_lead_time(source: LeadTimeSource, campground_id: int) -> Le
         by_group.setdefault(count.group, []).append(count)
     groups = [lead_time_group(g, by_group[g]) for g in sorted(by_group, key=group_order)]
     return LeadTime(campground_id=campground_id, since=since, until=until, groups=groups)
+
+
+@dataclass(frozen=True, kw_only=True)
+class MonthSites:
+    month: date  # its first day
+    sites: int
+
+
+@dataclass(frozen=True, kw_only=True)
+class YearMonth:
+    month: int  # 1-12
+    sites: int | None  # None: before the first booking, or after the history ends
+
+
+@dataclass(frozen=True, kw_only=True)
+class YearSites:
+    year: int
+    months: list[YearMonth]
+
+
+@dataclass(frozen=True, kw_only=True)
+class CampgroundYears:
+    campground_id: int
+    through: date | None  # the end of history; None: no history at all
+    years: list[YearSites]
+
+
+class YearsSource(CampgroundSource, Protocol):
+    async def history_end(self) -> date | None: ...
+
+    async def monthly_sites(self, campground_id: int) -> list[MonthSites]: ...
+
+
+async def campground_years(source: YearsSource, campground_id: int) -> CampgroundYears:
+    if await source.get(campground_id) is None:
+        raise CampgroundNotFound(campground_id)
+
+    until = await source.history_end()
+    booked = {m.month: m.sites for m in await source.monthly_sites(campground_id)}
+    # Known months run from the first booked one to the end of history; a month in between
+    # with no bookings is a real 0.
+    first = min((m for m in booked if until is not None and m <= until), default=None)
+    if until is None or first is None:
+        return CampgroundYears(campground_id=campground_id, through=until, years=[])
+
+    def sites(year: int, month: int) -> int | None:
+        start = date(year, month, 1)
+        return booked.get(start, 0) if first <= start <= until else None
+
+    years = [
+        YearSites(
+            year=year, months=[YearMonth(month=m, sites=sites(year, m)) for m in range(1, 13)]
+        )
+        for year in range(first.year, until.year + 1)
+    ]
+    return CampgroundYears(campground_id=campground_id, through=until, years=years)

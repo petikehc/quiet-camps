@@ -10,8 +10,10 @@ from quiet_camps.api.campground_service import (
     CalendarSource,
     CampgroundSource,
     LeadTimeSource,
+    YearsSource,
     campground_calendar,
     campground_lead_time,
+    campground_years,
     get_campground,
 )
 from quiet_camps.api.db import get_session
@@ -81,6 +83,30 @@ class LeadTimeOut(BaseModel):
     groups: list[LeadTimeGroupOut]  # holidays by name, then weekend, then weeknight
 
 
+class YearMonthOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    month: int  # 1-12
+    sites: int | None  # booked site-nights; None before the first booking or after `through`
+
+
+class YearSitesOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    year: int
+    months: list[YearMonthOut]  # always 12
+
+
+class YearsOut(BaseModel):
+    """Booked sites by month, every year from the first booking: one line per year."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    campground_id: int
+    through: date | None  # the end of history: the latest quarter isn't complete yet
+    years: list[YearSitesOut]
+
+
 def get_source(session: Annotated[AsyncSession, Depends(get_session)]) -> CampgroundSource:
     return CampgroundRepository(session)
 
@@ -92,6 +118,10 @@ def get_calendar_source(session: Annotated[AsyncSession, Depends(get_session)]) 
 def get_lead_time_source(
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> LeadTimeSource:
+    return CampgroundRepository(session)
+
+
+def get_years_source(session: Annotated[AsyncSession, Depends(get_session)]) -> YearsSource:
     return CampgroundRepository(session)
 
 
@@ -122,3 +152,12 @@ async def campground_lead_time_by_group(
 ) -> LeadTimeOut:
     found = await campground_lead_time(source, campground_id)
     return LeadTimeOut.model_validate(found)
+
+
+@campground_router.get("/{campground_id}/years")
+async def campground_years_by_month(
+    campground_id: Annotated[int, Path(ge=1)],
+    source: Annotated[YearsSource, Depends(get_years_source)],
+) -> YearsOut:
+    found = await campground_years(source, campground_id)
+    return YearsOut.model_validate(found)
