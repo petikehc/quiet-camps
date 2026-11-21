@@ -9,7 +9,9 @@ from quiet_camps.api.campground_repository import CampgroundRepository
 from quiet_camps.api.campground_service import (
     CalendarSource,
     CampgroundSource,
+    LeadTimeSource,
     campground_calendar,
+    campground_lead_time,
     get_campground,
 )
 from quiet_camps.api.db import get_session
@@ -53,11 +55,43 @@ class CalendarOut(BaseModel):
     nights: list[CalendarNightOut]  # every night of the year, in order
 
 
+class BookedByOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    weeks: int
+    share: float  # of the group's booked nights, booked at least `weeks` weeks before
+
+
+class LeadTimeGroupOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    group: str  # a holiday, "weekend" (Friday and Saturday nights) or "weeknight"
+    nights: int  # booked nights behind the shares: few means a rough answer
+    booked_by: list[BookedByOut]  # 0, 1, 2, 4, 8, 13, 26 and 52 weeks
+
+
+class LeadTimeOut(BaseModel):
+    """How far ahead nights were booked, over the last 3 years of history."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    campground_id: int
+    since: date | None  # None: no history at all
+    until: date | None
+    groups: list[LeadTimeGroupOut]  # holidays by name, then weekend, then weeknight
+
+
 def get_source(session: Annotated[AsyncSession, Depends(get_session)]) -> CampgroundSource:
     return CampgroundRepository(session)
 
 
 def get_calendar_source(session: Annotated[AsyncSession, Depends(get_session)]) -> CalendarSource:
+    return CampgroundRepository(session)
+
+
+def get_lead_time_source(
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> LeadTimeSource:
     return CampgroundRepository(session)
 
 
@@ -79,3 +113,12 @@ async def campground_calendar_by_year(
 ) -> CalendarOut:
     found = await campground_calendar(source, campground_id, year)
     return CalendarOut.model_validate(found)
+
+
+@campground_router.get("/{campground_id}/lead-time")
+async def campground_lead_time_by_group(
+    campground_id: Annotated[int, Path(ge=1)],
+    source: Annotated[LeadTimeSource, Depends(get_lead_time_source)],
+) -> LeadTimeOut:
+    found = await campground_lead_time(source, campground_id)
+    return LeadTimeOut.model_validate(found)

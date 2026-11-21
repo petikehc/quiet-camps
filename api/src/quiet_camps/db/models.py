@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Any
 
-from sqlalchemy import BigInteger, ForeignKey, MetaData, String, UniqueConstraint
+from sqlalchemy import BigInteger, ForeignKey, Index, MetaData, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -106,6 +106,8 @@ class CalendarDay(Base):
 
 class CampNight(Base):
     __tablename__ = "camp_night"
+    # One campground's bookings over a date range (its lead times) without a 7.8M-row scan.
+    __table_args__ = (Index("ix_camp_night_area_id_night", "area_id", "night"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     area_id: Mapped[int] = mapped_column(ForeignKey("camping_area.id"))

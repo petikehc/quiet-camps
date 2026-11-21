@@ -10,7 +10,9 @@ from quiet_camps.api.campground_service import (
     CampgroundCalendar,
     CampgroundDetail,
     CampgroundNotFound,
+    LeadCount,
     campground_calendar,
+    campground_lead_time,
     get_campground,
 )
 from quiet_camps.db.locations import ACTIVE_SINCE
@@ -110,3 +112,82 @@ def test_no_nights_means_no_campground() -> None:
         asyncio.run(campground_calendar(FakeCalendar(7, [NEW_YEAR]), 8, 2025))
 
     assert raised.value.campground_id == 8
+
+
+class FakeLeadTimes(FakeSource):
+    """Satisfies LeadTimeSource: FakeSource's campgrounds, one history end, fixed counts."""
+
+    def __init__(
+        self, *campgrounds: Campground, history_end: date | None, counts: list[LeadCount]
+    ) -> None:
+        super().__init__(*campgrounds)
+        self.end = history_end
+        self.counts = counts
+        self.asked: tuple[date, date] | None = None
+
+    async def history_end(self) -> date | None:
+        return self.end
+
+    async def lead_counts(self, campground_id: int, since: date, until: date) -> list[LeadCount]:
+        self.asked = (since, until)
+        return self.counts
+
+
+def test_lead_time_asks_for_the_last_3_years_of_history() -> None:
+    source = FakeLeadTimes(campground(), history_end=date(2026, 9, 30), counts=[])
+
+    found = asyncio.run(campground_lead_time(source, 7))
+
+    assert source.asked == (date(2023, 10, 1), date(2026, 9, 30))
+    assert (found.since, found.until) == (date(2023, 10, 1), date(2026, 9, 30))
+
+
+def test_lead_time_shares_add_up_from_the_longest_lead() -> None:
+    counts = [
+        LeadCount(group="easter", lead_days=0, nights=1),
+        LeadCount(group="easter", lead_days=30, nights=2),  # 4 weeks and 2 days
+        LeadCount(group="easter", lead_days=200, nights=1),
+    ]
+    source = FakeLeadTimes(campground(), history_end=date(2026, 9, 30), counts=counts)
+
+    [easter] = asyncio.run(campground_lead_time(source, 7)).groups
+
+    assert easter.nights == 4
+    assert [(b.weeks, b.share) for b in easter.booked_by] == [
+        (0, 1.0),
+        (1, 0.75),
+        (2, 0.75),
+        (4, 0.75),
+        (8, 0.25),
+        (13, 0.25),
+        (26, 0.25),
+        (52, 0.0),
+    ]
+
+
+def test_lead_time_groups_holidays_by_name_then_weekend_then_weeknight() -> None:
+    counts = [
+        LeadCount(group=g, lead_days=0, nights=1)
+        for g in ("weeknight", "labour day", "weekend", "christmas")
+    ]
+    source = FakeLeadTimes(campground(), history_end=date(2026, 9, 30), counts=counts)
+
+    groups = asyncio.run(campground_lead_time(source, 7)).groups
+
+    assert [g.group for g in groups] == ["christmas", "labour day", "weekend", "weeknight"]
+
+
+def test_lead_time_without_any_history_is_empty() -> None:
+    source = FakeLeadTimes(campground(), history_end=None, counts=[])
+
+    found = asyncio.run(campground_lead_time(source, 7))
+
+    assert (found.since, found.until, found.groups) == (None, None, [])
+    assert source.asked is None
+
+
+def test_lead_time_for_an_unknown_id_is_not_found() -> None:
+    source = FakeLeadTimes(campground(), history_end=date(2026, 9, 30), counts=[])
+
+    with pytest.raises(CampgroundNotFound):
+        asyncio.run(campground_lead_time(source, 8))

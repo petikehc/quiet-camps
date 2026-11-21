@@ -1,5 +1,5 @@
 from collections.abc import Iterator
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import psycopg
@@ -26,6 +26,7 @@ SEARCH_DB = "quiet_camps_search_test"
 
 RANGE = "Test Range National Park"
 COAST = "Busy Coast National Park"
+EARLY = "Early Bird camping area"
 
 
 def fresh_database(name: str) -> URL:
@@ -82,14 +83,47 @@ def client(api_settings: Settings, alembic_cfg: Config) -> Iterator[TestClient]:
         yield client
 
 
-def book(conn: Conn, park: str, area: str, night: date, sites: int = 1) -> None:
+def book(
+    conn: Conn,
+    park: str,
+    area: str,
+    night: date,
+    sites: int = 1,
+    booked_on: date | None = None,  # the night itself unless given
+    source_file: str = "test.csv",
+) -> None:
     area_id = ensure_areas(conn, [(park, area)])[(park, area)]
     for _ in range(sites):  # identical rows in one file are separate sites
         conn.execute(
             "INSERT INTO camp_night (area_id, night, booked_on, adults, children, infants,"
-            " state, source_file) VALUES (%s, %s, %s, 2, 0, 0, 'QLD', 'test.csv')",
-            (area_id, night, night),
+            " state, source_file) VALUES (%s, %s, %s, 2, 0, 0, 'QLD', %s)",
+            (area_id, night, booked_on or night, source_file),
         )
+
+
+def seed_lead_times(conn: Conn) -> None:
+    """Early Bird's bookings, where every lead-time answer is known: see test_api_lead_time.py.
+
+    Only December and October, so it has no typical for March and stays out of the search.
+    """
+    christmas = date(2024, 12, 27)
+    for days_ahead in (0, 10, 60, 400):
+        book(conn, RANGE, EARLY, christmas, booked_on=christmas - timedelta(days=days_ahead))
+    saturday = date(2025, 10, 11)
+    book(conn, RANGE, EARLY, saturday)
+    book(conn, RANGE, EARLY, saturday, sites=3, booked_on=saturday - timedelta(days=14))
+    tuesday = date(2025, 10, 14)
+    for source_file in ("test.csv", "overlap.csv"):  # one booking in two files
+        book(
+            conn,
+            RANGE,
+            EARLY,
+            tuesday,
+            booked_on=tuesday + timedelta(days=3),
+            source_file=source_file,
+        )
+    book(conn, RANGE, EARLY, date(2022, 12, 30))  # before the last 3 years of history
+    book(conn, RANGE, EARLY, date(2026, 1, 10))  # in the latest quarter, not history yet
 
 
 def seed_search_history(conn: Conn) -> None:
@@ -109,6 +143,7 @@ def seed_search_history(conn: Conn) -> None:
     # The latest quarter isn't history yet; this night makes all of 2025 count.
     book(conn, RANGE, "Quiet Creek camping area", date(2026, 1, 15))
     book(conn, RANGE, "Twin Hollow camping area", date(2026, 1, 15))
+    seed_lead_times(conn)
     list(refresh_derived(conn))
 
 
