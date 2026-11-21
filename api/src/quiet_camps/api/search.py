@@ -29,20 +29,13 @@ def decode_cursor(cursor: str) -> After:
         raise ValueError("after must be a `next` from a previous page") from e
 
 
-class SearchParams(BaseModel):
+class QuietFilters(BaseModel):
+    """What to search for: the search's pages and its map share these, and their rules."""
+
     arrive: date
     depart: date
     park: str | None = None
     q: str | None = Field(None, min_length=2, max_length=100)  # part of a name or park name
-    limit: int = Field(20, ge=1, le=100)
-    after: str | None = None  # the previous page's `next`; send the same filters with it
-
-    @field_validator("after")
-    @classmethod
-    def check_cursor(cls, after: str | None) -> str | None:
-        if after is not None:
-            decode_cursor(after)  # a bad cursor is a 422, not a 500 in the route
-        return after
 
     @model_validator(mode="after")
     def check_depart_after_arrive(self) -> Self:
@@ -52,6 +45,18 @@ class SearchParams(BaseModel):
         if (self.depart - self.arrive).days > MAX_NIGHTS:
             raise ValueError(f"booking must be {MAX_NIGHTS} nights at most")
         return self
+
+
+class SearchParams(QuietFilters):
+    limit: int = Field(20, ge=1, le=100)
+    after: str | None = None  # the previous page's `next`; send the same filters with it
+
+    @field_validator("after")
+    @classmethod
+    def check_cursor(cls, after: str | None) -> str | None:
+        if after is not None:
+            decode_cursor(after)  # a bad cursor is a 422, not a 500 in the route
+        return after
 
 
 class QuietCampgroundOut(BaseModel):
@@ -98,3 +103,21 @@ async def quiet_campgrounds(
     if len(found) > params.limit:
         cursor = encode_cursor(After(shown[-1].busyness, shown[-1].id))
     return SearchPage(results=[QuietCampgroundOut.model_validate(c) for c in shown], next=cursor)
+
+
+class SearchMap(BaseModel):
+    """Every result at once, in rank order: the list pages through a search, a map shows it all."""
+
+    results: list[QuietCampgroundOut]
+
+
+@search_router.get("/campgrounds/quiet/map")
+async def quiet_campgrounds_map(
+    filters: Annotated[QuietFilters, Query()],
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> SearchMap:
+    # No limit: about 550 active campgrounds at most, ~25 KB gzipped.
+    found = await search_quiet(
+        session, filters.arrive, filters.depart, filters.park, filters.q, limit=None
+    )
+    return SearchMap(results=[QuietCampgroundOut.model_validate(c) for c in found])

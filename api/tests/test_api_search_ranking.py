@@ -124,6 +124,22 @@ def test_next_pages_keep_the_filters_sent_again(seeded_client: TestClient) -> No
     assert second["next"] is None
 
 
+def map_names(client: TestClient, **params: Any) -> list[str]:
+    response = client.get("/campgrounds/quiet/map", params={**SATURDAY, **params})
+    assert response.status_code == 200
+    return [c["name"] for c in response.json()["results"]]
+
+
+def test_the_map_has_every_result_in_rank_order_on_one_page(seeded_client: TestClient) -> None:
+    assert page(seeded_client, limit=2)["next"] is not None  # more than one page of the search
+    assert map_names(seeded_client) == names(seeded_client)
+
+
+def test_the_map_takes_the_search_filters(seeded_client: TestClient) -> None:
+    assert map_names(seeded_client, q="creek") == [QUIET, MIDDLE]
+    assert map_names(seeded_client, park="Busy Coast National Park") == [BUSY]
+
+
 @pytest.mark.parametrize("wildcard", ["%%", "__"])
 def test_q_wildcards_are_plain_characters(seeded_client: TestClient, wildcard: str) -> None:
     """In LIKE, % is any text and _ any one character: unescaped, these would match everything."""

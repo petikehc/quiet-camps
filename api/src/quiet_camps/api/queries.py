@@ -78,13 +78,13 @@ async def search_quiet(
     depart: date,
     park: str | None,
     q: str | None,
-    limit: int,
+    limit: int | None,
     after: After | None = None,
 ) -> list[QuietCampground]:
     """Campgrounds that are usually quietest on the nights from arrive to depart (exclusive).
 
     `q` narrows to names or park names containing it, ignoring case. `after` starts the page
-    after that campground.
+    after that campground. `limit=None` returns every result (Postgres reads LIMIT NULL as none).
     """
     result = await session.execute(
         SEARCH,

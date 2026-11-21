@@ -21,6 +21,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/campgrounds/quiet/map": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Quiet Campgrounds Map */
+        get: operations["quiet_campgrounds_map_campgrounds_quiet_map_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/campgrounds/{campground_id}": {
         parameters: {
             query?: never;
@@ -260,6 +277,14 @@ export interface components {
             typical_sites: number;
         };
         /**
+         * SearchMap
+         * @description Every result at once, in rank order: the list pages through a search, a map shows it all.
+         */
+        SearchMap: {
+            /** Results */
+            results: components["schemas"]["QuietCampgroundOut"][];
+        };
+        /**
          * SearchPage
          * @description A wrapper, not a bare list, so paging fields sit beside the results.
          */
@@ -370,6 +395,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SearchPage"];
+                };
+            };
+            /** @description The request has invalid fields */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ValidationProblem"];
+                };
+            };
+        };
+    };
+    quiet_campgrounds_map_campgrounds_quiet_map_get: {
+        parameters: {
+            query: {
+                arrive: string;
+                depart: string;
+                park?: string | null;
+                q?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchMap"];
                 };
             };
             /** @description The request has invalid fields */

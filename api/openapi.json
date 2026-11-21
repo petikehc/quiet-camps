@@ -435,6 +435,23 @@
         "title": "QuietCampgroundOut",
         "type": "object"
       },
+      "SearchMap": {
+        "description": "Every result at once, in rank order: the list pages through a search, a map shows it all.",
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/QuietCampgroundOut"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "results"
+        ],
+        "title": "SearchMap",
+        "type": "object"
+      },
       "SearchPage": {
         "description": "A wrapper, not a bare list, so paging fields sit beside the results.",
         "properties": {
@@ -783,6 +800,90 @@
           }
         },
         "summary": "Quiet Campgrounds"
+      }
+    },
+    "/campgrounds/quiet/map": {
+      "get": {
+        "operationId": "quiet_campgrounds_map_campgrounds_quiet_map_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "arrive",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Arrive",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "depart",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Depart",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "park",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Park"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "minLength": 2,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchMap"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblem"
+                }
+              }
+            },
+            "description": "The request has invalid fields"
+          }
+        },
+        "summary": "Quiet Campgrounds Map"
       }
     },
     "/campgrounds/{campground_id}": {
