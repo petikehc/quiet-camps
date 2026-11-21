@@ -2,6 +2,7 @@ import { getRouteApi, Link } from '@tanstack/react-router'
 import { createColumnHelper, tableFeatures, useTable } from '@tanstack/react-table'
 import { useEffect, useRef } from 'react'
 import type { components } from '../api/schema'
+import { heatBin } from '../charts/scales'
 import { shownLocation } from './location'
 
 export type QuietCampground = components['schemas']['QuietCampgroundOut']
@@ -30,7 +31,17 @@ const columns = column.columns([
   }),
   column.accessor('busyness', {
     header: 'Usually',
-    cell: (info) => `${Math.round(info.getValue() * 100)}%`,
+    // The swatch matches the map pin and the calendar; the % stays, so colour is never the only cue.
+    cell: (info) => (
+      <span className="busy">
+        <span
+          className="swatch"
+          style={{ background: `var(--heat-${heatBin(info.getValue())})` }}
+          aria-hidden="true"
+        />
+        {Math.round(info.getValue() * 100)}%
+      </span>
+    ),
   }),
   column.accessor('typical_sites', {
     header: 'Sites booked',

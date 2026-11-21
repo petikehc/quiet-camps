@@ -1,26 +1,33 @@
+/* Reef to red earth: eucalypt neutrals, reef-teal links, a Queensland-maroon header band like a
+   park entrance sign, and busyness from beach sand to outback red earth. */
 :root {
-  --text: #1d2320;
-  --muted: #5b6660;
-  --bg: #fbfaf7;
+  --text: #1b2a26;
+  --muted: #53635e;
+  --bg: #f3f5f1;
   --surface: #ffffff;
-  --border: #dcded8;
-  --accent: #2f6b4f;
+  --border: #d4dcd6;
+  --accent: #0e6b6b;
+  --on-accent: #ffffff;
+  --maroon: #6b1f32;
+  --on-maroon: #f6efe9;
+  --wattle: #b47c10; /* the focus ring; 3:1 against --bg */
   --error: #a3261b;
+  --display: 'Overpass', system-ui, sans-serif;
 
   /* Charts: validated with the dataviz skill's validator against --bg, light and dark. */
-  --grid: #e1e0d9;
-  --axis: #c3c2b7;
-  --series-1: #2a78d6;
-  --series-2: #eb6834;
-  --series-muted: #c3c2b7;
-  --heat-0: #86b6ef;
-  --heat-1: #5598e7;
-  --heat-2: #2a78d6;
-  --heat-3: #1c5cab;
-  --heat-4: #0d366b;
+  --grid: #dfe5e0;
+  --axis: #bcc6bf;
+  --series-1: #1675a0;
+  --series-2: #c26b12;
+  --series-muted: #bcc6bf;
+  --heat-0: #d9a55e;
+  --heat-1: #c98443;
+  --heat-2: #b4652e;
+  --heat-3: #944a20;
+  --heat-4: #713214;
   --heat-ink-0: #0b0b0b; /* text or a marker inside a heat fill */
   --heat-ink-1: #0b0b0b;
-  --heat-ink-2: #ffffff;
+  --heat-ink-2: #0b0b0b;
   --heat-ink-3: #ffffff;
   --heat-ink-4: #ffffff;
   --pin-ring: #ffffff; /* a halo that lifts map pins off the basemap */
@@ -33,37 +40,45 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --text: #e6e8e3;
-    --muted: #a3aca6;
-    --bg: #141816;
-    --surface: #1c211f;
-    --border: #343b37;
-    --accent: #8cc7a5;
+    --text: #e4ebe6;
+    --muted: #9eafa9;
+    --bg: #0f1819;
+    --surface: #162223;
+    --border: #2b3a3a;
+    --accent: #5cc2bb;
+    --on-accent: #0f1819;
+    --maroon: #4a1522;
+    --wattle: #f0c04f;
     --error: #f2998f;
 
-    --grid: #2c2f2d;
-    --axis: #3f4441;
-    --series-1: #3987e5;
-    --series-2: #d95926;
-    --series-muted: #4a504c;
+    --grid: #233030;
+    --axis: #364646;
+    --series-1: #2f9fc0;
+    --series-2: #c4741c;
+    --series-muted: #435252;
     /* Reversed: near empty recedes into the dark surface, busy glows. */
-    --heat-0: #184f95;
-    --heat-1: #256abf;
-    --heat-2: #5598e7;
-    --heat-3: #86b6ef;
-    --heat-4: #cde2fb;
+    --heat-0: #8a4521;
+    --heat-1: #a85a2a;
+    --heat-2: #c47337;
+    --heat-3: #de9449;
+    --heat-4: #f2b968;
     --heat-ink-0: #ffffff;
     --heat-ink-1: #ffffff;
     --heat-ink-2: #0b0b0b;
     --heat-ink-3: #0b0b0b;
     --heat-ink-4: #0b0b0b;
-    --pin-ring: #a3aca6;
+    --pin-ring: #9eafa9;
   }
 }
 
 body {
-  margin: 0 auto;
+  margin: 0;
+}
+
+/* The header band runs edge to edge; everything inside it and below keeps to this column. */
+.wrap {
   max-width: 64rem;
+  margin: 0 auto;
   padding: 0 1rem;
 }
 
@@ -71,18 +86,32 @@ a {
   color: var(--accent);
 }
 
+:focus-visible {
+  outline: 3px solid var(--wattle);
+  outline-offset: 2px;
+}
+
+.site-header {
+  background: var(--maroon);
+  color: var(--on-maroon);
+  padding: 1.5rem 0 1.25rem;
+}
+
 .site-header h1 {
-  margin: 1.5rem 0 0;
+  margin: 0;
+  font: 800 2rem/1.1 var(--display);
 }
 
-.site-header p,
-.site-footer {
-  color: var(--muted);
+.site-header p {
+  margin: 0.4rem 0 0;
+  opacity: 0.85;
 }
 
 .site-footer {
-  margin: 3rem 0 2rem;
+  margin-top: 3rem;
+  margin-bottom: 2rem;
   border-top: 1px solid var(--border);
+  color: var(--muted);
   font-size: 0.875rem;
 }
 
@@ -118,7 +147,8 @@ button {
 button[type='submit'] {
   background: var(--accent);
   border-color: var(--accent);
-  color: var(--bg);
+  color: var(--on-accent);
+  font-weight: 600;
 }
 
 .park-filter {
@@ -163,6 +193,12 @@ button[type='submit'] {
 .results tbody tr.selected {
   background: var(--surface);
   box-shadow: inset 3px 0 0 var(--text);
+}
+
+.busy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 .location-mark {
@@ -225,6 +261,9 @@ button[type='submit'] {
 }
 
 .site-header h1 a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
   color: inherit;
   text-decoration: none;
 }

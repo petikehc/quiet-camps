@@ -1,6 +1,6 @@
 // Pure helpers behind the charts, kept apart from the SVG so they can be unit-tested.
 
-// Five bins of one blue ramp (the colours are --heat-0 to --heat-4 in index.css). More than
+// Five bins of one sand-to-red-earth ramp (the colours are --heat-0 to --heat-4 in index.css). More than
 // about seven classes blur together; five keep "quiet" and "busy" a glance apart.
 export const HEAT_LABELS = ['Under 20%', '20–40%', '40–60%', '60–80%', '80% or more']
 
