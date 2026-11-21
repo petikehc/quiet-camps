@@ -21,6 +21,12 @@ export function Layout() {
             </Link>
           </h1>
           <p>Queensland campgrounds that are usually quiet on your dates.</p>
+          <nav className="site-nav" aria-label="Pages">
+            <Link to="/" activeOptions={{ includeSearch: false }}>
+              Search
+            </Link>
+            <Link to="/timelapse">A year in 3D</Link>
+          </nav>
         </div>
       </header>
       <main className="wrap">

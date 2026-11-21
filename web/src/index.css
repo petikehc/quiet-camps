@@ -107,6 +107,24 @@ a {
   opacity: 0.85;
 }
 
+.site-nav {
+  display: flex;
+  gap: 1.25rem;
+  margin-top: 0.75rem;
+  font-size: 0.9375rem;
+}
+
+.site-nav a {
+  color: inherit;
+  opacity: 0.85;
+}
+
+.site-nav a.active {
+  opacity: 1;
+  font-weight: 600;
+  text-decoration: none;
+}
+
 .site-footer {
   margin-top: 3rem;
   margin-bottom: 2rem;
@@ -497,6 +515,94 @@ details summary {
   color: var(--muted);
 }
 
+/* The time-lapse */
+
+.timelapse-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+  margin: 1.25rem 0 0.75rem;
+}
+
+.timelapse-controls label {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+select {
+  font: inherit;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.timelapse-controls button {
+  min-width: 5.5rem;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+
+.timelapse-date {
+  margin: 0 0 0.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.holiday-name {
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--series-muted) 50%, transparent);
+  font-size: 0.875rem;
+}
+
+.timelapse-canvas {
+  position: relative;
+  height: 560px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none; /* a drag turns the state instead of scrolling the page */
+}
+
+.scrubber {
+  margin-top: 1rem;
+}
+
+.scrubber svg {
+  touch-action: none;
+}
+
+.holiday-band {
+  fill: var(--series-muted);
+  background: var(--series-muted);
+  opacity: 0.7;
+}
+
+.playhead {
+  stroke: var(--text);
+  stroke-width: 2;
+}
+
+.scrubber-range {
+  display: block;
+  width: 100%;
+  max-width: 900px;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  border: 0;
+  accent-color: var(--accent);
+}
+
+.small {
+  font-size: 0.8125rem;
+}
+
 /* Wide tables and charts scroll inside themselves on a phone, not the page. */
 .chart details,
 section:has(> .lead-time) {
@@ -506,6 +612,10 @@ section:has(> .lead-time) {
 @media (max-width: 40rem) {
   .map-canvas {
     height: 280px;
+  }
+
+  .timelapse-canvas {
+    height: 380px;
   }
 
   /* Name, park and busyness are what matter on a phone. */

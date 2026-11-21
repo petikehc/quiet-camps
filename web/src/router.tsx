@@ -9,6 +9,8 @@ import { parseYear } from './campground/year'
 import { Layout } from './Layout'
 import { parseFilters, parseView, type Filters, type View } from './search/filters'
 import { SearchPage } from './search/SearchPage'
+import { parseTimelapseYear } from './timelapse/timelapse'
+import { TimelapsePage } from './timelapse/TimelapsePage'
 
 // Code-based routes: with a page or two, one file reads more easily than generated file routes.
 const rootRoute = createRootRoute({ component: Layout })
@@ -32,8 +34,15 @@ const campgroundRoute = createRoute({
   component: CampgroundPage,
 })
 
+const timelapseRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/timelapse',
+  validateSearch: (search: { year?: number } & SearchSchemaInput) => parseTimelapseYear(search),
+  component: TimelapsePage,
+})
+
 export const router = createRouter({
-  routeTree: rootRoute.addChildren([searchRoute, campgroundRoute]),
+  routeTree: rootRoute.addChildren([searchRoute, campgroundRoute, timelapseRoute]),
   scrollRestoration: true, // back to the results puts you where you were in the list
 })
 
