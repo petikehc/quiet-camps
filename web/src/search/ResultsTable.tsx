@@ -1,6 +1,8 @@
 import { getRouteApi, Link } from '@tanstack/react-router'
 import { createColumnHelper, tableFeatures, useTable } from '@tanstack/react-table'
+import { useEffect, useRef } from 'react'
 import type { components } from '../api/schema'
+import { locationNote } from './location'
 
 export type QuietCampground = components['schemas']['QuietCampgroundOut']
 
@@ -11,7 +13,12 @@ const column = createColumnHelper<typeof features, QuietCampground>()
 const columns = column.columns([
   column.accessor('name', {
     header: 'Campground',
-    cell: (info) => <CampgroundLink id={info.row.original.id} name={info.getValue()} />,
+    cell: (info) => (
+      <>
+        <CampgroundLink id={info.row.original.id} name={info.getValue()} />
+        <LocationMark campground={info.row.original} />
+      </>
+    ),
   }),
   column.accessor('park_name', {
     header: 'Park',
@@ -48,11 +55,38 @@ function CampgroundLink({ id, name }: { id: number; name: string }) {
   )
 }
 
-export function ResultsTable({ rows }: { rows: QuietCampground[] }) {
+// The same reasons the map's pin shows on hover, for a campground whose location isn't exact.
+function LocationMark({ campground }: { campground: QuietCampground }) {
+  const { certainty, reasons } = locationNote(campground)
+  if (certainty === 'exact') return null
+  const text = `Location: ${reasons.join('. ')}`
+  return (
+    <span className="location-mark" role="img" aria-label={text} title={text}>
+      ⚠
+    </span>
+  )
+}
+
+type Props = {
+  rows: QuietCampground[]
+  selectedId: number | undefined
+  onSelect: (id: number) => void
+  scrollToSelected: boolean // true when the selection came from the map
+}
+
+export function ResultsTable({ rows, selectedId, onSelect, scrollToSelected }: Props) {
   const table = useTable({ features, columns, data: rows, getRowId: (row) => String(row.id) })
+  const element = useRef<HTMLTableElement>(null)
+
+  useEffect(() => {
+    if (!scrollToSelected || selectedId === undefined) return
+    element.current
+      ?.querySelector(`tr[data-id="${selectedId}"]`)
+      ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [scrollToSelected, selectedId])
 
   return (
-    <table className="results">
+    <table className="results" ref={element}>
       <caption>
         Quietest first. <strong>Usually</strong> is how busy a campground typically is on these
         nights, against its own busiest nights (100%). <strong>Sites booked</strong> is how many
@@ -71,7 +105,13 @@ export function ResultsTable({ rows }: { rows: QuietCampground[] }) {
       </thead>
       <tbody>
         {table.getRowModel().rows.map((row) => (
-          <tr key={row.id}>
+          <tr
+            key={row.id}
+            data-id={row.id}
+            className={row.original.id === selectedId ? 'selected' : undefined}
+            // A click on the row shows it on the map; the links in it still navigate.
+            onClick={() => onSelect(row.original.id)}
+          >
             {row.getAllCells().map((cell) => (
               <td key={cell.id}>
                 <table.FlexRender cell={cell} />

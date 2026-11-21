@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react'
 import type { components } from '../api/schema'
 import { pointerIn, type TooltipAt } from '../charts/pointer'
-import { calendarCell, formatNight, HEAT_LABELS, heatBin, holidayName } from '../charts/scales'
+import { HeatKeys } from '../charts/HeatKeys'
+import { calendarCell, formatNight, heatBin, holidayName } from '../charts/scales'
 import { Tooltip } from '../charts/Tooltip'
 
 type Night = components['schemas']['CalendarNightOut']
@@ -120,15 +121,10 @@ function NightDetails({ night }: { night: Night }) {
   )
 }
 
-export function HeatLegend() {
+function HeatLegend() {
   return (
     <ul className="legend">
-      {HEAT_LABELS.map((label, bin) => (
-        <li key={label}>
-          <span className="swatch" style={{ background: `var(--heat-${bin})` }} />
-          {label}
-        </li>
-      ))}
+      <HeatKeys />
       <li>
         <span className="swatch" style={{ background: 'var(--grid)' }} />
         No typical night

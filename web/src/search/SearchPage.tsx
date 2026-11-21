@@ -1,5 +1,5 @@
 import { getRouteApi } from '@tanstack/react-router'
-import { useEffect, useMemo, useRef } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { fieldErrors } from '../api/errors'
 import { ResultsTable, type QuietCampground } from './ResultsTable'
 import { SearchForm } from './SearchForm'
@@ -9,21 +9,43 @@ import { useQuietSearch } from './useQuietSearch'
 const route = getRouteApi('/')
 const noRows: QuietCampground[] = []
 
+// MapLibre is most of the app's JavaScript: its own chunk, loaded only where a map is shown.
+const ResultsMap = lazy(() => import('./ResultsMap').then((m) => ({ default: m.ResultsMap })))
+
 export function SearchPage() {
   const filters = route.useSearch()
   const search = useQuietSearch(filters)
   // A new array only when a page arrives; the table rebuilds its rows when this changes.
   const rows = useMemo(() => search.data?.pages.flatMap((page) => page.results) ?? noRows, [search.data])
+  // Shared by the map and the list: picking in one highlights (and brings into view) the other.
+  const [selected, setSelected] = useState<{ id: number; from: 'map' | 'list' }>()
 
   return (
     <>
       <SearchForm filters={filters} />
+      {/* Stays mounted between searches, so the tiles don't reload. Until its code arrives, an
+          empty box the same size keeps the table from jumping. */}
+      <Suspense fallback={<div className="results-map map-canvas" />}>
+        <ResultsMap
+          rows={rows}
+          selectedId={selected?.id}
+          onSelect={(id) => setSelected({ id, from: 'map' })}
+          fitKey={JSON.stringify(filters)}
+        />
+      </Suspense>
       {search.isPending && <p role="status">Searching…</p>}
       {search.isError && <SearchError error={search.error} />}
       {search.isSuccess && rows.length === 0 && (
         <p>No campgrounds have enough history for these nights. Try other dates or names.</p>
       )}
-      {rows.length > 0 && <ResultsTable rows={rows} />}
+      {rows.length > 0 && (
+        <ResultsTable
+          rows={rows}
+          selectedId={selected?.id}
+          onSelect={(id) => setSelected({ id, from: 'list' })}
+          scrollToSelected={selected?.from === 'map'}
+        />
+      )}
       {search.hasNextPage && (
         <LoadMore
           loading={search.isFetchingNextPage}
