@@ -8,11 +8,12 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from quiet_camps.api.db import get_session
+from quiet_camps.api.problems import INVALID
 from quiet_camps.api.queries import After, search_quiet
 
 MAX_NIGHTS = 60
 
-search_router = APIRouter()
+search_router = APIRouter(responses=INVALID)
 
 
 def encode_cursor(after: After) -> str:

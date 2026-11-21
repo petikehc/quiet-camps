@@ -6,6 +6,7 @@ import httpx2 as httpx
 from fastapi.testclient import TestClient
 
 from quiet_camps.api.app import create_app
+from quiet_camps.api.problems import Problem, ValidationProblem
 from quiet_camps.api.settings import Settings
 
 PROBLEM = "application/problem+json"
@@ -71,3 +72,14 @@ def test_a_crash_is_a_500_problem_that_hides_the_exception(api_settings: Setting
 
     problem(response, 500, "Internal Server Error")
     assert "hunter2" not in response.text
+
+
+def test_the_documented_models_describe_the_real_bodies(seeded_client: TestClient) -> None:
+    # extra="forbid" on the models: a key the docs don't mention fails here.
+    invalid = seeded_client.get(SEARCH, params={**EASTER_2027, "limit": 0, "q": "a"}).json()
+    not_found = seeded_client.get("/campgrounds/999999").json()
+    no_route = seeded_client.get("/nowhere").json()
+
+    ValidationProblem.model_validate(invalid)
+    Problem.model_validate(not_found)
+    Problem.model_validate(no_route)

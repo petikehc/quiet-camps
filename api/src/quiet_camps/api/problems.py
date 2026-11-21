@@ -7,11 +7,43 @@ from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, ConfigDict
 from starlette.exceptions import HTTPException
 
 from quiet_camps.api.errors import NotFound
 
 PROBLEM = "application/problem+json"
+
+
+class Problem(BaseModel):
+    """What every error looks like: documented in OpenAPI, so the web client is typed too."""
+
+    model_config = ConfigDict(extra="forbid")  # the tests check real bodies against it
+
+    type: str
+    title: str
+    status: int
+    detail: str
+
+
+class FieldError(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    field: str | None  # None: a rule across fields, like depart after arrive
+    message: str
+
+
+class ValidationProblem(Problem):
+    errors: list[FieldError]
+
+
+# For a router's `responses`: a 422 there also replaces FastAPI's own validation error shape.
+INVALID: dict[int | str, dict[str, Any]] = {
+    422: {"model": ValidationProblem, "description": "The request has invalid fields"}
+}
+NOT_FOUND: dict[int | str, dict[str, Any]] = {
+    404: {"model": Problem, "description": "Nothing with that id or year"}
+}
 
 
 def problem(
@@ -59,9 +91,28 @@ async def not_found(request: Request, exc: Exception) -> JSONResponse:
     return problem(404, str(exc))
 
 
+def document_problems(app: FastAPI) -> None:
+    """Make OpenAPI say what the handlers send: FastAPI files every model as application/json."""
+    build = app.openapi
+
+    def openapi() -> dict[str, Any]:
+        if app.openapi_schema is None:
+            for operations in build()["paths"].values():
+                for operation in operations.values():
+                    for status, response in operation["responses"].items():
+                        content = response.get("content", {})
+                        if int(status) >= 400 and "application/json" in content:
+                            content[PROBLEM] = content.pop("application/json")
+        assert app.openapi_schema is not None  # build() caches it there
+        return app.openapi_schema
+
+    app.openapi = openapi
+
+
 def add_problem_handlers(app: FastAPI) -> None:
     app.add_exception_handler(RequestValidationError, invalid_request)
     # Starlette's, not FastAPI's subclass: the router raises Starlette's for 404 and 405.
     app.add_exception_handler(HTTPException, http_error)
     app.add_exception_handler(Exception, crash)
     app.add_exception_handler(NotFound, not_found)  # CampgroundNotFound and the like
+    document_problems(app)

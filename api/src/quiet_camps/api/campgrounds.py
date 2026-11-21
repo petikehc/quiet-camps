@@ -17,9 +17,10 @@ from quiet_camps.api.campground_service import (
     get_campground,
 )
 from quiet_camps.api.db import get_session
+from quiet_camps.api.problems import INVALID, NOT_FOUND
 from quiet_camps.db.derived import FIRST_NIGHT, YEARS_AHEAD
 
-campground_router = APIRouter(prefix="/campgrounds")
+campground_router = APIRouter(prefix="/campgrounds", responses={**INVALID, **NOT_FOUND})
 
 
 class CampgroundOut(BaseModel):
