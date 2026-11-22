@@ -94,6 +94,16 @@ class ParkOutline(Base):
     geometry: Mapped[dict[str, Any]] = mapped_column(JSONB)
 
 
+class PostcodeCentroid(Base):
+    """Roughly where a postcode's campers live: its postal area's centre (ABS, CC BY 4.0)."""
+
+    __tablename__ = "postcode_centroid"
+
+    postcode: Mapped[str] = mapped_column(String(4), primary_key=True)
+    lat: Mapped[float]
+    lon: Mapped[float]
+
+
 class CalendarDay(Base):
     """Every night with its kind, from quiet_camps.ingest.day_kinds: "week 14 6", "easter +1"."""
 
