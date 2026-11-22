@@ -123,6 +123,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/trips/{year}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Trips By Night */
+        get: operations["trips_by_night_trips__year__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/year/{year}": {
         parameters: {
             query?: never;
@@ -242,6 +259,29 @@ export interface components {
             until: string | null;
         };
         /**
+         * LeftOutOut
+         * @description Trips with no line to draw, in sites.
+         */
+        LeftOutOut: {
+            /** No Centroid */
+            no_centroid: number;
+            /** No Postcode */
+            no_postcode: number;
+            /** Overseas */
+            overseas: number;
+            /** Unlocated */
+            unlocated: number;
+        };
+        /** OriginOut */
+        OriginOut: {
+            /** Lat */
+            lat: number;
+            /** Lon */
+            lon: number;
+            /** Postcode */
+            postcode: string;
+        };
+        /**
          * Problem
          * @description What every error looks like: documented in OpenAPI, so the web client is typed too.
          */
@@ -302,6 +342,48 @@ export interface components {
             next: string | null;
             /** Results */
             results: components["schemas"]["QuietCampgroundOut"][];
+        };
+        /** TripCampgroundOut */
+        TripCampgroundOut: {
+            /** Id */
+            id: number;
+            /** Lat */
+            lat: number;
+            /** Lon */
+            lon: number;
+            /** Name */
+            name: string;
+        };
+        /**
+         * TripsOut
+         * @description Arrivals as columns in night order: entry i is origin[i] → campground[i], sites[i].
+         *
+         *     A trip is a stay, a run of nights under one booking, and arrives on its first night.
+         *     Arrivals on one night from one postcode to one campground are one entry.
+         */
+        TripsOut: {
+            /** Campground */
+            campground: number[];
+            /** Campgrounds */
+            campgrounds: components["schemas"]["TripCampgroundOut"][];
+            /**
+             * First Night
+             * Format: date
+             */
+            first_night: string;
+            left_out: components["schemas"]["LeftOutOut"];
+            /** Nights */
+            nights: number;
+            /** Origin */
+            origin: number[];
+            /** Origins */
+            origins: components["schemas"]["OriginOut"][];
+            /** Per Night */
+            per_night: number[];
+            /** Sites */
+            sites: number[];
+            /** Year */
+            year: number;
         };
         /** ValidationProblem */
         ValidationProblem: {
@@ -633,6 +715,55 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+        };
+    };
+    trips_by_night_trips__year__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "if-none-match"?: string | null;
+            };
+            path: {
+                year: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TripsOut"];
+                };
+            };
+            /** @description Not Modified: the If-None-Match ETag still matches */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Nothing with that id or year */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The request has invalid fields */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ValidationProblem"];
                 };
             };
         };

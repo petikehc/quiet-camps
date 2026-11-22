@@ -279,12 +279,16 @@ def holiday_spans(nights: list[HolidayNight], first: date) -> list[HolidaySpan]:
     return spans
 
 
-async def year_campers(source: YearSource, year: int) -> YearCampers:
+def year_span(year: int, until: date | None) -> tuple[date, date]:
+    """The year's first and last nights of history; `until` is where the history ends."""
     first = date(year, 1, 1)
-    until = await source.history_end()
     if until is None or until < first:
         raise NoHistory(year)
-    last = min(date(year, 12, 31), until)
+    return first, min(date(year, 12, 31), until)
+
+
+async def year_campers(source: YearSource, year: int) -> YearCampers:
+    first, last = year_span(year, await source.history_end())
     nights = (last - first).days + 1
 
     campgrounds = await source.booked_campgrounds(first, last)
