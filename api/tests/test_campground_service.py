@@ -10,6 +10,8 @@ from quiet_camps.api.campground_service import (
     CampgroundCalendar,
     CampgroundDetail,
     CampgroundNotFound,
+    HolidayNight,
+    HolidaySpan,
     LeadCount,
     MonthSites,
     NightCampers,
@@ -261,10 +263,17 @@ def test_years_for_an_unknown_id_is_not_found() -> None:
 class FakeYear:
     """Satisfies YearSource: two campgrounds and their campers, one history end."""
 
-    def __init__(self, history_end: date | None, rows: list[NightCampers]) -> None:
+    def __init__(
+        self,
+        history_end: date | None,
+        rows: list[NightCampers],
+        holidays: list[HolidayNight] | None = None,
+    ) -> None:
         self.end = history_end
         self.rows = rows
+        self.holidays = holidays or []
         self.asked: tuple[date, date] | None = None
+        self.asked_holidays: tuple[date, date] | None = None
 
     async def history_end(self) -> date | None:
         return self.end
@@ -278,6 +287,14 @@ class FakeYear:
 
     async def campers_by_night(self, first: date, last: date) -> list[NightCampers]:
         return self.rows
+
+    async def holiday_nights(self, first: date, last: date) -> list[HolidayNight]:
+        self.asked_holidays = (first, last)
+        return self.holidays
+
+
+def holiday_nights(name: str, first: date, count: int) -> list[HolidayNight]:
+    return [HolidayNight(night=first + timedelta(days=i), holiday=name) for i in range(count)]
 
 
 def test_a_year_is_flat_campground_by_campground() -> None:
@@ -311,3 +328,47 @@ def test_a_year_after_the_history_has_none(history_end: date | None) -> None:
         asyncio.run(year_campers(FakeYear(history_end, []), 2026))
 
     assert raised.value.year == 2026
+
+
+def test_consecutive_holiday_nights_are_one_span() -> None:
+    nights = holiday_nights("easter", date(2025, 4, 17), 4) + holiday_nights(
+        "ekka", date(2025, 8, 12), 1
+    )
+
+    found = asyncio.run(year_campers(FakeYear(date(2025, 12, 31), [], nights), 2025))
+
+    assert found.holidays == [
+        HolidaySpan(name="easter", night=106, nights=4),  # 17 April is the 107th night
+        HolidaySpan(name="ekka", night=223, nights=1),
+    ]
+
+
+def test_christmas_starts_and_ends_a_year_as_two_spans() -> None:
+    nights = holiday_nights("christmas", date(2025, 1, 1), 4) + holiday_nights(
+        "christmas", date(2025, 12, 26), 6
+    )
+
+    found = asyncio.run(year_campers(FakeYear(date(2025, 12, 31), [], nights), 2025))
+
+    assert found.holidays == [
+        HolidaySpan(name="christmas", night=0, nights=4),
+        HolidaySpan(name="christmas", night=359, nights=6),
+    ]
+
+
+def test_holidays_side_by_side_stay_apart() -> None:
+    nights = holiday_nights("anzac day", date(2025, 4, 24), 3) + holiday_nights(
+        "labour day", date(2025, 4, 27), 2
+    )
+
+    found = asyncio.run(year_campers(FakeYear(date(2025, 12, 31), [], nights), 2025))
+
+    assert [(h.name, h.nights) for h in found.holidays] == [("anzac day", 3), ("labour day", 2)]
+
+
+def test_holidays_stop_where_the_history_does() -> None:
+    source = FakeYear(date(2026, 9, 30), [])
+
+    asyncio.run(year_campers(source, 2026))
+
+    assert source.asked_holidays == (date(2026, 1, 1), date(2026, 9, 30))

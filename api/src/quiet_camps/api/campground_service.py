@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, timedelta
 from typing import Protocol
 
@@ -235,12 +235,26 @@ class NightCampers:
 
 
 @dataclass(frozen=True, kw_only=True)
+class HolidayNight:
+    night: date
+    holiday: str
+
+
+@dataclass(frozen=True, kw_only=True)
+class HolidaySpan:
+    name: str
+    night: int  # the first night, as an index into the year's nights
+    nights: int
+
+
+@dataclass(frozen=True, kw_only=True)
 class YearCampers:
     year: int
     first_night: date
     nights: int  # 365 or 366, fewer in the year the history ends
     campgrounds: list[YearCampground]  # in id order
     values: list[int]  # campers: values[campground * nights + night], row by row
+    holidays: list[HolidaySpan]  # in night order
 
 
 class YearSource(Protocol):
@@ -249,6 +263,20 @@ class YearSource(Protocol):
     async def booked_campgrounds(self, first: date, last: date) -> list[YearCampground]: ...
 
     async def campers_by_night(self, first: date, last: date) -> list[NightCampers]: ...
+
+    async def holiday_nights(self, first: date, last: date) -> list[HolidayNight]: ...
+
+
+def holiday_spans(nights: list[HolidayNight], first: date) -> list[HolidaySpan]:
+    """Consecutive nights of one holiday become one span; nights must be in date order."""
+    spans: list[HolidaySpan] = []
+    for h in nights:
+        index = (h.night - first).days
+        if spans and spans[-1].name == h.holiday and spans[-1].night + spans[-1].nights == index:
+            spans[-1] = replace(spans[-1], nights=spans[-1].nights + 1)
+        else:
+            spans.append(HolidaySpan(name=h.holiday, night=index, nights=1))
+    return spans
 
 
 async def year_campers(source: YearSource, year: int) -> YearCampers:
@@ -265,5 +293,10 @@ async def year_campers(source: YearSource, year: int) -> YearCampers:
     for c in await source.campers_by_night(first, last):
         values[row[c.campground_id] * nights + (c.night - first).days] = c.campers
     return YearCampers(
-        year=year, first_night=first, nights=nights, campgrounds=campgrounds, values=values
+        year=year,
+        first_night=first,
+        nights=nights,
+        campgrounds=campgrounds,
+        values=values,
+        holidays=holiday_spans(await source.holiday_nights(first, last), first),
     )

@@ -30,6 +30,14 @@ class YearCampgroundOut(BaseModel):
     lon: float | None
 
 
+class HolidayOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    name: str  # "easter", "christmas", ...
+    night: int  # the first night, as an index into the year's nights
+    nights: int
+
+
 class YearOut(BaseModel):
     """Campers per campground per night: one flat array, ready for a typed array on the GPU."""
 
@@ -40,6 +48,7 @@ class YearOut(BaseModel):
     nights: int  # 365 or 366, fewer in the year the history ends
     campgrounds: list[YearCampgroundOut]  # every campground booked that year, in id order
     values: list[int]  # campers: values[campground * nights + night], row by row
+    holidays: list[HolidayOut]  # public holidays and their long weekends; Christmas twice
 
 
 def get_year_source(session: Annotated[AsyncSession, Depends(get_session)]) -> YearSource:

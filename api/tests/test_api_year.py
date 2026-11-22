@@ -3,7 +3,7 @@
 The seed's history ends with 2025 (conftest). Every seeded booking is 2 adults per site.
 """
 
-from datetime import date
+from datetime import date, timedelta
 from typing import Any
 
 import pytest
@@ -112,3 +112,13 @@ def test_big_responses_are_gzipped_small_ones_not(seeded_client: TestClient) -> 
 
     assert big.headers["content-encoding"] == "gzip"
     assert "content-encoding" not in small.headers
+
+
+def test_holidays_are_spans_of_nights(seeded_client: TestClient) -> None:
+    body = year(seeded_client, 2025)
+
+    first = date.fromisoformat(body["first_night"])
+    spans = {(h["name"], first + timedelta(days=h["night"]), h["nights"]) for h in body["holidays"]}
+    assert ("easter", date(2025, 4, 17), 4) in spans  # Thursday night to Sunday night
+    assert [h["name"] for h in body["holidays"]].count("christmas") == 2  # both ends of the year
+    assert set(body["holidays"][0]) == {"name", "night", "nights"}

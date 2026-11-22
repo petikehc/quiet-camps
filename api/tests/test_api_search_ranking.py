@@ -58,6 +58,13 @@ def test_a_campground_with_too_little_history_is_left_out(seeded_client: TestCli
     assert "Thin Creek camping area" not in names(seeded_client)
 
 
+def test_a_result_names_the_openstreetmap_object_it_matched(seeded_client: TestClient) -> None:
+    by_name = {c["name"]: c for c in results(seeded_client)}
+
+    assert (by_name[QUIET]["osm_type"], by_name[QUIET]["osm_id"]) == ("way", 4242)
+    assert (by_name[BUSY]["osm_type"], by_name[BUSY]["osm_id"]) == (None, None)  # no match
+
+
 def test_park_narrows_the_search(seeded_client: TestClient) -> None:
     assert names(seeded_client, park="Busy Coast National Park") == [BUSY]
 
@@ -115,6 +122,22 @@ def test_next_pages_keep_the_filters_sent_again(seeded_client: TestClient) -> No
 
     assert [c["name"] for c in first["results"] + second["results"]] == [QUIET, MIDDLE]
     assert second["next"] is None
+
+
+def map_names(client: TestClient, **params: Any) -> list[str]:
+    response = client.get("/campgrounds/quiet/map", params={**SATURDAY, **params})
+    assert response.status_code == 200
+    return [c["name"] for c in response.json()["results"]]
+
+
+def test_the_map_has_every_result_in_rank_order_on_one_page(seeded_client: TestClient) -> None:
+    assert page(seeded_client, limit=2)["next"] is not None  # more than one page of the search
+    assert map_names(seeded_client) == names(seeded_client)
+
+
+def test_the_map_takes_the_search_filters(seeded_client: TestClient) -> None:
+    assert map_names(seeded_client, q="creek") == [QUIET, MIDDLE]
+    assert map_names(seeded_client, park="Busy Coast National Park") == [BUSY]
 
 
 @pytest.mark.parametrize("wildcard", ["%%", "__"])

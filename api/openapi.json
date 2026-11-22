@@ -224,6 +224,29 @@
         "title": "FieldError",
         "type": "object"
       },
+      "HolidayOut": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "night": {
+            "title": "Night",
+            "type": "integer"
+          },
+          "nights": {
+            "title": "Nights",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "night",
+          "nights"
+        ],
+        "title": "HolidayOut",
+        "type": "object"
+      },
       "LeadTimeGroupOut": {
         "properties": {
           "booked_by": {
@@ -387,6 +410,28 @@
             "title": "Name",
             "type": "string"
           },
+          "osm_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Osm Id"
+          },
+          "osm_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Osm Type"
+          },
           "park_name": {
             "title": "Park Name",
             "type": "string"
@@ -406,9 +451,28 @@
           "lat",
           "lon",
           "location_source",
-          "location_flags"
+          "location_flags",
+          "osm_type",
+          "osm_id"
         ],
         "title": "QuietCampgroundOut",
+        "type": "object"
+      },
+      "SearchMap": {
+        "description": "Every result at once, in rank order: the list pages through a search, a map shows it all.",
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/QuietCampgroundOut"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "results"
+        ],
+        "title": "SearchMap",
         "type": "object"
       },
       "SearchPage": {
@@ -559,6 +623,13 @@
             "title": "First Night",
             "type": "string"
           },
+          "holidays": {
+            "items": {
+              "$ref": "#/components/schemas/HolidayOut"
+            },
+            "title": "Holidays",
+            "type": "array"
+          },
           "nights": {
             "title": "Nights",
             "type": "integer"
@@ -580,7 +651,8 @@
           "first_night",
           "nights",
           "campgrounds",
-          "values"
+          "values",
+          "holidays"
         ],
         "title": "YearOut",
         "type": "object"
@@ -759,6 +831,90 @@
           }
         },
         "summary": "Quiet Campgrounds"
+      }
+    },
+    "/campgrounds/quiet/map": {
+      "get": {
+        "operationId": "quiet_campgrounds_map_campgrounds_quiet_map_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "arrive",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Arrive",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "depart",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Depart",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "park",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Park"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "minLength": 2,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchMap"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblem"
+                }
+              }
+            },
+            "description": "The request has invalid fields"
+          }
+        },
+        "summary": "Quiet Campgrounds Map"
       }
     },
     "/campgrounds/{campground_id}": {

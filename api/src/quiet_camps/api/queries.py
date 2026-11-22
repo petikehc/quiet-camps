@@ -23,7 +23,7 @@ ranked AS (
     SELECT c.id, c.name, c.park_name,
            CAST(round(CAST(avg(t.busyness) AS numeric), 6) AS float8) AS busyness,
            avg(t.sites) AS typical_sites, min(t.nights) AS history,
-           c.lat, c.lon, c.location_source, c.location_flags
+           c.lat, c.lon, c.location_source, c.location_flags, c.osm_type, c.osm_id
     FROM asked a
     JOIN campground_typical t ON t.kind = a.kind
     JOIN campground c ON c.id = t.campground_id
@@ -53,6 +53,8 @@ class QuietCampground:
     lon: float | None
     location_source: str | None
     location_flags: list[str]
+    osm_type: str | None  # node, way or relation
+    osm_id: int | None
 
 
 @dataclass(frozen=True)
@@ -76,13 +78,13 @@ async def search_quiet(
     depart: date,
     park: str | None,
     q: str | None,
-    limit: int,
+    limit: int | None,
     after: After | None = None,
 ) -> list[QuietCampground]:
     """Campgrounds that are usually quietest on the nights from arrive to depart (exclusive).
 
     `q` narrows to names or park names containing it, ignoring case. `after` starts the page
-    after that campground.
+    after that campground. `limit=None` returns every result (Postgres reads LIMIT NULL as none).
     """
     result = await session.execute(
         SEARCH,
