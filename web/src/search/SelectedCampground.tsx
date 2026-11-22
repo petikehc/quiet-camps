@@ -2,7 +2,7 @@ import { getRouteApi, Link } from '@tanstack/react-router'
 import { osmLink, shownLocation } from './location'
 import type { QuietCampground } from './ResultsTable'
 
-const route = getRouteApi('/')
+const route = getRouteApi('/search')
 
 // The campground picked on the map or in the list. A tooltip vanishes with the pointer, so
 // the links (its page, and its OpenStreetMap object) live here.

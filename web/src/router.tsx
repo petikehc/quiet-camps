@@ -2,12 +2,20 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  redirect,
   type SearchSchemaInput,
 } from '@tanstack/react-router'
 import { CampgroundPage } from './campground/CampgroundPage'
 import { parseYear } from './campground/year'
+import { HomePage } from './home/HomePage'
 import { Layout } from './Layout'
-import { parseFilters, parseView, type Filters, type View } from './search/filters'
+import {
+  isOldSearchLink,
+  parseFilters,
+  parseView,
+  type Filters,
+  type View,
+} from './search/filters'
 import { SearchPage } from './search/SearchPage'
 import { parseTimelapseYear } from './timelapse/timelapse'
 import { TimelapsePage } from './timelapse/TimelapsePage'
@@ -15,9 +23,19 @@ import { TimelapsePage } from './timelapse/TimelapsePage'
 // Code-based routes: with a page or two, one file reads more easily than generated file routes.
 const rootRoute = createRootRoute({ component: Layout })
 
-const searchRoute = createRoute({
+const homeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
+  // Links from when the search was the homepage go on to it, filters and all.
+  beforeLoad: ({ search }) => {
+    if (isOldSearchLink(search)) throw redirect({ to: '/search', search, replace: true })
+  },
+  component: HomePage,
+})
+
+const searchRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/search',
   // SearchSchemaInput: a link may leave filters out (parseFilters fills in the coming weekend),
   // but the page always gets them all.
   validateSearch: (search: Partial<Filters & View> & SearchSchemaInput) => ({
@@ -42,7 +60,7 @@ const timelapseRoute = createRoute({
 })
 
 export const router = createRouter({
-  routeTree: rootRoute.addChildren([searchRoute, campgroundRoute, timelapseRoute]),
+  routeTree: rootRoute.addChildren([homeRoute, searchRoute, campgroundRoute, timelapseRoute]),
   scrollRestoration: true, // back to the results puts you where you were in the list
 })
 

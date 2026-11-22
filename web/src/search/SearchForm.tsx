@@ -2,7 +2,7 @@ import { getRouteApi, Link } from '@tanstack/react-router'
 import type { FormEvent } from 'react'
 import type { Filters } from './filters'
 
-const route = getRouteApi('/')
+const route = getRouteApi('/search')
 
 // Submitting navigates to a new URL; the page reads the filters back from it.
 export function SearchForm({ filters }: { filters: Filters }) {
@@ -41,7 +41,7 @@ export function SearchForm({ filters }: { filters: Filters }) {
       {filters.park && (
         <p className="park-filter">
           In {filters.park}{' '}
-          <Link from="/" to="/" search={(prev) => ({ ...prev, park: undefined })}>
+          <Link from="/search" to="/search" search={(prev) => ({ ...prev, park: undefined })}>
             Any park
           </Link>
         </p>

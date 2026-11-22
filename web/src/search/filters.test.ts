@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addDays, parseFilters, parseView } from './filters'
+import { addDays, isOldSearchLink, parseFilters, parseView } from './filters'
 
 const wednesday = new Date(2026, 10, 18) // months count from 0: 18 Nov 2026
 
@@ -61,5 +61,18 @@ describe('addDays', () => {
   it('crosses a leap day', () => {
     expect(addDays('2028-02-28', 1)).toBe('2028-02-29')
     expect(addDays('2028-02-28', 2)).toBe('2028-03-01')
+  })
+})
+
+describe('isOldSearchLink', () => {
+  it('spots a search link from when the search was the homepage', () => {
+    expect(isOldSearchLink({ arrive: '2027-04-02', depart: '2027-04-06' })).toBe(true)
+    expect(isOldSearchLink({ park: 'Main Range National Park' })).toBe(true)
+    expect(isOldSearchLink({ review: 'locations' })).toBe(true)
+  })
+
+  it('leaves the homepage alone', () => {
+    expect(isOldSearchLink({})).toBe(false)
+    expect(isOldSearchLink({ utm_source: 'newsletter' })).toBe(false)
   })
 })

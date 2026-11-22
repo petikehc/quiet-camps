@@ -22,7 +22,7 @@ export function Layout() {
           </h1>
           <p>Queensland campgrounds that are usually quiet on your dates.</p>
           <nav className="site-nav" aria-label="Pages">
-            <Link to="/" activeOptions={{ includeSearch: false }}>
+            <Link to="/search" activeOptions={{ includeSearch: false }}>
               Search
             </Link>
             <Link to="/timelapse">A year in 3D</Link>
