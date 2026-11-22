@@ -32,6 +32,18 @@
   --heat-ink-4: #ffffff;
   --pin-ring: #ffffff; /* a halo that lifts map pins off the basemap */
 
+  /* The homepage's night map, the same in light and dark mode: trails glow by adding up, which
+     needs a dark ground. Validated against --night: the trail ramp (tail → head) is one hue,
+     lighter at every step, its tail 4.2:1; state lines 3.3:1 against the land; text 8:1+. */
+  --night: #0a1416;
+  --night-land: #13252a;
+  --night-line: #557880;
+  --night-text: #e4ebe6;
+  --night-muted: #9eafa9;
+  --trail-tail: #a8692a;
+  --trail: #e8a24a;
+  --trail-head: #ffd89a;
+
   color-scheme: light dark;
   font: 16px/1.5 system-ui, 'Segoe UI', Roboto, sans-serif;
   color: var(--text);
@@ -609,7 +621,181 @@ section:has(> .lead-time) {
   overflow-x: auto;
 }
 
+/* The homepage: the map on a night panel, its numbers laid over the corners. */
+.home {
+  margin-top: 1.5rem;
+}
+
+.home-map {
+  position: relative;
+  height: min(74vh, 720px);
+  min-height: 420px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--night);
+  color: var(--night-text);
+}
+
+.home-outline,
+.home-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.home-outline {
+  padding: 8%;
+  box-sizing: border-box;
+  fill: var(--night-land);
+  stroke: var(--night-line);
+  stroke-width: 0.06;
+}
+
+.home-now,
+.home-board {
+  position: absolute;
+  padding: 0.6rem 0.9rem;
+  border-radius: 8px;
+  /* Lines pass under the numbers, not through them. */
+  background: color-mix(in srgb, var(--night) 82%, transparent);
+  pointer-events: none;
+}
+
+.home-now {
+  top: 1rem;
+  left: 1rem;
+}
+
+.home-now h2 {
+  margin: 0;
+  font: 700 1rem/1.3 var(--display);
+  color: var(--night-muted);
+}
+
+.home-date {
+  margin: 0.25rem 0 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.home-hero {
+  margin: 0;
+  color: var(--night-muted);
+}
+
+.home-hero strong {
+  display: block;
+  font: 800 3.5rem/1 var(--display);
+  font-variant-numeric: tabular-nums;
+  color: var(--trail);
+}
+
+.home-board {
+  right: 1rem;
+  bottom: 1rem;
+  width: 17rem;
+  font-size: 0.875rem;
+}
+
+.home-board h3 {
+  margin: 0 0 0.4rem;
+  font: 700 0.8125rem/1.3 var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--night-muted);
+}
+
+.home-board ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.home-board li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--night-land);
+  font-variant-numeric: tabular-nums;
+}
+
+.home-board li span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-board p {
+  margin: 0.6rem 0 0;
+  color: var(--night-muted);
+}
+
+.home-board strong {
+  color: var(--night-text);
+}
+
+.home-play {
+  position: absolute;
+  left: 1rem;
+  bottom: 1rem;
+  min-width: 5.5rem;
+  background: var(--night-land);
+  border-color: var(--night-line);
+  color: var(--night-text);
+  font-weight: 600;
+}
+
+.home-cta {
+  margin: 1.25rem 0 0;
+  text-align: center;
+}
+
+.cta {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font: 700 1.125rem/1.2 var(--display);
+  text-decoration: none;
+}
+
+.home-about {
+  max-width: 44rem;
+  margin: 1.5rem auto 0;
+}
+
 @media (max-width: 40rem) {
+  .home-hero strong {
+    font-size: 2.5rem;
+  }
+
+  /* A phone's map is as wide as the screen and no taller: the leaderboard goes under it,
+     still on the night panel. */
+  .home-map {
+    height: auto;
+    min-height: 0;
+    padding-top: 420px;
+  }
+
+  .home-outline,
+  .home-canvas {
+    height: 420px;
+  }
+
+  .home-play {
+    bottom: auto;
+    top: 364px;
+  }
+
+  .home-board {
+    position: static;
+    width: auto;
+    padding: 0 1rem 1rem;
+    background: none;
+  }
+
   .map-canvas {
     height: 280px;
   }

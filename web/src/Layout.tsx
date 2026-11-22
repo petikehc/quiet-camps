@@ -43,6 +43,7 @@ export function Layout() {
             , © State of Queensland,{' '}
             <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Locations: ©{' '}
             <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors.
+            Boundaries and postal areas: ABS, © Commonwealth of Australia, CC BY 4.0.
           </p>
           <p>
             Past bookings, not live availability. Not affiliated with or endorsed by Queensland

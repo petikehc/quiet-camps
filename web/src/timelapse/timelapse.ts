@@ -1,5 +1,6 @@
 import type { components } from '../api/schema'
 import { FIRST_YEAR } from '../campground/year'
+import { projection } from '../projection'
 
 export type Year = components['schemas']['YearOut']
 export type Holiday = components['schemas']['HolidayOut']
@@ -22,15 +23,8 @@ export function timelapseYears(today = new Date()): number[] {
   return Array.from({ length: today.getFullYear() - FIRST_YEAR + 1 }, (_, i) => FIRST_YEAR + i)
 }
 
-// Longitude and latitude to the ground plane, in degrees of latitude: an equirectangular
-// projection squeezed by cos(latitude) at Queensland's middle, so the state keeps its shape.
-// North is -z, away from a camera that starts in the south.
-const MIDDLE = { lon: 145.8, lat: -19.6 }
-const SQUEEZE = Math.cos((MIDDLE.lat * Math.PI) / 180)
-
-export function project(lon: number, lat: number): [x: number, z: number] {
-  return [(lon - MIDDLE.lon) * SQUEEZE, -(lat - MIDDLE.lat)]
-}
+// Queensland's middle, so the state keeps its shape.
+export const project = projection({ lon: 145.8, lat: -19.6 })
 
 // Campers on each night, every campground together (located or not).
 export function statewide(year: Year): number[] {
