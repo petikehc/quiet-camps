@@ -80,14 +80,15 @@ def test_a_retired_mark_with_no_other_name_is_taken_off(conn: Conn) -> None:
         (MAIN_RANGE, "Repulse Creek camp (obsolete)"),
         (MAIN_RANGE, "Mount Superbus-South Peak remote bush camp - OBSEL"),
         (MAIN_RANGE, "z_Thorsborne Trail"),
+        (MAIN_RANGE, "Thorsborne Trail - prior to 24 July 2025 Obsolete"),
     ]
     ensure_areas(conn, areas)
     assign_campgrounds(conn, {})
 
-    assert sorted(name for _, name in campground_of(conn).values()) == [
+    assert sorted({name for _, name in campground_of(conn).values()}) == [
         "Mount Superbus-South Peak remote bush camp",
         "Repulse Creek camp",
-        "Thorsborne Trail",
+        "Thorsborne Trail",  # both Thorsborne names show this: the dated one loses its date too
     ]
 
 
