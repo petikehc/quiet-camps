@@ -12,7 +12,7 @@
   --on-maroon: #f6efe9;
   --wattle: #b47c10; /* the focus ring; 3:1 against --bg */
   --error: #a3261b;
-  --display: 'Overpass', system-ui, sans-serif;
+  --display: 'Overpass Variable', system-ui, sans-serif;
   --stage-pad: clamp(1rem, 4vw, 3.5rem); /* the homepage's night stage and its header */
 
   /* Charts: validated with the dataviz skill's validator against --bg, light and dark. */
@@ -698,6 +698,7 @@ section:has(> .lead-time) {
   stroke-width: 0.06;
   transform: perspective(110vh) rotateX(34deg) scale(0.98) translateY(-3%);
   transform-origin: 50% 55%;
+  pointer-events: none; /* decoration: the tilt widens its box, which mustn't take a tap */
 }
 
 .home-canvas {
@@ -1064,7 +1065,8 @@ section:has(> .lead-time) {
 }
 
 .home-about {
-  max-width: 65ch;
+  max-width: 60ch;
+  text-wrap: pretty;
   margin: 3rem 0 0;
 }
 
@@ -1114,6 +1116,7 @@ section:has(> .lead-time) {
   .home-map {
     order: 2;
     position: relative;
+    overflow: hidden; /* the tilted outline stays inside the map */
     margin: 0.5rem 0 0.75rem;
     padding-top: 75%; /* 4:3, so the continent fills the width */
   }
@@ -1173,4 +1176,10 @@ section:has(> .lead-time) {
   .results td:nth-child(n + 4) {
     display: none;
   }
+}
+
+/* The footer's credits stay readable lines on a wide screen. */
+.site-footer p {
+  max-width: 64ch;
+  text-wrap: pretty;
 }

@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from '@tanstack/react-router'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import '@fontsource-variable/overpass' // self-hosted: no flash of a fallback, no call to Google
 import { shouldRetry } from './api/errors'
 import './index.css'
 import { router } from './router'
