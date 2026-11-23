@@ -51,7 +51,7 @@ export function BookingHint({ campgroundId, arrive, holiday, today }: Props) {
           already: book soon if there's room.
         </p>
       )}
-      <p className="muted">From its bookings over the last 3 years, not live availability.</p>
+      <p className="muted">Estimated from past bookings.</p>
     </div>
   )
 }
