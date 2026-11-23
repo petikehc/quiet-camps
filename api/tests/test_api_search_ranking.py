@@ -5,6 +5,8 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
+from quiet_camps.ingest.geo import km
+
 SEARCH = "/campgrounds/quiet"
 # The Saturday of ISO week 10 in 2027: compared with week-10 Saturdays in 2022-2025.
 SATURDAY = {"arrive": "2027-03-13", "depart": "2027-03-14"}
@@ -158,3 +160,25 @@ def test_the_map_takes_the_search_filters(seeded_client: TestClient) -> None:
 def test_q_wildcards_are_plain_characters(seeded_client: TestClient, wildcard: str) -> None:
     """In LIKE, % is any text and _ any one character: unescaped, these would match everything."""
     assert names(seeded_client, q=wildcard) == []
+
+
+NEAR = {"near_lat": -28.0, "near_lon": 152.5}
+
+
+def test_near_a_place_keeps_located_campgrounds_within_the_km(seeded_client: TestClient) -> None:
+    found = results(seeded_client, **NEAR, within_km=40)
+
+    # Twin Hollow ~10 km, Big Hollow ~33 km; Middle Creek is 49 km and Quiet Creek unlocated.
+    assert [c["name"] for c in found] == [BIG, TWIN]  # still quietest, then biggest, first
+
+
+def test_each_result_near_a_place_says_how_far(seeded_client: TestClient) -> None:
+    found = results(seeded_client, **NEAR, within_km=200)
+
+    assert len(found) == 4  # every located campground; Busy Beach is the farthest, ~188 km
+    for c in found:
+        assert c["distance_km"] == pytest.approx(km((-28.0, 152.5), (c["lat"], c["lon"])))
+
+
+def test_without_a_place_there_is_no_distance(seeded_client: TestClient) -> None:
+    assert {c["distance_km"] for c in results(seeded_client)} == {None}

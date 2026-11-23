@@ -337,6 +337,8 @@ export interface components {
             busy_night_sites: number;
             /** Busyness */
             busyness: number;
+            /** Distance Km */
+            distance_km: number | null;
             /** History */
             history: number;
             /** Id */
@@ -509,6 +511,9 @@ export interface operations {
                 depart: string;
                 park?: string | null;
                 q?: string | null;
+                near_lat?: number | null;
+                near_lon?: number | null;
+                within_km?: number | null;
                 limit?: number;
                 after?: string | null;
             };
@@ -545,6 +550,9 @@ export interface operations {
                 depart: string;
                 park?: string | null;
                 q?: string | null;
+                near_lat?: number | null;
+                near_lon?: number | null;
+                within_km?: number | null;
             };
             header?: never;
             path?: never;

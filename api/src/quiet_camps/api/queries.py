@@ -4,6 +4,8 @@ from datetime import date
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from quiet_camps.ingest.geo import EARTH_RADIUS_KM
+
 # A typical night resting on fewer past nights than this is noise, not a pattern.
 MIN_HISTORY = 3
 
@@ -15,6 +17,12 @@ SELECT (date_trunc('quarter', max(last_night)) - interval '1 day')::date AS last
 # open every season is; one renamed "... - OBSELETE" and retired, or closed for good, isn't.
 ACTIVE_DAYS = 365
 ACTIVE = f"c.last_night > ({HISTORY_END}) - CAST(:active_days AS integer)"  # campground c
+# Straight-line km from (:near_lat, :near_lon) to campground c: geo.km (haversine) in SQL.
+# No PostGIS (ADR 0003): a few hundred campgrounds are quick to measure one by one.
+DISTANCE = f"""(2 * {EARTH_RADIUS_KM} * asin(sqrt(
+    sin(radians(c.lat - CAST(:near_lat AS float8)) / 2) ^ 2
+    + cos(radians(CAST(:near_lat AS float8))) * cos(radians(c.lat))
+      * sin(radians(c.lon - CAST(:near_lon AS float8)) / 2) ^ 2)))"""
 
 # ADR 0002: the nights asked for → their kind of night → each campground's typical night.
 # A campground must have a typical for every night asked for, with enough history: a missing
@@ -33,13 +41,17 @@ ranked AS (
     SELECT c.id, c.name, c.park_name,
            CAST(round(CAST(avg(t.busyness) AS numeric), 6) AS float8) AS busyness,
            avg(t.sites) AS typical_sites, min(t.nights) AS history, max(t.peak) AS peak,
-           c.lat, c.lon, c.location_source, c.location_flags, c.osm_type, c.osm_id
+           c.lat, c.lon, c.location_source, c.location_flags, c.osm_type, c.osm_id,
+           CASE WHEN CAST(:near_lat AS float8) IS NULL THEN NULL ELSE {DISTANCE} END
+               AS distance_km
     FROM asked a
     JOIN campground_typical t ON t.kind = a.kind
     JOIN campground c ON c.id = t.campground_id
     WHERE {ACTIVE}
       AND (CAST(:park AS text) IS NULL OR c.park_name = :park)
       AND (CAST(:pattern AS text) IS NULL OR c.name ILIKE :pattern OR c.park_name ILIKE :pattern)
+      AND (CAST(:near_lat AS float8) IS NULL
+           OR (c.lat IS NOT NULL AND {DISTANCE} <= CAST(:within_km AS float8)))
     GROUP BY c.id
     HAVING count(*) = (SELECT count(*) FROM asked) AND min(t.nights) >= :min_history
 )
@@ -67,6 +79,16 @@ class QuietCampground:
     location_flags: list[str]
     osm_type: str | None  # node, way or relation
     osm_id: int | None
+    distance_km: float | None  # from the place searched near; None without one
+
+
+@dataclass(frozen=True)
+class Near:
+    """Within km of a place: where someone starts from, or wants to be near."""
+
+    lat: float
+    lon: float
+    km: float
 
 
 @dataclass(frozen=True)
@@ -93,11 +115,13 @@ async def search_quiet(
     q: str | None,
     limit: int | None,
     after: After | None = None,
+    near: Near | None = None,
 ) -> list[QuietCampground]:
     """Campgrounds that are usually quietest on the nights from arrive to depart (exclusive).
 
-    `q` narrows to names or park names containing it, ignoring case. `after` starts the page
-    after that campground. `limit=None` returns every result (Postgres reads LIMIT NULL as none).
+    `q` narrows to names or park names containing it, ignoring case. `near` narrows to located
+    campgrounds within its km, and gives each one's distance. `after` starts the page after
+    that campground. `limit=None` returns every result (Postgres reads LIMIT NULL as none).
     """
     result = await session.execute(
         SEARCH,
@@ -111,6 +135,9 @@ async def search_quiet(
             "after_peak": None if after is None else after.peak,
             "after_id": None if after is None else after.id,
             "active_days": ACTIVE_DAYS,
+            "near_lat": None if near is None else near.lat,
+            "near_lon": None if near is None else near.lon,
+            "within_km": None if near is None else near.km,
             "min_history": MIN_HISTORY,
         },
     )

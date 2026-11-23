@@ -9,9 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from quiet_camps.api.db import get_session
 from quiet_camps.api.problems import INVALID
-from quiet_camps.api.queries import After, search_quiet
+from quiet_camps.api.queries import After, Near, search_quiet
 
 MAX_NIGHTS = 60
+NEAR_KM = (10, 400)  # from the next town over to a long drive
 
 search_router = APIRouter(responses=INVALID)
 
@@ -37,6 +38,10 @@ class QuietFilters(BaseModel):
     depart: date
     park: str | None = None
     q: str | None = Field(None, min_length=2, max_length=100)  # part of a name or park name
+    # Within within_km of a place (from GET /places): all three, or none.
+    near_lat: float | None = Field(None, ge=-45, le=-9)  # Australia's latitudes
+    near_lon: float | None = Field(None, ge=112, le=155)
+    within_km: float | None = Field(None, ge=NEAR_KM[0], le=NEAR_KM[1])
 
     @model_validator(mode="after")
     def check_depart_after_arrive(self) -> Self:
@@ -46,6 +51,18 @@ class QuietFilters(BaseModel):
         if (self.depart - self.arrive).days > MAX_NIGHTS:
             raise ValueError(f"booking must be {MAX_NIGHTS} nights at most")
         return self
+
+    @model_validator(mode="after")
+    def check_near_is_whole(self) -> Self:
+        given = [v is not None for v in (self.near_lat, self.near_lon, self.within_km)]
+        if any(given) and not all(given):
+            raise ValueError("near_lat, near_lon and within_km go together")
+        return self
+
+    def near(self) -> Near | None:
+        if self.near_lat is None or self.near_lon is None or self.within_km is None:
+            return None
+        return Near(self.near_lat, self.near_lon, self.within_km)
 
 
 class SearchParams(QuietFilters):
@@ -83,6 +100,7 @@ class QuietCampgroundOut(BaseModel):
     # rejected when location_flags has rejected_osm. None when nothing on the map matched.
     osm_type: str | None
     osm_id: int | None
+    distance_km: float | None  # straight-line, from the place searched near; None without one
 
 
 class SearchPage(BaseModel):
@@ -100,7 +118,14 @@ async def quiet_campgrounds(
     after = None if params.after is None else decode_cursor(params.after)
     # One more than asked for tells us whether another page exists, without a count query.
     found = await search_quiet(
-        session, params.arrive, params.depart, params.park, params.q, params.limit + 1, after
+        session,
+        params.arrive,
+        params.depart,
+        params.park,
+        params.q,
+        params.limit + 1,
+        after,
+        params.near(),
     )
     shown = found[: params.limit]
     cursor = None
@@ -122,6 +147,12 @@ async def quiet_campgrounds_map(
 ) -> SearchMap:
     # No limit: about 550 active campgrounds at most, ~25 KB gzipped.
     found = await search_quiet(
-        session, filters.arrive, filters.depart, filters.park, filters.q, limit=None
+        session,
+        filters.arrive,
+        filters.depart,
+        filters.park,
+        filters.q,
+        limit=None,
+        near=filters.near(),
     )
     return SearchMap(results=[QuietCampgroundOut.model_validate(c) for c in found])

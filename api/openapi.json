@@ -458,6 +458,17 @@
             "title": "Busyness",
             "type": "number"
           },
+          "distance_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance Km"
+          },
           "history": {
             "title": "History",
             "type": "integer"
@@ -554,7 +565,8 @@
           "location_source",
           "location_flags",
           "osm_type",
-          "osm_id"
+          "osm_id",
+          "distance_km"
         ],
         "title": "QuietCampgroundOut",
         "type": "object"
@@ -995,6 +1007,60 @@
           },
           {
             "in": "query",
+            "name": "near_lat",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": -9,
+                  "minimum": -45,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Near Lat"
+            }
+          },
+          {
+            "in": "query",
+            "name": "near_lon",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 155,
+                  "minimum": 112,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Near Lon"
+            }
+          },
+          {
+            "in": "query",
+            "name": "within_km",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 400,
+                  "minimum": 10,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Within Km"
+            }
+          },
+          {
+            "in": "query",
             "name": "limit",
             "required": false,
             "schema": {
@@ -1103,6 +1169,60 @@
                 }
               ],
               "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "near_lat",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": -9,
+                  "minimum": -45,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Near Lat"
+            }
+          },
+          {
+            "in": "query",
+            "name": "near_lon",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 155,
+                  "minimum": 112,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Near Lon"
+            }
+          },
+          {
+            "in": "query",
+            "name": "within_km",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 400,
+                  "minimum": 10,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Within Km"
             }
           }
         ],

@@ -21,6 +21,7 @@ RESULT_FIELDS = {
     "location_flags",
     "osm_type",
     "osm_id",
+    "distance_km",
 }
 
 
@@ -54,6 +55,10 @@ BAD_FILTERS = [
     ({"arrive": "2027-01-01", "depart": "2027-03-03"}, "61 nights"),
     ({**EASTER_2027, "q": "a"}, "q shorter than 2"),
     ({**EASTER_2027, "q": "a" * 101}, "q longer than 100"),
+    ({**EASTER_2027, "near_lat": -26.4, "near_lon": 153.1}, "near without within_km"),
+    ({**EASTER_2027, "near_lat": -26.4, "within_km": 50}, "near without its lon"),
+    ({**EASTER_2027, "near_lat": -26.4, "near_lon": 153.1, "within_km": 5}, "within 5 km"),
+    ({**EASTER_2027, "near_lat": 51.5, "near_lon": 153.1, "within_km": 50}, "near London"),
 ]
 BAD_PAGING = [
     ({**EASTER_2027, "limit": 0}, "limit below 1"),

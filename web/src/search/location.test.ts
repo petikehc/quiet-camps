@@ -16,6 +16,7 @@ const camp = (overrides: Partial<QuietCampground>): QuietCampground => ({
   location_flags: [],
   osm_type: null,
   osm_id: null,
+  distance_km: null,
   ...overrides,
 })
 

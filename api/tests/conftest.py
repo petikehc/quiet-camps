@@ -126,6 +126,14 @@ def seed_lead_times(conn: Conn) -> None:
     book(conn, RANGE, EARLY, date(2026, 1, 10))  # in the latest quarter, not history yet
 
 
+SEEDED_LOCATIONS = [
+    ("Twin Hollow camping area", -28.0, 152.6),
+    ("Big Hollow camping area", -28.3, 152.5),
+    ("Middle Creek camping area", -28.0, 153.0),
+    ("Busy Beach camping area", -26.4, 153.1),
+]
+
+
 def seed_search_history(conn: Conn) -> None:
     """A history where every search answer is known: see test_api_search_ranking.py."""
     for year in range(2022, 2026):
@@ -156,6 +164,9 @@ def seed_search_history(conn: Conn) -> None:
         "UPDATE campground SET osm_type = 'way', osm_id = 4242 WHERE name = %s",
         ("Quiet Creek camping area",),
     )
+    # Located, for searches near a place; Quiet Creek stays unlocated.
+    for name, lat, lon in SEEDED_LOCATIONS:
+        conn.execute("UPDATE campground SET lat = %s, lon = %s WHERE name = %s", (lat, lon, name))
 
 
 @pytest.fixture(scope="session")
