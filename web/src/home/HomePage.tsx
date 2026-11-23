@@ -85,7 +85,7 @@ export function HomePage() {
               </Link>
             )}
           </div>
-          {trips && (
+          {trips ? (
             <TimeControls
               trips={trips}
               night={night}
@@ -93,12 +93,22 @@ export function HomePage() {
               onPlaying={setPlaying}
               onSeek={jump}
             />
+          ) : query.isError ? (
+            <div className="home-status" role="alert">
+              <p>The year's camping data didn't load.</p>
+              <button type="button" onClick={() => void query.refetch()} disabled={query.isFetching}>
+                {query.isFetching ? 'Trying again…' : 'Try again'}
+              </button>
+            </div>
+          ) : (
+            <p className="home-status" role="status">
+              Loading a year of camping…
+            </p>
           )}
         </div>
         <div className="home-map">
           <Outline />
           {trips && <Live trips={trips} night={night} seek={seek} playing={playing} onNight={setNight} />}
-          {query.isError && <p role="alert">{query.error.message}</p>}
         </div>
       </section>
       <div className="wrap">{trips && <About trips={trips} />}</div>

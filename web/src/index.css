@@ -688,12 +688,50 @@ section:has(> .lead-time) {
   inset: 0 0 0 34%;
 }
 
+/* Drawn before three.js and the data arrive, tilted like the camera that replaces it, so the
+   map settles rather than jumps; the canvas then fades in over it. */
 .home-outline {
   padding: 7%;
   box-sizing: border-box;
   fill: var(--night-land);
   stroke: var(--night-line);
   stroke-width: 0.06;
+  transform: perspective(110vh) rotateX(34deg) scale(0.98) translateY(-3%);
+  transform-origin: 50% 55%;
+}
+
+.home-canvas {
+  animation: canvas-in 900ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes canvas-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Loading, or the data didn't come: in the slot where the year's controls will be. */
+.home-status {
+  margin: 0;
+  color: var(--night-muted);
+}
+
+.home-status p {
+  margin: 0 0 0.75rem;
+  color: var(--night-text);
+}
+
+.home-status button {
+  background: var(--night-land);
+  border-color: var(--night-line);
+  color: var(--night-text);
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-canvas {
+    animation: none;
+  }
 }
 
 /* The left column is time: the headline and your dates at the top, where the year is at the
