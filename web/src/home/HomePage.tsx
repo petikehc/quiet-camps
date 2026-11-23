@@ -29,18 +29,42 @@ export function HomePage() {
 
   return (
     <article className="home">
-      <div className="home-map">
-        <Outline />
-        {trips && <Live trips={trips} />}
-        {query.isError && <p role="alert">{query.error.message}</p>}
-      </div>
-      <p className="home-cta">
-        <Link to="/search" className="cta">
-          Find a quiet campground →
-        </Link>
-      </p>
-      {trips && <About trips={trips} />}
+      {/* The night stage: the words are HTML over the WebGL map, and come first so a screen
+          reader and the tab order meet the headline before the controls. */}
+      <section className="home-stage" aria-labelledby="home-title">
+        <div className="home-intro">
+          <h2 id="home-title">A year of Queensland camping.</h2>
+          <p>
+            Each line is a camping trip in Queensland's national parks in {YEAR}, from the camper's
+            home postcode. Watch where everyone went, and the campgrounds they left quiet.
+          </p>
+          <Link to="/search" className="cta">
+            Find a quiet campground <Arrow />
+          </Link>
+        </div>
+        <div className="home-map">
+          <Outline />
+          {trips && <Live trips={trips} />}
+          {query.isError && <p role="alert">{query.error.message}</p>}
+        </div>
+      </section>
+      <div className="wrap">{trips && <About trips={trips} />}</div>
     </article>
+  )
+}
+
+function Arrow() {
+  return (
+    <svg width="18" height="14" viewBox="0 0 18 14" aria-hidden="true">
+      <path
+        d="M1 7h15M10 1l6 6-6 6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.25"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   )
 }
 
@@ -69,13 +93,10 @@ function Live({ trips }: { trips: Trips }) {
 
       {/* Numbers that change four times a second: not live regions, or a screen reader
           would never stop. The summary below the map says it once. */}
-      <div className="home-now" aria-hidden="true">
-        <h2>Camping trips across Australia, {trips.year}</h2>
-        <p className="home-date">{formatNight(nightDate(trips.first_night, night))}</p>
-        <p className="home-hero">
-          <strong>{sitesOn(trips, offsets, night).toLocaleString()}</strong> campsites arriving that night
-        </p>
-      </div>
+      <p className="home-now" aria-hidden="true">
+        <span>{formatNight(nightDate(trips.first_night, night))}</span>
+        <strong>{sitesOn(trips, offsets, night).toLocaleString()}</strong> campsites arriving
+      </p>
 
       <div className="home-board" aria-hidden="true">
         <h3>Busiest this week</h3>
@@ -107,19 +128,20 @@ function About({ trips }: { trips: Trips }) {
   const { overseas, no_postcode, no_centroid } = trips.left_out
   return (
     <div className="home-about">
+      <h2>Reading the map</h2>
       <p>
-        Each line is a camping trip in {trips.year}: a site booked at a Queensland national park
-        campground, flying from the camper's home postcode to the campground on the night they
-        arrived. {total.toLocaleString()} campsites booked from{' '}
+        Each line is a camping trip: campsites booked at a Queensland national park campground,
+        flying from the camper's home postcode on the night they arrive. Brighter lines carry more
+        campsites, and a campground glows as they land. In {trips.year},{' '}
+        {total.toLocaleString()} campsites were booked from{' '}
         {trips.origins.length.toLocaleString()} postcodes at{' '}
-        {trips.campgrounds.length.toLocaleString()} campgrounds; the year plays in about a minute and
-        a half, then starts again.
+        {trips.campgrounds.length.toLocaleString()} campgrounds. The year plays in about a minute
+        and a half, then starts again.
       </p>
       <p className="muted small">
-        Not drawn: {overseas.toLocaleString()} campsites booked from overseas,{' '}
+        Not drawn: {overseas.toLocaleString()} campsites booked from overseas, and{' '}
         {(no_postcode + no_centroid).toLocaleString()} with no postcode or a PO-box postcode. A
-        postcode is placed at its postal area's centre. Boundaries and postal areas: ABS
-        Australian Statistical Geography Standard 2021, © Commonwealth of Australia, CC BY 4.0.
+        postcode is placed at the centre of its ABS postal area (2021).
       </p>
     </div>
   )

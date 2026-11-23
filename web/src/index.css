@@ -13,6 +13,7 @@
   --wattle: #b47c10; /* the focus ring; 3:1 against --bg */
   --error: #a3261b;
   --display: 'Overpass', system-ui, sans-serif;
+  --stage-pad: clamp(1rem, 4vw, 3.5rem); /* the homepage's night stage and its header */
 
   /* Charts: validated with the dataviz skill's validator against --bg, light and dark. */
   --grid: #dfe5e0;
@@ -43,6 +44,7 @@
   --trail-tail: #a8692a;
   --trail: #e8a24a;
   --trail-head: #ffd89a;
+  --quiet: #35c2b0; /* reef teal: quiet campgrounds and the way to them; 8.4:1 on --night */
 
   color-scheme: light dark;
   font: 16px/1.5 system-ui, 'Segoe UI', Roboto, sans-serif;
@@ -621,87 +623,167 @@ section:has(> .lead-time) {
   overflow-x: auto;
 }
 
-/* The homepage: the map on a night panel, its numbers laid over the corners. */
-.home {
-  margin-top: 1.5rem;
+/* The homepage: a night stage edge to edge, the header a thin bar over it. Words sit on the
+   left over a scrim; the map takes the right, so nothing covers the continent. */
+.site-header.over {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 2;
+  padding: 1rem 0;
+  background: none;
+  color: var(--night-text);
 }
 
-.home-map {
+.site-header.over .wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+  max-width: none;
+  padding: 0 var(--stage-pad);
+}
+
+.site-header.over h1 {
+  font-size: 1.375rem;
+}
+
+.site-header.over .site-nav {
+  margin: 0;
+}
+
+.home-stage {
   position: relative;
-  height: min(74vh, 720px);
-  min-height: 420px;
-  border-radius: 10px;
+  isolation: isolate;
+  height: min(100svh, 60rem);
+  min-height: 38rem;
   overflow: hidden;
   background: var(--night);
   color: var(--night-text);
 }
 
+/* Under the words: the night thickens to the left and along the top, so trails pass under
+   the headline and the header rather than through them. */
+.home-stage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(180deg, var(--night) 0, transparent 7rem),
+    linear-gradient(90deg, var(--night) 0 18%, transparent 46%);
+  pointer-events: none;
+}
+
+/* The map and what's laid over it: the whole stage on a wide screen, the map itself on the
+   right; a block under the words on a narrow one. */
+.home-map {
+  position: absolute;
+  inset: 0;
+}
+
 .home-outline,
 .home-canvas {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0 0 0 34%;
 }
 
 .home-outline {
-  padding: 8%;
+  padding: 7%;
   box-sizing: border-box;
   fill: var(--night-land);
   stroke: var(--night-line);
   stroke-width: 0.06;
 }
 
+.home-intro {
+  position: absolute;
+  z-index: 2;
+  top: clamp(6rem, 18vh, 11rem);
+  left: var(--stage-pad);
+  max-width: min(36rem, 44%);
+}
+
+.home-intro h2 {
+  margin: 0;
+  font: 800 clamp(2.75rem, 5.4vw, 5.75rem) / 0.95 var(--display);
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+.home-intro p {
+  max-width: 34ch;
+  margin: 1.5rem 0 2rem;
+  font: 400 clamp(1.0625rem, 1.3vw, 1.25rem) / 1.45 var(--display);
+  color: var(--night-muted);
+  text-wrap: pretty;
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.85rem 1.5rem;
+  border-radius: 8px;
+  background: var(--quiet);
+  color: var(--night);
+  font: 800 1.125rem/1.2 var(--display);
+  text-decoration: none;
+  transition: background-color 160ms ease-out;
+}
+
+.cta:hover {
+  background: color-mix(in srgb, var(--quiet) 82%, white);
+}
+
+.cta svg {
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cta:hover svg {
+  transform: translateX(3px);
+}
+
 .home-now,
 .home-board {
   position: absolute;
-  padding: 0.6rem 0.9rem;
-  border-radius: 8px;
-  /* Lines pass under the numbers, not through them. */
-  background: color-mix(in srgb, var(--night) 82%, transparent);
+  z-index: 2;
   pointer-events: none;
 }
 
 .home-now {
-  top: 1rem;
-  left: 1rem;
-}
-
-.home-now h2 {
+  left: var(--stage-pad);
+  bottom: 5rem;
   margin: 0;
-  font: 700 1rem/1.3 var(--display);
   color: var(--night-muted);
-}
-
-.home-date {
-  margin: 0.25rem 0 0;
   font-variant-numeric: tabular-nums;
 }
 
-.home-hero {
-  margin: 0;
-  color: var(--night-muted);
-}
-
-.home-hero strong {
+.home-now span {
   display: block;
-  font: 800 3.5rem/1 var(--display);
-  font-variant-numeric: tabular-nums;
+  margin-bottom: 0.15rem;
+  color: var(--night-text);
+}
+
+.home-now strong {
+  font: 800 1.75rem/1 var(--display);
   color: var(--trail);
 }
 
 .home-board {
-  right: 1rem;
-  bottom: 1rem;
+  right: var(--stage-pad);
+  bottom: 1.5rem;
   width: 17rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 8px;
+  /* Lines pass under the names, not through them. */
+  background: color-mix(in srgb, var(--night) 82%, transparent);
   font-size: 0.875rem;
 }
 
 .home-board h3 {
   margin: 0 0 0.4rem;
-  font: 700 0.8125rem/1.3 var(--display);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font: 600 0.9375rem/1.3 var(--display);
   color: var(--night-muted);
 }
 
@@ -737,8 +819,9 @@ section:has(> .lead-time) {
 
 .home-play {
   position: absolute;
-  left: 1rem;
-  bottom: 1rem;
+  z-index: 2;
+  left: var(--stage-pad);
+  bottom: 1.5rem;
   min-width: 5.5rem;
   background: var(--night-land);
   border-color: var(--night-line);
@@ -746,56 +829,80 @@ section:has(> .lead-time) {
   font-weight: 600;
 }
 
-.home-cta {
-  margin: 1.25rem 0 0;
-  text-align: center;
-}
-
-.cta {
-  display: inline-block;
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
-  background: var(--accent);
-  color: var(--on-accent);
-  font: 700 1.125rem/1.2 var(--display);
-  text-decoration: none;
-}
-
 .home-about {
-  max-width: 44rem;
-  margin: 1.5rem auto 0;
+  max-width: 65ch;
+  margin: 3rem 0 0;
 }
 
-@media (max-width: 40rem) {
-  .home-hero strong {
-    font-size: 2.5rem;
+.home-about h2 {
+  margin: 0 0 0.5rem;
+  font: 800 1.5rem/1.2 var(--display);
+}
+
+/* Narrower than a laptop: the words go above the map instead of beside it, and the busiest
+   list under it, still on the night. */
+@media (max-width: 64rem) {
+  /* The header may wrap here, so it takes its own space instead of floating over the words. */
+  .site-header.over {
+    position: static;
+    background: var(--night);
   }
 
-  /* A phone's map is as wide as the screen and no taller: the leaderboard goes under it,
-     still on the night panel. */
-  .home-map {
+  .home-stage {
     height: auto;
     min-height: 0;
-    padding-top: 420px;
+    padding-top: 1.5rem;
+  }
+
+  .home-stage::before {
+    display: none;
+  }
+
+  .home-intro {
+    position: static;
+    max-width: 36rem;
+    padding: 0 var(--stage-pad);
+  }
+
+  .home-intro h2 {
+    font-size: clamp(2.5rem, 9vw, 4.5rem);
+  }
+
+  .home-intro p {
+    margin: 1rem 0 1.5rem;
+  }
+
+  .home-map {
+    position: relative;
+    margin-top: 1.5rem;
+    padding-top: 460px;
   }
 
   .home-outline,
   .home-canvas {
-    height: 420px;
+    inset: 0 0 auto;
+    height: 460px;
+  }
+
+  .home-now {
+    top: 0.5rem;
+    bottom: auto;
   }
 
   .home-play {
+    top: 404px;
     bottom: auto;
-    top: 364px;
   }
 
   .home-board {
     position: static;
     width: auto;
-    padding: 0 1rem 1rem;
+    padding: 0.5rem var(--stage-pad) 1.5rem;
     background: none;
   }
+}
 
+@media (max-width: 40rem) {
   .map-canvas {
     height: 280px;
   }

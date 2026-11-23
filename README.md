@@ -1,8 +1,8 @@
 # Quiet Camps
 
-Find Queensland campgrounds that are usually quiet on your dates.
+Queensland camping since 2011, read from the permits: where people travel from, when the crowds arrive, and which campgrounds are usually quiet on your dates.
 
-A learning project with Python (FastAPI, SQLAlchemy, Postgres) and React, built on ten years of public camping-permit data from Queensland Parks and Wildlife Service.
+A learning project with Python (FastAPI, SQLAlchemy, Postgres) and React, built on every public camping permit since 2011 from Queensland Parks and Wildlife Service.
 
 > **Work in progress.** This README grows with the project.
 
