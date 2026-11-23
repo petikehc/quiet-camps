@@ -28,7 +28,7 @@ Built on every QPWS camping permit since 2011, not on reviews or guesses. "Quiet
 
 ## Capabilities and Constraints
 
-- Pages: the homepage (a year of trips from home postcodes to campgrounds), Search (campgrounds that are usually quiet on your dates), campground pages (calendar, years, lead time) and A year in 3D (the whole state, night by night).
+- Pages: the homepage (a year of trips from home postcodes to campgrounds, and one plain-words question), the explorer (a full-screen map of the campgrounds that are usually quiet, not too busy or busy on your dates, near a place if you like; the coming year to pick dates from; when people book) and campground pages (calendar, years, lead time).
 - The data is **past bookings, not live availability**. Never imply a campground is free.
 - The permits have no campsite capacity and no coordinates: quiet is relative to each campground's own history; locations come from OpenStreetMap and park outlines.
 - A "trip" is a stay under one booking; counts are campsites (sites booked), not people or bookings.
