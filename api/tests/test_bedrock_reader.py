@@ -3,7 +3,7 @@
 import asyncio
 from dataclasses import dataclass
 from datetime import date
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 import anthropic
 import httpx2  # the SDK's own httpx
@@ -41,9 +41,12 @@ class FakeClient:
         self.messages = FakeMessages(result)
 
 
-def read(result: Parsed | Exception) -> tuple[Reading, FakeClient]:
+def read(
+    result: Parsed | Exception, effort: Literal["low"] | None = None
+) -> tuple[Reading, FakeClient]:
     client = FakeClient(result)
-    reader = BedrockReader(cast(AsyncAnthropicBedrockMantle, client), "anthropic.claude-haiku-5-5")
+    model = "anthropic.claude-haiku-4-5"
+    reader = BedrockReader(cast(AsyncAnthropicBedrockMantle, client), model, effort)
     return asyncio.run(reader.read("Easter near Noosa", TODAY, [EASTER])), client
 
 
@@ -52,13 +55,19 @@ def test_asks_haiku_for_a_reading_with_the_calendar() -> None:
 
     asked = client.messages.asked
     assert reading == READING
-    assert asked["model"] == "anthropic.claude-haiku-5-5"
+    assert asked["model"] == "anthropic.claude-haiku-4-5"
     assert asked["output_format"] is Reading
-    assert asked["output_config"] == {"effort": "low"}
+    assert asked["output_config"] == {}  # Haiku 4.5 takes no effort
     content = asked["messages"][0]["content"]
     assert "Today is Monday 23 November 2026." in content
     assert "- easter: arrive Thu 25 Mar 2027, depart Mon 29 Mar 2027" in content
     assert content.endswith("<request>Easter near Noosa</request>")
+
+
+def test_an_effort_is_sent_when_set() -> None:
+    _, client = read(Parsed("end_turn", READING), effort="low")
+
+    assert client.messages.asked["output_config"] == {"effort": "low"}
 
 
 def test_a_refusal_is_unavailable() -> None:

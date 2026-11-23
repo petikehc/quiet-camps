@@ -12,7 +12,7 @@ holidays, "3–6 April"), and places as nicknames and regions ("the Sunny Coast"
 
 ## Decision
 
-`POST /ask` sends the words to Claude Haiku 5.5 on Amazon Bedrock and gets back a structured
+`POST /ask` sends the words to Claude Haiku on Amazon Bedrock and gets back a structured
 reading (arrive, depart, place, from or near, km), validated against a Pydantic schema. The
 model only reads; the API checks the dates, and finds the place in our own list of
 Queensland places (ADR 0003, `qc places`). Holiday dates come from our calendar in the
@@ -30,8 +30,11 @@ prompt, so "Easter" is never the model's arithmetic.
 
 ## Consequences
 
-- **Cost:** a short extraction (~600 tokens in, ~100 out) at effort `low`; thousands of asks
-  cost about a dollar. Guards: off unless `ASK_ENABLED`, 200 characters, 20 an hour per
+- **Model:** Claude Haiku 4.5 (`anthropic.claude-haiku-4-5`), open to every Bedrock account.
+  Haiku 5.5 is cheaper and newer but needs its terms accepted in the console first; then
+  `ASK_MODEL=anthropic.claude-haiku-5-5` and `ASK_EFFORT=low` (4.5 rejects effort).
+- **Cost:** a short extraction (~600 tokens in, ~100 out): about a tenth of a cent an ask on
+  Haiku 4.5, a hundredth on Haiku 5.5. Guards: off unless `ASK_ENABLED`, 200 characters, 20 an hour per
   client (in memory, per process: API Gateway throttling replaces it once deployed), the same
   words answered from a cache for the rest of the day, and an AWS Budgets alert.
 - **Privacy:** the words go to Bedrock in our AWS account; we don't store or log them, only

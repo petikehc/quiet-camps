@@ -1,6 +1,7 @@
 """Reads plain words with Claude Haiku on Amazon Bedrock (ADR 0005)."""
 
 from datetime import date
+from typing import Literal
 
 import anthropic
 from anthropic.lib.bedrock import AsyncAnthropicBedrockMantle
@@ -44,9 +45,18 @@ def prompt(text: str, today: date, holidays: list[Holiday]) -> str:
 
 
 class BedrockReader:
-    def __init__(self, client: AsyncAnthropicBedrockMantle, model: str) -> None:
+    def __init__(
+        self,
+        client: AsyncAnthropicBedrockMantle,
+        model: str,
+        effort: Literal["low", "medium", "high"] | None = None,
+    ) -> None:
         self._client = client
         self._model = model
+        # A short extraction needs little thinking: "low" where the model takes an effort.
+        self._output_config: anthropic.types.OutputConfigParam = (
+            {} if effort is None else {"effort": effort}
+        )
 
     async def read(self, text: str, today: date, holidays: list[Holiday]) -> Reading:
         try:
@@ -56,7 +66,7 @@ class BedrockReader:
                 system=SYSTEM,
                 messages=[{"role": "user", "content": prompt(text, today, holidays)}],
                 output_format=Reading,
-                output_config={"effort": "low"},  # a short extraction: little thinking needed
+                output_config=self._output_config,
             )
         except anthropic.APIError as e:  # throttled, no access, a network error…
             raise ReaderUnavailable(type(e).__name__) from e

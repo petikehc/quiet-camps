@@ -21,7 +21,7 @@ def test_easter_near_noosa() -> None:
     client = AsyncAnthropicBedrockMantle(
         aws_region=settings.aws_region, aws_profile=settings.aws_profile
     )
-    reader = BedrockReader(client, settings.ask_model)
+    reader = BedrockReader(client, settings.ask_model, settings.ask_effort)
     easter = Holiday(name="easter", arrive=date(2027, 3, 25), depart=date(2027, 3, 29))
 
     reading = asyncio.run(reader.read("easter near noosa", date(2026, 11, 23), [easter]))

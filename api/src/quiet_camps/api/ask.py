@@ -107,7 +107,7 @@ def reader_for(state: AskState, settings: Settings) -> Reader:
         client = AsyncAnthropicBedrockMantle(
             aws_region=settings.aws_region, aws_profile=settings.aws_profile
         )
-        state.reader = BedrockReader(client, settings.ask_model)
+        state.reader = BedrockReader(client, settings.ask_model, settings.ask_effort)
     return state.reader
 
 
