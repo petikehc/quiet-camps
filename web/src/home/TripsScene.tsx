@@ -20,9 +20,14 @@ const TILT = (52 * Math.PI) / 180 // the camera's height above the horizon
 // The camera drifts while it plays: a few degrees either way and a little closer and back.
 const DRIFT = { turn: (6 * Math.PI) / 180, turnPeriod: 40, zoom: 0.04, zoomPeriod: 53 }
 
+// A jump to a night, from the year strip or your dates. The id makes a second jump to the same
+// night a new one.
+export type Seek = { night: number; id: number }
+
 type Props = {
   trips: Trips
   startNight: number
+  seek?: Seek
   playing: boolean
   drift: boolean // false when motion is reduced
   quiet: Float32Array // 1 for each campground quiet this week, by index into trips.campgrounds
@@ -178,7 +183,7 @@ const CAMP_FRAGMENT = /* glsl */ `
   }
 `
 
-function Flights({ trips, startNight, playing, drift, quiet, onNight }: Props) {
+function Flights({ trips, startNight, seek, playing, drift, quiet, onNight }: Props) {
   const tokens = useTokens()
   const loop = trips.nights * DAY
 
@@ -285,6 +290,11 @@ function Flights({ trips, startNight, playing, drift, quiet, onNight }: Props) {
     time.current = startNight * DAY
     shown.current = -1
   }, [startNight, plan])
+  useEffect(() => {
+    if (!seek) return
+    time.current = Math.min(seek.night, trips.nights - 1) * DAY
+    shown.current = -1
+  }, [seek, trips.nights])
 
   const camera = useThree((state) => state.camera as THREE.PerspectiveCamera)
   const aspect = useThree((state) => state.size.width / state.size.height)

@@ -93,6 +93,23 @@ export function sitesOn(trips: Trips, offsets: Uint32Array, night: number): numb
   return sites
 }
 
+// Sites arriving each night, every campground together: the year strip's shape.
+export function nightlySites(trips: Trips, offsets: Uint32Array): number[] {
+  return Array.from({ length: trips.nights }, (_, night) => sitesOn(trips, offsets, night))
+}
+
+// The year's busiest nights, at least `gap` nights apart so each is its own moment, in night
+// order: the peaks the year strip names.
+export function peaks(totals: number[], count: number, gap: number): number[] {
+  const picked: number[] = []
+  const byBusiest = [...totals.keys()].sort((a, b) => totals[b] - totals[a] || a - b)
+  for (const night of byBusiest) {
+    if (picked.length === count) break
+    if (picked.every((p) => Math.abs(p - night) >= gap)) picked.push(night)
+  }
+  return picked.sort((a, b) => a - b)
+}
+
 // The night with the most arrivals: the still shown when motion is reduced.
 export function busiestNight(trips: Trips, offsets: Uint32Array): number {
   let best = 0

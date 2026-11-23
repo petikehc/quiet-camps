@@ -656,7 +656,7 @@ section:has(> .lead-time) {
   position: relative;
   isolation: isolate;
   height: min(100svh, 60rem);
-  min-height: 38rem;
+  min-height: 52rem;
   overflow: hidden;
   background: var(--night);
   color: var(--night-text);
@@ -696,12 +696,17 @@ section:has(> .lead-time) {
   stroke-width: 0.06;
 }
 
-.home-intro {
+/* The left column is time: the headline and your dates at the top, where the year is at the
+   bottom. The right is place: the map and its board. */
+.home-left {
   position: absolute;
   z-index: 2;
-  top: clamp(6rem, 18vh, 11rem);
-  left: var(--stage-pad);
-  max-width: min(36rem, 44%);
+  inset: clamp(5.5rem, 14vh, 10rem) auto 1.5rem var(--stage-pad);
+  width: min(36rem, 44%);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.5rem;
 }
 
 .home-intro h2 {
@@ -711,9 +716,9 @@ section:has(> .lead-time) {
   text-wrap: balance;
 }
 
-.home-intro p {
+.home-intro > p:first-of-type {
   max-width: 34ch;
-  margin: 1.5rem 0 2rem;
+  margin: 1.25rem 0 1.5rem;
   font: 400 clamp(1.0625rem, 1.3vw, 1.25rem) / 1.45 var(--display);
   color: var(--night-muted);
   text-wrap: pretty;
@@ -744,16 +749,51 @@ section:has(> .lead-time) {
   transform: translateX(3px);
 }
 
-.home-now,
+/* Your dates: native date inputs, on the night. */
+.home-dates {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.home-dates label {
+  display: grid;
+  gap: 0.25rem;
+  font: 600 0.875rem/1.2 var(--display);
+  color: var(--night-muted);
+}
+
+.home-dates input {
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--night-line);
+  border-radius: 6px;
+  background: var(--night-land);
+  color: var(--night-text);
+  color-scheme: dark;
+  font: inherit;
+  font-weight: 400;
+}
+
+.home-hint {
+  min-height: 1.25rem;
+  margin: 0.35rem 0 0.5rem;
+  font-size: 0.875rem;
+  color: var(--trail-head);
+}
+
 .home-board {
   position: absolute;
   z-index: 2;
   pointer-events: none;
 }
 
+.home-now-row {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
 .home-now {
-  left: var(--stage-pad);
-  bottom: 5rem;
   margin: 0;
   color: var(--night-muted);
   font-variant-numeric: tabular-nums;
@@ -763,6 +803,11 @@ section:has(> .lead-time) {
   display: block;
   margin-bottom: 0.15rem;
   color: var(--night-text);
+}
+
+.home-now b {
+  font-weight: 600;
+  color: var(--trail-head);
 }
 
 .home-now strong {
@@ -873,15 +918,111 @@ section:has(> .lead-time) {
 }
 
 .home-play {
-  position: absolute;
-  z-index: 2;
-  left: var(--stage-pad);
-  bottom: 1.5rem;
+  flex-shrink: 0;
   min-width: 5.5rem;
   background: var(--night-land);
   border-color: var(--night-line);
   color: var(--night-text);
   font-weight: 600;
+}
+
+/* The year strip: arrivals as one shape, a native range input over it as the playhead. The
+   drawing is inset by half the thumb so the thumb's centre lands on its night. */
+.year-strip {
+  --thumb: 14px;
+  position: relative;
+  margin-top: 0.75rem;
+  padding: 1.1rem 0 1.1rem;
+}
+
+.year-strip svg {
+  display: block;
+  width: calc(100% - var(--thumb));
+  height: 3rem;
+  margin: 0 calc(var(--thumb) / 2);
+}
+
+.year-holiday {
+  fill: var(--night-land);
+}
+
+.year-area {
+  fill: color-mix(in srgb, var(--trail) 22%, transparent);
+}
+
+.year-line {
+  fill: none;
+  stroke: var(--trail);
+  stroke-width: 1.25;
+}
+
+.year-peaks,
+.year-months {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  pointer-events: none;
+}
+
+.year-peaks li,
+.year-months li {
+  position: absolute;
+  font-size: 0.75rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.year-peaks li {
+  top: 0;
+  transform: translateX(-50%);
+  font-weight: 600;
+  color: var(--trail-head);
+}
+
+.year-months li {
+  bottom: 0;
+  color: var(--night-muted);
+}
+
+.year-strip input {
+  position: absolute;
+  inset: 1.1rem 0 auto;
+  width: 100%;
+  height: 3rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  appearance: none;
+  cursor: ew-resize;
+}
+
+.year-strip input::-webkit-slider-runnable-track {
+  height: 100%;
+  background: none;
+}
+
+.year-strip input::-webkit-slider-thumb {
+  appearance: none;
+  width: var(--thumb);
+  height: 3rem;
+  border: 0;
+  border-radius: 0;
+  background: linear-gradient(var(--night-text), var(--night-text)) center / 2px 100% no-repeat;
+}
+
+.year-strip input::-moz-range-track {
+  background: none;
+}
+
+.year-strip input::-moz-range-thumb {
+  width: var(--thumb);
+  height: 3rem;
+  border: 0;
+  border-radius: 0;
+  background: linear-gradient(var(--night-text), var(--night-text)) center / 2px 100% no-repeat;
 }
 
 .home-about {
@@ -913,9 +1054,10 @@ section:has(> .lead-time) {
     display: none;
   }
 
-  .home-intro {
+  .home-left {
     position: static;
-    max-width: 36rem;
+    width: auto;
+    max-width: 40rem;
     padding: 0 var(--stage-pad);
   }
 
@@ -923,8 +1065,8 @@ section:has(> .lead-time) {
     font-size: clamp(2.5rem, 9vw, 4.5rem);
   }
 
-  .home-intro p {
-    margin: 1rem 0 1.5rem;
+  .home-intro > p:first-of-type {
+    margin: 1rem 0 1.25rem;
   }
 
   .home-map {
@@ -937,16 +1079,6 @@ section:has(> .lead-time) {
   .home-canvas {
     inset: 0 0 auto;
     height: 460px;
-  }
-
-  .home-now {
-    top: 0.5rem;
-    bottom: auto;
-  }
-
-  .home-play {
-    top: 404px;
-    bottom: auto;
   }
 
   .home-board {

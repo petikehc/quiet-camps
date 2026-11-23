@@ -3,11 +3,12 @@ import { Link } from '@tanstack/react-router'
 import { lazy, Suspense, useMemo, useState } from 'react'
 import { api } from '../api/client'
 import { unwrap } from '../api/errors'
-import { formatNight } from '../charts/scales'
-import { nightDate } from '../timelapse/timelapse'
 import australia from './australia.json'
+import { isTrip, sameNight, tripLabel } from './dates'
 import { quietMask, usualWeekly, weekBoard, weekOf } from './quiet'
-import { busiestNight, homeYear, nightOffsets, project, sitesOn, type Trips } from './trips'
+import { TimeControls } from './TimeControls'
+import type { Seek } from './TripsScene'
+import { busiestNight, homeYear, nightOffsets, project, type Trips } from './trips'
 
 // three.js is most of a megabyte: the page shows the outline below until it arrives.
 const TripsScene = lazy(() => import('./TripsScene'))
@@ -27,25 +28,76 @@ const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').mat
 export function HomePage() {
   const query = useQuery(tripsQuery(YEAR))
   const trips = query.data
+  // The year's clock lives in the scene; the page hears each night, and asks for jumps.
+  const [night, setNight] = useState(0)
+  const [playing, setPlaying] = useState(!REDUCED_MOTION)
+  const [seek, setSeek] = useState<Seek>()
+  const [arrive, setArrive] = useState('')
+  const [depart, setDepart] = useState('')
+
+  function jump(to: number) {
+    setSeek((last) => ({ night: to, id: (last?.id ?? 0) + 1 }))
+  }
+
+  // Your arrival shows the same week last year, held still so the board can be read.
+  function pickArrive(day: string) {
+    setArrive(day)
+    if (!day) return
+    jump(sameNight(day, YEAR))
+    setPlaying(false)
+  }
+
+  const trip = isTrip(arrive, depart)
 
   return (
     <article className="home">
       {/* The night stage: the words are HTML over the WebGL map, and come first so a screen
           reader and the tab order meet the headline before the controls. */}
       <section className="home-stage" aria-labelledby="home-title">
-        <div className="home-intro">
-          <h2 id="home-title">A year of Queensland camping.</h2>
-          <p>
-            Each line is a camping trip in Queensland's national parks in {YEAR}, from the camper's
-            home postcode. Watch where everyone went, and the campgrounds they left quiet.
-          </p>
-          <Link to="/search" className="cta">
-            Find a quiet campground <Arrow />
-          </Link>
+        <div className="home-left">
+          <div className="home-intro">
+            <h2 id="home-title">A year of Queensland camping.</h2>
+            <p>
+              Each line is a camping trip in Queensland's national parks in {YEAR}, from the
+              camper's home postcode. Watch where everyone went, and the campgrounds they left
+              quiet.
+            </p>
+            <div className="home-dates">
+              <label>
+                Arrive
+                <input type="date" value={arrive} onChange={(e) => pickArrive(e.target.value)} />
+              </label>
+              <label>
+                Leave
+                <input type="date" value={depart} onChange={(e) => setDepart(e.target.value)} />
+              </label>
+            </div>
+            <p className="home-hint" aria-live="polite">
+              {arrive && depart && !trip ? 'Leave after the day you arrive.' : ''}
+            </p>
+            {trip ? (
+              <Link to="/search" search={{ arrive, depart }} className="cta">
+                Quiet camps for {tripLabel(arrive, depart)} <Arrow />
+              </Link>
+            ) : (
+              <Link to="/search" className="cta">
+                Find a quiet campground <Arrow />
+              </Link>
+            )}
+          </div>
+          {trips && (
+            <TimeControls
+              trips={trips}
+              night={night}
+              playing={playing}
+              onPlaying={setPlaying}
+              onSeek={jump}
+            />
+          )}
         </div>
         <div className="home-map">
           <Outline />
-          {trips && <Live trips={trips} />}
+          {trips && <Live trips={trips} night={night} seek={seek} playing={playing} onNight={setNight} />}
           {query.isError && <p role="alert">{query.error.message}</p>}
         </div>
       </section>
@@ -69,13 +121,19 @@ function Arrow() {
   )
 }
 
-// The map, its numbers and its controls, once a year of trips has loaded.
-function Live({ trips }: { trips: Trips }) {
+type LiveProps = {
+  trips: Trips
+  night: number
+  seek?: Seek
+  playing: boolean
+  onNight: (night: number) => void
+}
+
+// The map and its board, once a year of trips has loaded.
+function Live({ trips, night, seek, playing, onNight }: LiveProps) {
   const offsets = useMemo(() => nightOffsets(trips.per_night), [trips])
   // Motion reduced: no autoplay, and the busiest night as a still until Play.
   const [start] = useState(() => (REDUCED_MOTION ? busiestNight(trips, offsets) : 0))
-  const [night, setNight] = useState(start)
-  const [playing, setPlaying] = useState(!REDUCED_MOTION)
   // The board and the teal points change once a week, not every night.
   const usual = useMemo(() => usualWeekly(trips), [trips])
   const w = weekOf(night, trips.nights)
@@ -89,20 +147,14 @@ function Live({ trips }: { trips: Trips }) {
           <TripsScene
             trips={trips}
             startNight={start}
+            seek={seek}
             playing={playing}
             drift={!REDUCED_MOTION}
             quiet={quiet}
-            onNight={setNight}
+            onNight={onNight}
           />
         </div>
       </Suspense>
-
-      {/* Numbers that change four times a second: not live regions, or a screen reader
-          would never stop. The summary below the map says it once. */}
-      <p className="home-now" aria-hidden="true">
-        <span>{formatNight(nightDate(trips.first_night, night))}</span>
-        <strong>{sitesOn(trips, offsets, night).toLocaleString()}</strong> campsites arriving
-      </p>
 
       {/* Keyed by week, so each week's lists fade in once rather than flickering. */}
       <div className="home-board" aria-hidden="true">
@@ -139,10 +191,6 @@ function Live({ trips }: { trips: Trips }) {
         </div>
       </div>
 
-      {/* The label says what a press does; aria-pressed as well would announce "Play, pressed". */}
-      <button type="button" className="home-play" onClick={() => setPlaying(!playing)}>
-        {playing ? 'Pause' : 'Play'}
-      </button>
     </>
   )
 }
