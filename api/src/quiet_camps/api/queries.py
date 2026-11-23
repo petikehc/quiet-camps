@@ -32,6 +32,20 @@ CHOSEN = f"""{ACTIVE}
       AND (CAST(:near_lat AS float8) IS NULL
            OR (c.lat IS NOT NULL AND {DISTANCE} <= CAST(:within_km AS float8)))"""
 
+# Each campground's typical for each night of `nights` (rows with night, kind, fallback_kind):
+# its own kind of night when enough past nights back it, else the broader fallback kind when
+# enough years do (day_kinds.py: the weekday across the fortnight, a holiday's nights
+# together; a pool has more nights a year, so it's judged by years). Neither: no row, usually
+# closed then.
+USUAL = """
+    SELECT DISTINCT ON (t.campground_id, d.night)
+           t.campground_id, d.night, t.busyness, t.sites, t.nights, t.peak
+    FROM {nights} d
+    JOIN campground_typical t ON t.kind IN (d.kind, d.fallback_kind)
+    WHERE ((t.kind = d.kind AND t.nights >= :min_history)
+           OR (t.kind = d.fallback_kind AND t.years >= :min_history)){also}
+    ORDER BY t.campground_id, d.night, t.kind = d.kind DESC"""
+
 # ADR 0002: the nights asked for → their kind of night → each campground's typical night.
 # A campground must have a typical for every night asked for, with enough history: a missing
 # kind means it's usually closed then (Cape York in the wet), not quiet.
@@ -43,21 +57,23 @@ CHOSEN = f"""{ACTIVE}
 # bits between runs, and the cursor compares it exactly.
 SEARCH = text(f"""
 WITH asked AS (
-    SELECT kind FROM calendar_day WHERE night >= :arrive AND night < :depart
+    SELECT night, kind, fallback_kind
+    FROM calendar_day WHERE night >= :arrive AND night < :depart
+),
+usual AS ({USUAL.format(nights="asked", also="")}
 ),
 ranked AS (
     SELECT c.id, c.name, c.park_name,
-           CAST(round(CAST(avg(t.busyness) AS numeric), 6) AS float8) AS busyness,
-           avg(t.sites) AS typical_sites, min(t.nights) AS history, max(t.peak) AS peak,
+           CAST(round(CAST(avg(u.busyness) AS numeric), 6) AS float8) AS busyness,
+           avg(u.sites) AS typical_sites, min(u.nights) AS history, max(u.peak) AS peak,
            c.lat, c.lon, c.location_source, c.location_flags, c.osm_type, c.osm_id,
            CASE WHEN CAST(:near_lat AS float8) IS NULL THEN NULL ELSE {DISTANCE} END
                AS distance_km
-    FROM asked a
-    JOIN campground_typical t ON t.kind = a.kind
-    JOIN campground c ON c.id = t.campground_id
+    FROM usual u
+    JOIN campground c ON c.id = u.campground_id
     WHERE {CHOSEN}
     GROUP BY c.id
-    HAVING count(*) = (SELECT count(*) FROM asked) AND min(t.nights) >= :min_history
+    HAVING count(*) = (SELECT count(*) FROM asked)
 )
 SELECT * FROM ranked
 WHERE CAST(:after_id AS integer) IS NULL
@@ -161,13 +177,15 @@ def chosen(park: str | None, q: str | None, near: Near | None) -> dict[str, obje
 AREA_YEAR = text(f"""
 WITH picked AS (
     SELECT c.id FROM campground c WHERE {CHOSEN}
+),
+nights AS (
+    SELECT night, kind, fallback_kind FROM calendar_day WHERE night BETWEEN :first AND :last
+),
+usual AS ({USUAL.format(nights="nights", also=" AND t.campground_id IN (SELECT id FROM picked)")}
 )
-SELECT d.night, avg(t.busyness) AS busyness, count(t.campground_id)::int AS open
-FROM calendar_day d
-LEFT JOIN campground_typical t
-    ON t.kind = d.kind AND t.nights >= :min_history
-   AND t.campground_id IN (SELECT id FROM picked)
-WHERE d.night BETWEEN :first AND :last
+SELECT d.night, avg(u.busyness) AS busyness, count(u.campground_id)::int AS open
+FROM nights d
+LEFT JOIN usual u ON u.night = d.night
 GROUP BY d.night
 ORDER BY d.night
 """)

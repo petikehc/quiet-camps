@@ -125,6 +125,9 @@ class CalendarDay(Base):
     night: Mapped[date] = mapped_column(primary_key=True)
     kind: Mapped[str] = mapped_column(index=True)
     holiday: Mapped[str | None]
+    # A broader kind for when `kind` comes too seldom: "fortnight 26 3", "easter", "christmas".
+    # None only before the next refresh fills it.
+    fallback_kind: Mapped[str | None]
 
 
 class CampNight(Base):

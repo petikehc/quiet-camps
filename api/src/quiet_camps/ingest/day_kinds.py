@@ -4,6 +4,12 @@ Ordinary nights compare by ISO week and weekday: Saturday of week 14 with every 
 week 14. Holidays move, so their nights compare with the same night of the same holiday:
 Easter Saturday 2024 (30 March) with Easter Saturday 2025 (19 April). 24 Dec to 2 Jan compares
 by calendar date, because those dates don't move.
+
+Some kinds come too seldom to say what's usual: the Wednesday of week 52 is inside 24 Dec to
+2 Jan most years, so it's an ordinary night only every few years; a holiday on a Friday gives
+nights other years don't have. Each night also has a broader kind to fall back on: an ordinary
+night's weekday across its fortnight (weeks 51-52, Wednesdays), a holiday's nights all
+together, Christmas to New Year together.
 """
 
 from collections.abc import Iterator
@@ -36,6 +42,7 @@ class DayKind:
     night: date
     kind: str  # "week 14 6", "easter +1" or "christmas 12-31"
     holiday: str | None  # the holiday key, for showing the same holiday in other years
+    fallback: str  # "fortnight 07 6", "easter" or "christmas": when kind is too seldom
 
 
 def day_kinds(first: date, last: date) -> Iterator[DayKind]:
@@ -44,14 +51,18 @@ def day_kinds(first: date, last: date) -> Iterator[DayKind]:
     night = first
     while night <= last:
         if _is_christmas(night):
-            yield DayKind(night, f"christmas {night:%m-%d}", "christmas")
+            yield DayKind(night, f"christmas {night:%m-%d}", "christmas", "christmas")
         elif night in holiday_nights:
             key, offset = holiday_nights[night]
-            yield DayKind(night, f"{key} {offset:+d}", key)
+            yield DayKind(night, f"{key} {offset:+d}", key, key)
         else:
             _, week, weekday = night.isocalendar()
             # Week 53 comes every 5 or 6 years; it sits beside week 52, not week 1.
-            yield DayKind(night, f"week {min(week, 52):02d} {weekday}", None)
+            week = min(week, 52)
+            fortnight = (week + 1) // 2  # weeks 1-2 are fortnight 1, weeks 51-52 fortnight 26
+            yield DayKind(
+                night, f"week {week:02d} {weekday}", None, f"fortnight {fortnight:02d} {weekday}"
+            )
         night += timedelta(days=1)
 
 

@@ -1,7 +1,13 @@
+from datetime import date
 from typing import Any
 
+import psycopg
 import pytest
 from fastapi.testclient import TestClient
+from psycopg.rows import TupleRow
+
+from quiet_camps.db.derived import refresh_derived
+from quiet_camps.db.load import ensure_areas
 
 SEARCH = "/campgrounds/quiet"
 MAP = "/campgrounds/quiet/map"
@@ -114,3 +120,28 @@ def _resolve(schema: dict[str, Any], node: dict[str, Any]) -> dict[str, Any]:
 @pytest.mark.parametrize("year", [2010, 2100, "x"])
 def test_a_year_outside_the_calendar_is_422(client: TestClient, year: int | str) -> None:
     assert client.get("/campgrounds/quiet/year", params={"year": year}).status_code == 422
+
+
+def book(conn: psycopg.Connection[TupleRow], area: str, night: date) -> None:
+    area_id = ensure_areas(conn, [("Range NP", area)])[("Range NP", area)]
+    conn.execute(
+        "INSERT INTO camp_night (area_id, night, booked_on, adults, state, source_file)"
+        " VALUES (%s, %s, %s, 2, 'QLD', 'q.csv')",
+        (area_id, night, night),
+    )
+
+
+def test_a_night_whose_kind_is_rare_falls_back_to_its_fortnight(
+    conn: psycopg.Connection[TupleRow], client: TestClient
+) -> None:
+    """23 Dec 2026 is the Wednesday of week 52, which is inside Christmas most years: too few
+    past nights of its own. The Wednesdays of weeks 51-52 together have five years."""
+    for year in range(2021, 2026):
+        book(conn, "Edge camping area", date(year, 12, 10))  # open each December
+    book(conn, "Edge camping area", date(2026, 1, 15))  # makes 2025 history
+    list(refresh_derived(conn))
+    conn.commit()
+
+    response = client.get(SEARCH, params={"arrive": "2026-12-23", "depart": "2026-12-24"})
+
+    assert [c["name"] for c in response.json()["results"]] == ["Edge camping area"]

@@ -32,8 +32,15 @@ SELECT d.night, d.kind, d.holiday,
 FROM campground c
 JOIN calendar_day d ON d.night >= :first AND d.night < :next
 CROSS JOIN history h
-LEFT JOIN campground_typical t
-    ON t.campground_id = c.id AND t.kind = d.kind AND t.nights >= :min_history
+-- The night's own kind with enough history, else its fallback (as the search, USUAL).
+LEFT JOIN LATERAL (
+    SELECT t.sites, t.busyness FROM campground_typical t
+    WHERE t.campground_id = c.id
+      AND ((t.kind = d.kind AND t.nights >= :min_history)
+           OR (t.kind = d.fallback_kind AND t.years >= :min_history))
+    ORDER BY t.kind = d.kind DESC
+    LIMIT 1
+) t ON true
 LEFT JOIN booked b ON b.night = d.night
 WHERE c.id = :campground_id
 ORDER BY d.night
