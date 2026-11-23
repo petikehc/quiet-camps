@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.14"
 dependencies = [
     "alembic>=1.20.1",
+    "anthropic[bedrock]==2.6.0",
     "fastapi>=0.165.0",
     "holidays>=0.109",
     "httpx>=0.28.1",

@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/ask": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ask In Plain Words */
+        post: operations["ask_in_plain_words_ask_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/campgrounds/quiet": {
         parameters: {
             query?: never;
@@ -215,6 +232,28 @@ export interface components {
             open: number[];
             /** Year */
             year: number;
+        };
+        /** AskIn */
+        AskIn: {
+            /** Text */
+            text: string;
+        };
+        /**
+         * AskOut
+         * @description What was understood. Anything not understood is None, for the page to ask itself.
+         */
+        AskOut: {
+            /** Arrive */
+            arrive: string | null;
+            /** Depart */
+            depart: string | null;
+            place: components["schemas"]["PlaceOut"] | null;
+            /** Place Asked */
+            place_asked: string | null;
+            /** Place Role */
+            place_role: ("from" | "near") | null;
+            /** Within Km */
+            within_km: number | null;
         };
         /** BookedByOut */
         BookedByOut: {
@@ -542,6 +581,57 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    ask_in_plain_words_ask_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AskIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AskOut"];
+                };
+            };
+            /** @description The request has invalid fields */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ValidationProblem"];
+                };
+            };
+            /** @description Too many asks from here; try again later */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Asking is switched off or unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     quiet_campgrounds_campgrounds_quiet_get: {
         parameters: {
             query: {

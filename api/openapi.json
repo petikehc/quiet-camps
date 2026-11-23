@@ -57,6 +57,107 @@
         "title": "AreaYearOut",
         "type": "object"
       },
+      "AskIn": {
+        "properties": {
+          "text": {
+            "maxLength": 200,
+            "minLength": 3,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "AskIn",
+        "type": "object"
+      },
+      "AskOut": {
+        "description": "What was understood. Anything not understood is None, for the page to ask itself.",
+        "properties": {
+          "arrive": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Arrive"
+          },
+          "depart": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Depart"
+          },
+          "place": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlaceOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "place_asked": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Place Asked"
+          },
+          "place_role": {
+            "anyOf": [
+              {
+                "enum": [
+                  "from",
+                  "near"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Place Role"
+          },
+          "within_km": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Within Km"
+          }
+        },
+        "required": [
+          "arrive",
+          "depart",
+          "place",
+          "place_asked",
+          "place_role",
+          "within_km"
+        ],
+        "title": "AskOut",
+        "type": "object"
+      },
       "BookedByOut": {
         "properties": {
           "share": {
@@ -1003,6 +1104,64 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/ask": {
+      "post": {
+        "operationId": "ask_in_plain_words_ask_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AskIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AskOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblem"
+                }
+              }
+            },
+            "description": "The request has invalid fields"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Too many asks from here; try again later"
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Asking is switched off or unavailable"
+          }
+        },
+        "summary": "Ask In Plain Words"
+      }
+    },
     "/campgrounds/quiet": {
       "get": {
         "operationId": "quiet_campgrounds_campgrounds_quiet_get",
