@@ -1,8 +1,8 @@
 import { Link, Outlet, useMatchRoute } from '@tanstack/react-router'
 
 export function Layout() {
-  // The homepage runs its night map edge to edge, under a thin header; every other page keeps
-  // the maroon band and the column.
+  // The homepage runs its night map edge to edge, with the header floating over it; every
+  // other page has the header as a bar and its content in the column.
   const home = Boolean(useMatchRoute()({ to: '/' }))
 
   return (
@@ -24,7 +24,6 @@ export function Layout() {
               Quiet Camps
             </Link>
           </h1>
-          {!home && <p>Queensland camping since 2011, read from the permits.</p>}
           <nav className="site-nav" aria-label="Pages">
             <Link to="/search" activeOptions={{ includeSearch: false }}>
               Find quiet dates

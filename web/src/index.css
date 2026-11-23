@@ -105,26 +105,32 @@ a {
   outline-offset: 2px;
 }
 
+/* A thin night bar on every page, the homepage's: the brand on the left, the pages on the
+   right, edge to edge. */
 .site-header {
-  background: var(--maroon);
-  color: var(--on-maroon);
-  padding: 1.5rem 0 1.25rem;
+  background: var(--night);
+  color: var(--night-text);
+  padding: 1rem 0;
+}
+
+.site-header .wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+  max-width: none;
+  padding: 0 var(--stage-pad);
 }
 
 .site-header h1 {
   margin: 0;
-  font: 800 2rem/1.1 var(--display);
-}
-
-.site-header p {
-  margin: 0.4rem 0 0;
-  opacity: 0.85;
+  font: 800 1.375rem/1.1 var(--display);
 }
 
 .site-nav {
   display: flex;
   gap: 1.25rem;
-  margin-top: 0.75rem;
   font-size: 0.9375rem;
 }
 
@@ -623,33 +629,13 @@ section:has(> .lead-time) {
   overflow-x: auto;
 }
 
-/* The homepage: a night stage edge to edge, the header a thin bar over it. Words sit on the
+/* The homepage: a night stage edge to edge, the header floating over it. Words sit on the
    left over a scrim; the map takes the right, so nothing covers the continent. */
 .site-header.over {
   position: absolute;
   inset: 0 0 auto;
   z-index: 2;
-  padding: 1rem 0;
   background: none;
-  color: var(--night-text);
-}
-
-.site-header.over .wrap {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem 1.5rem;
-  max-width: none;
-  padding: 0 var(--stage-pad);
-}
-
-.site-header.over h1 {
-  font-size: 1.375rem;
-}
-
-.site-header.over .site-nav {
-  margin: 0;
 }
 
 .home-stage {
