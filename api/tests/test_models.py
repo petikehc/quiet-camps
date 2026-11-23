@@ -29,6 +29,7 @@ def test_the_tables() -> None:
         "calendar_day",
         "park_outline",
         "postcode_centroid",
+        "place",
     }
 
 

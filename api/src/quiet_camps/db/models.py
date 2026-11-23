@@ -104,6 +104,19 @@ class PostcodeCentroid(Base):
     lon: Mapped[float]
 
 
+class Place(Base):
+    """A Queensland suburb, town or council area at its centre (ABS, CC BY 4.0): where a camper
+    starts from or wants to be near. Parks and campgrounds join these when matching."""
+
+    __tablename__ = "place"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str]
+    kind: Mapped[str]  # locality or council
+    lat: Mapped[float]
+    lon: Mapped[float]
+
+
 class CalendarDay(Base):
     """Every night with its kind, from quiet_camps.ingest.day_kinds: "week 14 6", "easter +1"."""
 

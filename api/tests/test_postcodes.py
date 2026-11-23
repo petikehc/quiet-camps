@@ -47,7 +47,7 @@ def test_postcode_centroids_skips_areas_without_a_place(odd: dict[str, Any]) -> 
 
 
 def test_fetch_postcodes_pages_until_a_short_page(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("quiet_camps.cli.POSTCODES_PAGE", 2)
+    monkeypatch.setattr("quiet_camps.cli.ABS_PAGE", 2)
     offsets: list[str] = []
 
     def handler(request: httpx.Request) -> httpx.Response:

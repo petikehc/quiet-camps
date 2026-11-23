@@ -14,6 +14,7 @@ SELECT (date_trunc('quarter', max(last_night)) - interval '1 day')::date AS last
 # A campground is active if it was booked in the year before the history ends. A campground
 # open every season is; one renamed "... - OBSELETE" and retired, or closed for good, isn't.
 ACTIVE_DAYS = 365
+ACTIVE = f"c.last_night > ({HISTORY_END}) - CAST(:active_days AS integer)"  # campground c
 
 # ADR 0002: the nights asked for → their kind of night → each campground's typical night.
 # A campground must have a typical for every night asked for, with enough history: a missing
@@ -36,7 +37,7 @@ ranked AS (
     FROM asked a
     JOIN campground_typical t ON t.kind = a.kind
     JOIN campground c ON c.id = t.campground_id
-    WHERE c.last_night > ({HISTORY_END}) - CAST(:active_days AS integer)
+    WHERE {ACTIVE}
       AND (CAST(:park AS text) IS NULL OR c.park_name = :park)
       AND (CAST(:pattern AS text) IS NULL OR c.name ILIKE :pattern OR c.park_name ILIKE :pattern)
     GROUP BY c.id

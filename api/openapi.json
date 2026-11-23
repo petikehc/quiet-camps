@@ -373,6 +373,50 @@
         "title": "OriginOut",
         "type": "object"
       },
+      "PlaceOut": {
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "lat": {
+            "title": "Lat",
+            "type": "number"
+          },
+          "lon": {
+            "title": "Lon",
+            "type": "number"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "kind",
+          "lat",
+          "lon"
+        ],
+        "title": "PlaceOut",
+        "type": "object"
+      },
+      "PlacesOut": {
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/PlaceOut"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "results"
+        ],
+        "title": "PlacesOut",
+        "type": "object"
+      },
       "Problem": {
         "additionalProperties": false,
         "description": "What every error looks like: documented in OpenAPI, so the web client is typed too.",
@@ -1318,6 +1362,59 @@
           }
         },
         "summary": "Health"
+      }
+    },
+    "/places": {
+      "get": {
+        "operationId": "places_places_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "maxLength": 100,
+              "minLength": 2,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 8,
+              "maximum": 20,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlacesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblem"
+                }
+              }
+            },
+            "description": "The request has invalid fields"
+          }
+        },
+        "summary": "Places"
       }
     },
     "/trips/{year}": {
