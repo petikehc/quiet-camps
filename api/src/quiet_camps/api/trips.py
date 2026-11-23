@@ -12,7 +12,7 @@ from quiet_camps.api.db import get_session
 from quiet_camps.api.problems import INVALID, NOT_FOUND
 from quiet_camps.api.trip_repository import TripRepository
 from quiet_camps.api.trip_service import TripSource, year_trips
-from quiet_camps.api.year import CACHE_CONTROL, etag_matches
+from quiet_camps.api.year import CACHE_CONTROL, HolidayOut, etag_matches
 from quiet_camps.db.derived import FIRST_NIGHT, YEARS_AHEAD
 
 trips_router = APIRouter(responses={**INVALID, **NOT_FOUND})
@@ -65,6 +65,7 @@ class TripsOut(BaseModel):
     campground: list[int]  # an index into campgrounds
     sites: list[int]
     left_out: LeftOutOut
+    holidays: list[HolidayOut]  # public holidays and their long weekends; Christmas twice
 
 
 def get_trip_source(session: Annotated[AsyncSession, Depends(get_session)]) -> TripSource:

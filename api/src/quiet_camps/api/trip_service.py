@@ -4,7 +4,12 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Protocol
 
-from quiet_camps.api.campground_service import year_span
+from quiet_camps.api.campground_service import (
+    HolidayNight,
+    HolidaySpan,
+    holiday_spans,
+    year_span,
+)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -57,6 +62,7 @@ class YearTrips:
     campground: list[int]  # an index into campgrounds
     sites: list[int]
     left_out: LeftOut
+    holidays: list[HolidaySpan]  # in night order: the year's peaks have names
 
 
 class TripSource(Protocol):
@@ -67,6 +73,8 @@ class TripSource(Protocol):
     async def origins(self) -> list[Origin]: ...
 
     async def located_campgrounds(self) -> list[TripCampground]: ...
+
+    async def holiday_nights(self, first: date, last: date) -> list[HolidayNight]: ...
 
 
 async def year_trips(source: TripSource, year: int) -> YearTrips:
@@ -107,4 +115,5 @@ async def year_trips(source: TripSource, year: int) -> YearTrips:
         campground=campground,
         sites=sites,
         left_out=left_out,
+        holidays=holiday_spans(await source.holiday_nights(first, last), first),
     )

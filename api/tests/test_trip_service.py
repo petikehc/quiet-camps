@@ -1,9 +1,9 @@
 import asyncio
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 
-from quiet_camps.api.campground_service import NoHistory
+from quiet_camps.api.campground_service import HolidayNight, HolidaySpan, NoHistory
 from quiet_camps.api.trip_service import (
     Arrivals,
     LeftOut,
@@ -21,10 +21,17 @@ TEEWAH = TripCampground(id=9, name="Teewah", lat=-26.2, lon=153.1)
 class FakeTrips:
     """Satisfies TripSource: two postcodes, two located campgrounds, fixed arrivals."""
 
-    def __init__(self, history_end: date | None, arrivals: list[Arrivals]) -> None:
+    def __init__(
+        self,
+        history_end: date | None,
+        arrivals: list[Arrivals],
+        holidays: list[HolidayNight] | None = None,
+    ) -> None:
         self.end = history_end
         self.rows = arrivals
+        self.holidays = holidays or []
         self.asked: tuple[date, date] | None = None
+        self.asked_holidays: tuple[date, date] | None = None
 
     async def history_end(self) -> date | None:
         return self.end
@@ -38,6 +45,10 @@ class FakeTrips:
 
     async def located_campgrounds(self) -> list[TripCampground]:
         return [HOOP_PINES, TEEWAH]
+
+    async def holiday_nights(self, first: date, last: date) -> list[HolidayNight]:
+        self.asked_holidays = (first, last)
+        return self.holidays
 
 
 def arrive(
@@ -91,13 +102,32 @@ def test_trips_without_a_line_to_draw_are_counted_not_drawn() -> None:
     assert (found.origins, found.campgrounds, found.sites) == ([BRISBANE], [HOOP_PINES], [1])
 
 
+def test_holidays_are_spans_of_the_years_nights() -> None:
+    easter = [
+        HolidayNight(night=date(2025, 4, 17) + timedelta(days=i), holiday="easter")
+        for i in range(4)
+    ]
+    source = FakeTrips(date(2025, 12, 31), [], easter)
+
+    found = asyncio.run(year_trips(source, 2025))
+
+    assert found.holidays == [HolidaySpan(name="easter", night=106, nights=4)]
+    assert source.asked_holidays == (date(2025, 1, 1), date(2025, 12, 31))
+
+
+def test_a_year_without_holidays_has_none() -> None:
+    found = asyncio.run(year_trips(FakeTrips(date(2025, 12, 31), []), 2025))
+
+    assert found.holidays == []
+
+
 def test_the_year_history_ends_in_stops_there() -> None:
     source = FakeTrips(date(2026, 9, 30), [])
 
     found = asyncio.run(year_trips(source, 2026))
 
     assert found.nights == len(found.per_night) == 273
-    assert source.asked == (date(2026, 1, 1), date(2026, 9, 30))
+    assert source.asked == source.asked_holidays == (date(2026, 1, 1), date(2026, 9, 30))
 
 
 @pytest.mark.parametrize("history_end", [date(2025, 12, 31), None])

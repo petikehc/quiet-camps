@@ -371,6 +371,8 @@ export interface components {
              * Format: date
              */
             first_night: string;
+            /** Holidays */
+            holidays: components["schemas"]["HolidayOut"][];
             left_out: components["schemas"]["LeftOutOut"];
             /** Nights */
             nights: number;

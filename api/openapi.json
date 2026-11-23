@@ -606,6 +606,13 @@
             "title": "First Night",
             "type": "string"
           },
+          "holidays": {
+            "items": {
+              "$ref": "#/components/schemas/HolidayOut"
+            },
+            "title": "Holidays",
+            "type": "array"
+          },
           "left_out": {
             "$ref": "#/components/schemas/LeftOutOut"
           },
@@ -656,7 +663,8 @@
           "origin",
           "campground",
           "sites",
-          "left_out"
+          "left_out",
+          "holidays"
         ],
         "title": "TripsOut",
         "type": "object"

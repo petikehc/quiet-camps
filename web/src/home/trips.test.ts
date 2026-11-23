@@ -34,6 +34,7 @@ const trips: Trips = {
   campground: [1, 0, 1, 1, 1, 0],
   sites: [2, 1, 4, 1, 3, 1],
   left_out: { overseas: 0, no_postcode: 0, no_centroid: 0, unlocated: 0 },
+  holidays: [],
 }
 const offsets = nightOffsets(trips.per_night)
 

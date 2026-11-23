@@ -73,6 +73,24 @@ def test_trips_without_a_line_are_counted(trips_client: TestClient) -> None:
     assert left_out == {"overseas": 1, "no_postcode": 1, "no_centroid": 1, "unlocated": 1}
 
 
+def test_holidays_name_the_years_peaks(conn: Conn, trips_client: TestClient) -> None:
+    conn.execute(
+        "INSERT INTO calendar_day (night, kind, holiday) SELECT d::date, 'easter', 'easter'"
+        " FROM generate_series('2025-04-17'::date, '2025-04-20', '1 day') d"
+    )
+    conn.commit()
+
+    holidays = trips(trips_client, 2025)["holidays"]
+
+    assert holidays == [
+        {"name": "easter", "night": (date(2025, 4, 17) - date(2025, 1, 1)).days, "nights": 4}
+    ]
+
+
+def test_a_year_with_no_holiday_rows_has_none(trips_client: TestClient) -> None:
+    assert trips(trips_client, 2025)["holidays"] == []
+
+
 def test_cached_for_a_day_with_a_weak_etag(trips_client: TestClient) -> None:
     response = trips_client.get("/trips/2025")
     etag = response.headers["etag"]
