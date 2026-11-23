@@ -1,5 +1,7 @@
 import { Link } from '@tanstack/react-router'
+import type { Holiday } from '../charts/dates'
 import { usually } from './bands'
+import { BookingHint } from './BookingHint'
 import { osmLink, shownLocation } from './location'
 import type { QuietCampground } from './queries'
 
@@ -8,13 +10,26 @@ type Props = {
   selected: boolean
   rank: number // its place among all the results, quietest first
   of: number
-  year: number // for the campground page's calendar
+  arrive: string
+  holiday: Holiday | undefined // the holiday the arrival falls in, if any
+  today: string
   review: boolean
   onSelect: () => void
   onHover: (on: boolean) => void
 }
 
-export function Card({ campground: c, selected, rank, of, year, review, onSelect, onHover }: Props) {
+export function Card({
+  campground: c,
+  selected,
+  rank,
+  of,
+  arrive,
+  holiday,
+  today,
+  review,
+  onSelect,
+  onHover,
+}: Props) {
   const { notes } = shownLocation(c, review)
   const osm = osmLink(c, review)
   return (
@@ -38,6 +53,7 @@ export function Card({ campground: c, selected, rank, of, year, review, onSelect
       </button>
       {selected && (
         <div className="card-more">
+          <BookingHint campgroundId={c.id} arrive={arrive} holiday={holiday} today={today} />
           <p>
             Number {rank} of {of} for these nights, quietest first.
           </p>
@@ -50,7 +66,7 @@ export function Card({ campground: c, selected, rank, of, year, review, onSelect
             <Link
               to="/campgrounds/$campgroundId"
               params={{ campgroundId: String(c.id) }}
-              search={{ year }}
+              search={{ year: Number(arrive.slice(0, 4)) }}
             >
               Its year, night by night
             </Link>

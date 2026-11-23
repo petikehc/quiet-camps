@@ -1253,6 +1253,14 @@ section:has(> .lead-time) {
   margin: 0.35rem 0 0;
 }
 
+.book-by p:first-child {
+  color: var(--night-text);
+}
+
+.book-by strong {
+  color: var(--quiet);
+}
+
 .card-links {
   display: flex;
   flex-wrap: wrap;

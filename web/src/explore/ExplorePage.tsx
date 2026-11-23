@@ -5,7 +5,7 @@ import { fieldErrors } from '../api/errors'
 import { BandToggle } from './BandToggle'
 import { BAND_NAMES, bandOf } from './bands'
 import { Card } from './Card'
-import { comingYear } from './comingYear'
+import { comingYear, holidayFor } from './comingYear'
 import { apiQuery, localDay, type Band, type Filters } from './filters'
 import { LeaderLine } from './LeaderLine'
 import { QueryBar } from './QueryBar'
@@ -92,7 +92,7 @@ export function ExplorePage() {
     filters.lat !== undefined && filters.lon !== undefined
       ? { lat: filters.lat, lon: filters.lon, km: filters.km ?? 50 }
       : undefined
-  const year = Number(filters.arrive.slice(0, 4))
+  const holiday = coming && holidayFor(coming, filters.arrive)
 
   return (
     <div className="explore" ref={root}>
@@ -112,7 +112,9 @@ export function ExplorePage() {
               selected={c.id === sel}
               rank={rows.indexOf(c) + 1}
               of={rows.length}
-              year={year}
+              arrive={filters.arrive}
+              holiday={holiday}
+              today={today}
               review={review !== undefined}
               onSelect={() => select(c.id)}
               onHover={(on) => setHovered(on ? c.id : undefined)}

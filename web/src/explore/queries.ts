@@ -42,3 +42,20 @@ export function useAreaYear(filters: Filters, year: number) {
     staleTime: 60 * 60_000, // the history changes once a quarter
   })
 }
+
+// How far ahead a campground's nights were booked, by kind of night: for an opened card's
+// "book by". The same answer the campground page's table uses.
+export function useLeadTime(campgroundId: number, enabled: boolean) {
+  return useQuery({
+    queryKey: ['campground', campgroundId, 'lead-time'],
+    queryFn: ({ signal }) =>
+      unwrap(
+        api.GET('/campgrounds/{campground_id}/lead-time', {
+          params: { path: { campground_id: campgroundId } },
+          signal,
+        }),
+      ),
+    enabled,
+    staleTime: 60 * 60_000,
+  })
+}
