@@ -8,6 +8,7 @@ from quiet_camps.api.health import health_router
 from quiet_camps.api.problems import add_problem_handlers
 from quiet_camps.api.search import search_router
 from quiet_camps.api.settings import Settings
+from quiet_camps.api.trips import trips_router
 from quiet_camps.api.year import year_router
 
 
@@ -23,6 +24,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(search_router)
     app.include_router(campground_router)
     app.include_router(year_router)
+    app.include_router(trips_router)
     if settings.experiments:
         app.include_router(experiment_router)
     app.state.settings = settings

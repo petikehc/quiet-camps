@@ -14,6 +14,7 @@ from quiet_camps.db.config import psycopg_conninfo
 from quiet_camps.db.derived import refresh_derived, refresh_locations
 from quiet_camps.db.load import load_all
 from quiet_camps.db.locations import OSM_FILE, PARKS_FILE, has_sources, location_report
+from quiet_camps.db.postcodes import POSTCODES_FILE, load_postcodes
 from quiet_camps.ingest.ckan import PackageShowResponse, camping_csv_urls
 from quiet_camps.ingest.download import download_csv
 from quiet_camps.ingest.profile_report import profile
@@ -39,6 +40,9 @@ PARKS_URL = (
     "ParksTerrestrialProtectedAreas/MapServer/10/query"
 )
 PARKS_PAGE = 1000
+# Postal area centres, ABS ASGS 2021 (CC BY 4.0): where campers come from, for the homepage.
+POSTCODES_URL = "https://geo.abs.gov.au/arcgis/rest/services/ASGS2021/POA/MapServer/2/query"
+POSTCODES_PAGE = 2000  # the service's most per request
 
 
 def is_transient(exc: Exception) -> bool:
@@ -95,6 +99,50 @@ def fetch_park_outlines(client: httpx.Client) -> dict[str, Any]:
         features += page["features"]
         if len(page["features"]) < PARKS_PAGE:
             return {"type": "FeatureCollection", "features": features}
+
+
+@retry(attempts=4, delay=2.0, retry_if=is_transient)
+def fetch_postcodes_page(client: httpx.Client, offset: int) -> dict[str, Any]:
+    params: dict[str, str | float] = {
+        "where": "1=1",
+        "outFields": "poa_code_2021",
+        "outSR": 4326,
+        "geometryPrecision": 4,  # about 10 m: a postcode's centre is a rough place anyway
+        "orderByFields": "objectid",
+        "resultOffset": offset,
+        "resultRecordCount": POSTCODES_PAGE,
+        "f": "geojson",
+    }
+    response = client.get(POSTCODES_URL, params=params)
+    response.raise_for_status()
+    return response.json()
+
+
+def fetch_postcodes(client: httpx.Client) -> dict[str, Any]:
+    """Every postal area's centre, one page at a time."""
+    features: list[Any] = []
+    while True:
+        page = fetch_postcodes_page(client, len(features))
+        features += page["features"]
+        if len(page["features"]) < POSTCODES_PAGE:
+            return {"type": "FeatureCollection", "features": features}
+
+
+def postcodes_command(locations_dir: Path, fetch: bool) -> int:
+    path = locations_dir / POSTCODES_FILE
+    if fetch:
+        locations_dir.mkdir(parents=True, exist_ok=True)
+        with httpx.Client(
+            headers={"User-Agent": USER_AGENT}, follow_redirects=True, timeout=60
+        ) as client:
+            path.write_text(json.dumps(fetch_postcodes(client)), encoding="utf-8")
+    if not path.exists():
+        print(f"No {POSTCODES_FILE} in {locations_dir}: run `qc postcodes --fetch` first.")
+        return 1
+    with psycopg.connect(psycopg_conninfo()) as conn:
+        n = load_postcodes(conn, path)
+    print(f"{n:,} postcode centres (ABS postal areas 2021, © Commonwealth of Australia, CC BY 4.0)")
+    return 0
 
 
 def fetch_locations(locations_dir: Path) -> None:
@@ -227,6 +275,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     locations.add_argument("--locations-dir", type=Path, default=DEFAULT_LOCATIONS_DIR)
 
+    postcodes = commands.add_parser(
+        "postcodes",
+        help="Load the centre of every postcode, for where campers come from.",
+        description=(
+            "Load the centre of every ABS postal area (ASGS 2021, CC BY 4.0) into "
+            "postcode_centroid. PO-box-only postcodes have no area, so no centre."
+        ),
+    )
+    postcodes.add_argument(
+        "--fetch", action="store_true", help="Download the postal area centres first."
+    )
+    postcodes.add_argument("--locations-dir", type=Path, default=DEFAULT_LOCATIONS_DIR)
+
     openapi = commands.add_parser(
         "openapi",
         help="Write the API's OpenAPI document, for the web client's generated types.",
@@ -265,6 +326,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         case "locations":
             return locations_command(args.locations_dir, args.fetch, args.sample)
+        case "postcodes":
+            return postcodes_command(args.locations_dir, args.fetch)
         case "openapi":
             args.output.write_text(openapi_document())
             print(f"wrote {args.output}")

@@ -24,7 +24,7 @@ const columns = column.columns([
   column.accessor('park_name', {
     header: 'Park',
     cell: (info) => (
-      <Link from="/" to="/" search={(prev) => ({ ...prev, park: info.getValue() })}>
+      <Link from="/search" to="/search" search={(prev) => ({ ...prev, park: info.getValue() })}>
         {info.getValue()}
       </Link>
     ),
@@ -50,7 +50,7 @@ const columns = column.columns([
   column.accessor('history', { header: 'Nights of history' }),
 ])
 
-const searchRoute = getRouteApi('/')
+const searchRoute = getRouteApi('/search')
 
 // Opens the campground's calendar on the year of the searched dates.
 function CampgroundLink({ id, name }: { id: number; name: string }) {

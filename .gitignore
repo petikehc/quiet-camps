@@ -25,3 +25,7 @@ dist/
 
 # Personal Claude Code instructions
 CLAUDE.local.md
+
+# Impeccable skill: the engine binary it downloads, and per-developer config
+.claude/skills/impeccable/bin/
+.impeccable/config.local.json

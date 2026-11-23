@@ -12,7 +12,8 @@
   --on-maroon: #f6efe9;
   --wattle: #b47c10; /* the focus ring; 3:1 against --bg */
   --error: #a3261b;
-  --display: 'Overpass', system-ui, sans-serif;
+  --display: 'Overpass Variable', system-ui, sans-serif;
+  --stage-pad: clamp(1rem, 4vw, 3.5rem); /* the homepage's night stage and its header */
 
   /* Charts: validated with the dataviz skill's validator against --bg, light and dark. */
   --grid: #dfe5e0;
@@ -31,6 +32,19 @@
   --heat-ink-3: #ffffff;
   --heat-ink-4: #ffffff;
   --pin-ring: #ffffff; /* a halo that lifts map pins off the basemap */
+
+  /* The homepage's night map, the same in light and dark mode: trails glow by adding up, which
+     needs a dark ground. Validated against --night: the trail ramp (tail → head) is one hue,
+     lighter at every step, its tail 4.2:1; state lines 3.3:1 against the land; text 8:1+. */
+  --night: #0a1416;
+  --night-land: #13252a;
+  --night-line: #557880;
+  --night-text: #e4ebe6;
+  --night-muted: #9eafa9;
+  --trail-tail: #a8692a;
+  --trail: #e8a24a;
+  --trail-head: #ffd89a;
+  --quiet: #35c2b0; /* reef teal: quiet campgrounds and the way to them; 8.4:1 on --night */
 
   color-scheme: light dark;
   font: 16px/1.5 system-ui, 'Segoe UI', Roboto, sans-serif;
@@ -609,6 +623,545 @@ section:has(> .lead-time) {
   overflow-x: auto;
 }
 
+/* The homepage: a night stage edge to edge, the header a thin bar over it. Words sit on the
+   left over a scrim; the map takes the right, so nothing covers the continent. */
+.site-header.over {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 2;
+  padding: 1rem 0;
+  background: none;
+  color: var(--night-text);
+}
+
+.site-header.over .wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+  max-width: none;
+  padding: 0 var(--stage-pad);
+}
+
+.site-header.over h1 {
+  font-size: 1.375rem;
+}
+
+.site-header.over .site-nav {
+  margin: 0;
+}
+
+.home-stage {
+  position: relative;
+  isolation: isolate;
+  height: min(100svh, 60rem);
+  min-height: 52rem;
+  overflow: hidden;
+  background: var(--night);
+  color: var(--night-text);
+}
+
+/* Under the words: the night thickens to the left and along the top, so trails pass under
+   the headline and the header rather than through them. */
+.home-stage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(180deg, var(--night) 0, transparent 7rem),
+    linear-gradient(90deg, var(--night) 0 18%, transparent 46%);
+  pointer-events: none;
+}
+
+/* The map and what's laid over it: the whole stage on a wide screen, the map itself on the
+   right; a block under the words on a narrow one. */
+.home-map {
+  position: absolute;
+  inset: 0;
+}
+
+.home-outline,
+.home-canvas {
+  position: absolute;
+  inset: 0 0 0 34%;
+}
+
+/* Drawn before three.js and the data arrive, tilted like the camera that replaces it, so the
+   map settles rather than jumps; the canvas then fades in over it. */
+.home-outline {
+  padding: 7%;
+  box-sizing: border-box;
+  fill: var(--night-land);
+  stroke: var(--night-line);
+  stroke-width: 0.06;
+  transform: perspective(110vh) rotateX(34deg) scale(0.98) translateY(-3%);
+  transform-origin: 50% 55%;
+  pointer-events: none; /* decoration: the tilt widens its box, which mustn't take a tap */
+}
+
+.home-canvas {
+  animation: canvas-in 900ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes canvas-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Loading, or the data didn't come: in the slot where the year's controls will be. */
+.home-status {
+  margin: 0;
+  color: var(--night-muted);
+}
+
+.home-status p {
+  margin: 0 0 0.75rem;
+  color: var(--night-text);
+}
+
+.home-status button {
+  background: var(--night-land);
+  border-color: var(--night-line);
+  color: var(--night-text);
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-canvas {
+    animation: none;
+  }
+}
+
+/* The left column is time: the headline and your dates at the top, where the year is at the
+   bottom. The right is place: the map and its board. */
+.home-left {
+  position: absolute;
+  z-index: 2;
+  inset: clamp(5.5rem, 14vh, 10rem) auto 1.5rem var(--stage-pad);
+  width: min(36rem, 44%);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.home-intro h2 {
+  margin: 0;
+  font: 800 clamp(2.75rem, 5.4vw, 5.75rem) / 0.95 var(--display);
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+.home-intro > p:first-of-type {
+  max-width: 34ch;
+  margin: 1.25rem 0 1.5rem;
+  font: 400 clamp(1.0625rem, 1.3vw, 1.25rem) / 1.45 var(--display);
+  color: var(--night-muted);
+  text-wrap: pretty;
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.85rem 1.5rem;
+  border-radius: 8px;
+  background: var(--quiet);
+  color: var(--night);
+  font: 800 1.125rem/1.2 var(--display);
+  text-decoration: none;
+  transition: background-color 160ms ease-out;
+}
+
+.cta:hover {
+  background: color-mix(in srgb, var(--quiet) 82%, white);
+}
+
+.cta svg {
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cta:hover svg {
+  transform: translateX(3px);
+}
+
+/* Your dates: native date inputs, on the night. */
+.home-dates {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.home-dates label {
+  display: grid;
+  gap: 0.25rem;
+  font: 600 0.875rem/1.2 var(--display);
+  color: var(--night-muted);
+}
+
+.home-dates input {
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--night-line);
+  border-radius: 6px;
+  background: var(--night-land);
+  color: var(--night-text);
+  color-scheme: dark;
+  font: inherit;
+  font-weight: 400;
+}
+
+.home-hint {
+  min-height: 1.25rem;
+  margin: 0.35rem 0 0.5rem;
+  font-size: 0.875rem;
+  color: var(--trail-head);
+}
+
+.home-board {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.home-now-row {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.home-now {
+  margin: 0;
+  color: var(--night-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.home-now span {
+  display: block;
+  margin-bottom: 0.15rem;
+  color: var(--night-text);
+}
+
+.home-now b {
+  font-weight: 600;
+  color: var(--trail-head);
+}
+
+.home-now strong {
+  font: 800 1.75rem/1 var(--display);
+  color: var(--trail);
+}
+
+.home-board {
+  right: var(--stage-pad);
+  bottom: 1.5rem;
+  width: min(38rem, 52%);
+  padding: 0.6rem 0.9rem;
+  border-radius: 8px;
+  /* Lines pass under the names, not through them. */
+  background: color-mix(in srgb, var(--night) 82%, transparent);
+  font-size: 0.875rem;
+}
+
+.home-board h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.25rem;
+  font: 600 0.9375rem/1.3 var(--display);
+  color: var(--night-text);
+}
+
+/* Busiest and quiet side by side: a short band under the continent, not a column over it. */
+.home-board > div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-auto-flow: column;
+  grid-template-rows: auto auto;
+  column-gap: 1.5rem;
+}
+
+.home-board > div > p:last-child {
+  grid-row: 3;
+  grid-column: 1 / -1;
+}
+
+/* The board's headings are the map's key: amber is where everyone went, teal is quiet. */
+.key {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+}
+
+.key-busy {
+  background: var(--trail);
+}
+
+.key-quiet {
+  background: var(--quiet);
+}
+
+.home-board small {
+  font-size: 0.8125rem;
+  color: var(--night-muted);
+}
+
+.home-board > div {
+  animation: board-in 280ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes board-in {
+  from {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-board > div {
+    animation: none;
+  }
+}
+
+.home-board ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.home-board li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--night-land);
+  font-variant-numeric: tabular-nums;
+}
+
+.home-board li span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-board li span:last-child {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.home-board p {
+  margin: 0.4rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--night-muted);
+}
+
+.home-play {
+  flex-shrink: 0;
+  min-width: 5.5rem;
+  background: var(--night-land);
+  border-color: var(--night-line);
+  color: var(--night-text);
+  font-weight: 600;
+}
+
+/* The year strip: arrivals as one shape, a native range input over it as the playhead. The
+   drawing is inset by half the thumb so the thumb's centre lands on its night. */
+.year-strip {
+  --thumb: 14px;
+  position: relative;
+  margin-top: 0.75rem;
+  padding: 1.1rem 0 1.1rem;
+}
+
+.year-strip svg {
+  display: block;
+  width: calc(100% - var(--thumb));
+  height: 3rem;
+  margin: 0 calc(var(--thumb) / 2);
+}
+
+.year-holiday {
+  fill: var(--night-land);
+}
+
+.year-area {
+  fill: color-mix(in srgb, var(--trail) 22%, transparent);
+}
+
+.year-line {
+  fill: none;
+  stroke: var(--trail);
+  stroke-width: 1.25;
+}
+
+.year-peaks,
+.year-months {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  pointer-events: none;
+}
+
+.year-peaks li,
+.year-months li {
+  position: absolute;
+  font-size: 0.75rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.year-peaks li {
+  top: 0;
+  transform: translateX(-50%);
+  font-weight: 600;
+  color: var(--trail-head);
+}
+
+.year-months li {
+  bottom: 0;
+  color: var(--night-muted);
+}
+
+.year-strip input {
+  position: absolute;
+  inset: 1.1rem 0 auto;
+  width: 100%;
+  height: 3rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  appearance: none;
+  cursor: ew-resize;
+}
+
+.year-strip input::-webkit-slider-runnable-track {
+  height: 100%;
+  background: none;
+}
+
+.year-strip input::-webkit-slider-thumb {
+  appearance: none;
+  width: var(--thumb);
+  height: 3rem;
+  border: 0;
+  border-radius: 0;
+  background: linear-gradient(var(--night-text), var(--night-text)) center / 2px 100% no-repeat;
+}
+
+.year-strip input::-moz-range-track {
+  background: none;
+}
+
+.year-strip input::-moz-range-thumb {
+  width: var(--thumb);
+  height: 3rem;
+  border: 0;
+  border-radius: 0;
+  background: linear-gradient(var(--night-text), var(--night-text)) center / 2px 100% no-repeat;
+}
+
+.home-about {
+  max-width: 60ch;
+  text-wrap: pretty;
+  margin: 3rem 0 0;
+}
+
+.home-about h2 {
+  margin: 0 0 0.5rem;
+  font: 800 1.5rem/1.2 var(--display);
+}
+
+/* Narrower than a laptop: one column on the night, in reading order: the words, the map, where
+   the year is, then the week's board. The left column dissolves (display: contents) so its
+   two parts can sit either side of the map. */
+@media (max-width: 64rem) {
+  /* The header may wrap here, so it takes its own space instead of floating over the words. */
+  .site-header.over {
+    position: static;
+    background: var(--night);
+  }
+
+  .home-stage {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: 0;
+    padding: 1.5rem 0;
+  }
+
+  .home-stage::before {
+    display: none;
+  }
+
+  .home-left {
+    display: contents;
+  }
+
+  .home-intro,
+  .home-time,
+  .home-status,
+  .home-board {
+    max-width: 40rem;
+    padding: 0 var(--stage-pad);
+  }
+
+  .home-intro {
+    order: 1;
+  }
+
+  .home-map {
+    order: 2;
+    position: relative;
+    overflow: hidden; /* the tilted outline stays inside the map */
+    margin: 0.5rem 0 0.75rem;
+    padding-top: 75%; /* 4:3, so the continent fills the width */
+  }
+
+  .home-time,
+  .home-status {
+    order: 3;
+  }
+
+  .home-board {
+    order: 4;
+    position: static;
+    width: auto;
+    margin-top: 1.5rem;
+    background: none;
+  }
+
+  .home-board > div {
+    grid-template-columns: 1fr;
+    grid-auto-flow: row;
+    grid-template-rows: none;
+  }
+
+  .home-board > div > p:last-child {
+    grid-row: auto;
+  }
+
+  .home-board ol + h3 {
+    margin-top: 1rem;
+  }
+
+  .home-intro h2 {
+    font-size: clamp(2.5rem, 9vw, 4.5rem);
+  }
+
+  .home-intro > p:first-of-type {
+    margin: 1rem 0 1.25rem;
+  }
+
+  .home-outline,
+  .home-canvas {
+    inset: 0;
+  }
+}
+
 @media (max-width: 40rem) {
   .map-canvas {
     height: 280px;
@@ -623,4 +1176,10 @@ section:has(> .lead-time) {
   .results td:nth-child(n + 4) {
     display: none;
   }
+}
+
+/* The footer's credits stay readable lines on a wide screen. */
+.site-footer p {
+  max-width: 64ch;
+  text-wrap: pretty;
 }

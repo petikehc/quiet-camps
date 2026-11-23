@@ -2,7 +2,15 @@ from alembic import command
 from alembic.config import Config
 from sqlalchemy import Engine, inspect, text
 
-TABLES = {"park", "camping_area", "camp_night", "campground", "calendar_day", "park_outline"}
+TABLES = {
+    "park",
+    "camping_area",
+    "camp_night",
+    "campground",
+    "calendar_day",
+    "park_outline",
+    "postcode_centroid",
+}
 
 
 def tables(engine: Engine) -> set[str]:

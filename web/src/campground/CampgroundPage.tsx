@@ -31,7 +31,7 @@ function Campground({ id }: { id: number }) {
     <article className="campground">
       <h2>{name}</h2>
       <p className="muted">
-        <Link to="/" search={{ park: park_name }}>
+        <Link to="/search" search={{ park: park_name }}>
           {park_name}
         </Link>
         {!active && last_night && <> · No bookings since {formatNight(last_night)}</>}

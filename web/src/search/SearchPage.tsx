@@ -7,7 +7,7 @@ import { SearchForm } from './SearchForm'
 import { useQuietMap, useQuietSearch } from './useQuietSearch'
 
 // getRouteApi instead of importing the route: router.tsx imports this file, not the other way.
-const route = getRouteApi('/')
+const route = getRouteApi('/search')
 const noRows: QuietCampground[] = []
 
 // MapLibre is most of the app's JavaScript: its own chunk, loaded only where a map is shown.

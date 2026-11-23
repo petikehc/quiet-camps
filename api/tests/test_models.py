@@ -28,6 +28,7 @@ def test_the_tables() -> None:
         "campground",
         "calendar_day",
         "park_outline",
+        "postcode_centroid",
     }
 
 

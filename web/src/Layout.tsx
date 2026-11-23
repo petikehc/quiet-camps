@@ -1,9 +1,13 @@
-import { Link, Outlet } from '@tanstack/react-router'
+import { Link, Outlet, useMatchRoute } from '@tanstack/react-router'
 
 export function Layout() {
+  // The homepage runs its night map edge to edge, under a thin header; every other page keeps
+  // the maroon band and the column.
+  const home = Boolean(useMatchRoute()({ to: '/' }))
+
   return (
     <>
-      <header className="site-header">
+      <header className={home ? 'site-header over' : 'site-header'}>
         <div className="wrap">
           <h1>
             <Link to="/">
@@ -20,16 +24,16 @@ export function Layout() {
               Quiet Camps
             </Link>
           </h1>
-          <p>Queensland campgrounds that are usually quiet on your dates.</p>
+          {!home && <p>Queensland camping since 2011, read from the permits.</p>}
           <nav className="site-nav" aria-label="Pages">
-            <Link to="/" activeOptions={{ includeSearch: false }}>
-              Search
+            <Link to="/search" activeOptions={{ includeSearch: false }}>
+              Find quiet dates
             </Link>
             <Link to="/timelapse">A year in 3D</Link>
           </nav>
         </div>
       </header>
-      <main className="wrap">
+      <main className={home ? undefined : 'wrap'}>
         <Outlet />
       </main>
       {/* wrap sets the column; the border sits on the inner box, so it's as wide as the text. */}
@@ -43,6 +47,7 @@ export function Layout() {
             , © State of Queensland,{' '}
             <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Locations: ©{' '}
             <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors.
+            Boundaries and postal areas: ABS, © Commonwealth of Australia, CC BY 4.0.
           </p>
           <p>
             Past bookings, not live availability. Not affiliated with or endorsed by Queensland

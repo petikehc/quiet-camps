@@ -51,3 +51,11 @@ function text(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined
   return value.trim() || undefined
 }
+
+// The search was the homepage until the trips map took /: its old links and bookmarks still
+// carry these, and go on to /search.
+const SEARCH_KEYS = ['arrive', 'depart', 'q', 'park', 'review']
+
+export function isOldSearchLink(search: Record<string, unknown>): boolean {
+  return SEARCH_KEYS.some((key) => key in search)
+}
