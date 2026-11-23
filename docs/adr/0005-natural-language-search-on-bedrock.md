@@ -13,7 +13,9 @@ holidays, "3–6 April"), and places as nicknames and regions ("the Sunny Coast"
 ## Decision
 
 `POST /ask` sends the words to Claude Haiku on Amazon Bedrock and gets back a structured
-reading (arrive, depart, place, from or near, km), validated against a Pydantic schema. The
+reading (arrive, depart, place, from or near, km), validated against a Pydantic schema. It
+calls AWS's Converse API on `bedrock-runtime` with the `au.` inference profile, so the words
+stay in Australia; the reading is a forced call of a tool whose input is the schema. The
 model only reads; the API checks the dates, and finds the place in our own list of
 Queensland places (ADR 0003, `qc places`). Holiday dates come from our calendar in the
 prompt, so "Easter" is never the model's arithmetic.
@@ -30,9 +32,13 @@ prompt, so "Easter" is never the model's arithmetic.
 
 ## Consequences
 
-- **Model:** Claude Haiku 4.5 (`anthropic.claude-haiku-4-5`), open to every Bedrock account.
-  Haiku 5.5 is cheaper and newer but needs its terms accepted in the console first; then
-  `ASK_MODEL=anthropic.claude-haiku-5-5` and `ASK_EFFORT=low` (4.5 rejects effort).
+- **Endpoint and model:** Claude Haiku 4.5 (`au.anthropic.claude-haiku-4-5-20251001-v1:0`) in
+  Sydney through Converse. Anthropic's SDK client for Bedrock's Messages API
+  (`bedrock-mantle`) is kept as a second reader (`ASK_ENDPOINT=mantle`), but AWS opens that
+  endpoint per account and region: here it had no Haiku in Sydney, and in Melbourne (an
+  opt-in region) answered "not available for this account". Haiku 5.5 is newer and cheaper;
+  it needs Anthropic's first-time-use form and its terms accepted in the console, then
+  `ASK_MODEL=au.anthropic.claude-haiku-5-5`.
 - **Cost:** a short extraction (~600 tokens in, ~100 out): about a tenth of a cent an ask on
   Haiku 4.5, a hundredth on Haiku 5.5. Guards: off unless `ASK_ENABLED`, 200 characters, 20 an hour per
   client (in memory, per process: API Gateway throttling replaces it once deployed), the same

@@ -12,13 +12,12 @@ from datetime import date, datetime, timedelta
 from typing import Annotated, Literal
 from zoneinfo import ZoneInfo
 
-from anthropic.lib.bedrock import AsyncAnthropicBedrockMantle
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from quiet_camps.api.ask_service import Answer, Holiday, Reader, ReaderUnavailable, ask
-from quiet_camps.api.bedrock_reader import BedrockReader
+from quiet_camps.api.bedrock_reader import make_reader
 from quiet_camps.api.campground_repository import HOLIDAY_NIGHTS
 from quiet_camps.api.campground_service import HolidayNight, holiday_spans
 from quiet_camps.api.db import get_session
@@ -104,10 +103,7 @@ def reader_for(state: AskState, settings: Settings) -> Reader:
     """Made on the first ask, so a switched-off API never builds an AWS client. Tests put a
     fake reader in AskState instead."""
     if state.reader is None:
-        client = AsyncAnthropicBedrockMantle(
-            aws_region=settings.aws_region, aws_profile=settings.aws_profile
-        )
-        state.reader = BedrockReader(client, settings.ask_model, settings.ask_effort)
+        state.reader = make_reader(settings)
     return state.reader
 
 
