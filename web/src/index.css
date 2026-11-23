@@ -993,7 +993,7 @@ section:has(> .lead-time) {
   color: var(--night-muted);
 }
 
-.explore input,
+.explore input:not([type='range']),
 .explore select {
   padding: 0.5rem 0.6rem;
   border: 1px solid var(--night-line);
@@ -1282,8 +1282,35 @@ section:has(> .lead-time) {
 
 .explore-map {
   position: relative;
+  grid-area: 1 / 2;
   height: 100%;
   min-height: 0;
+}
+
+/* The coming year, over the foot of the map: when it's quiet around here. */
+.explore-when {
+  grid-area: 1 / 2;
+  align-self: end;
+  z-index: 2;
+  margin: 0 4.5rem 1.25rem 1.25rem;
+  padding: 0.75rem 1rem 0.5rem;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--night) 86%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+.explore-when h2 {
+  margin: 0;
+  font: 700 0.9375rem/1.3 var(--display);
+}
+
+.explore-when h2 span {
+  font-weight: 400;
+  color: var(--night-muted);
+}
+
+.year-stay {
+  fill: color-mix(in srgb, var(--quiet) 35%, transparent);
 }
 
 /* Sized, not positioned: MapLibre makes its container position: relative. */
@@ -1327,8 +1354,15 @@ section:has(> .lead-time) {
   }
 
   .explore-map {
-    order: -1;
+    order: -2;
     height: 45svh;
+  }
+
+  .explore-when {
+    order: -1;
+    margin: 0;
+    border-radius: 0;
+    backdrop-filter: none;
   }
 
   .explore-side {

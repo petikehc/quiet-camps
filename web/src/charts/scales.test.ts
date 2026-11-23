@@ -42,7 +42,13 @@ describe('niceTicks', () => {
 })
 
 describe('holidayName', () => {
-  it('capitalises the first letter only', () => {
-    expect(holidayName("sovereign's birthday")).toBe("Sovereign's birthday")
+  it('says holidays the way Queenslanders do', () => {
+    expect(holidayName("sovereign's birthday")).toBe("King's Birthday")
+    expect(holidayName('australia day')).toBe('Australia Day')
+  })
+
+  it('shows a holiday it has no name for as a sentence', () => {
+    expect(holidayName('easter')).toBe('Easter')
+    expect(holidayName('new thing')).toBe('New thing')
   })
 })

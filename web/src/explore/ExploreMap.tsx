@@ -125,7 +125,13 @@ export function ExploreMap({
     }
     if (bounds.isEmpty()) return
     fitted.current = fitKey
-    map.current.fitBounds(bounds, { padding: 48, maxZoom: 10, duration: 0 })
+    // Room at the foot for the year strip over the map, on a screen wide enough to have it.
+    const strip = window.matchMedia('(min-width: 56.01rem)').matches ? 170 : 24
+    map.current.fitBounds(bounds, {
+      padding: { top: 48, right: 48, bottom: strip, left: 48 },
+      maxZoom: 10,
+      duration: 0,
+    })
   }, [ready, rows, near, fitKey])
 
   // A campground picked in the list comes into view, if it isn't already.

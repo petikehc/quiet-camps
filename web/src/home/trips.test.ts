@@ -7,7 +7,6 @@ import {
   inFlight,
   jitter,
   nightlySites,
-  peaks,
   mostInFlight,
   nightOffsets,
   sitesOn,
@@ -116,22 +115,6 @@ describe('inFlight', () => {
 describe('nightlySites', () => {
   it('adds up each night across campgrounds', () => {
     expect(nightlySites(trips, offsets)).toEqual([3, 0, 4, 5])
-  })
-})
-
-describe('peaks', () => {
-  const totals = [1, 9, 8, 2, 1, 7, 3, 6, 1, 1]
-
-  it('takes the busiest nights at least `gap` apart, in night order', () => {
-    expect(peaks(totals, 3, 3)).toEqual([1, 5, 8])
-  })
-
-  it('skips a night too close to a busier one', () => {
-    expect(peaks(totals, 2, 3)).not.toContain(2) // 8, but beside the 9
-  })
-
-  it('stops short when no more nights are far enough apart', () => {
-    expect(peaks(totals, 5, 6)).toEqual([1, 7])
   })
 })
 

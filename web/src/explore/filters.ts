@@ -71,6 +71,13 @@ export function addDays(day: string, days: number): string {
   return new Date(Date.UTC(year, month - 1, date + days)).toISOString().slice(0, 10)
 }
 
+// Today's date where the browser is, YYYY-MM-DD.
+export function localDay(today = new Date()): string {
+  return [today.getFullYear(), today.getMonth() + 1, today.getDate()]
+    .map((part) => String(part).padStart(2, '0'))
+    .join('-')
+}
+
 function comingFriday(today: Date): string {
   const local = new Date(today.getFullYear(), today.getMonth(), today.getDate())
   local.setDate(local.getDate() + ((5 - local.getDay() + 7) % 7))

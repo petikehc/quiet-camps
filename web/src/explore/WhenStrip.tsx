@@ -1,0 +1,62 @@
+import { useMemo } from 'react'
+import { addDays } from './filters'
+import { holidayOn, nightDate } from '../charts/dates'
+import { formatNight, holidayName } from '../charts/scales'
+import { peaks } from '../charts/strip'
+import { YearStrip } from '../charts/YearStrip'
+import { nightsBetween, quietestWeek, type ComingYear } from './comingYear'
+
+type Props = {
+  coming: ComingYear
+  arrive: string
+  depart: string
+  near: string | undefined
+  onDates: (arrive: string, depart: string) => void
+}
+
+// When it's quiet around here: the coming year for the campgrounds asked about, the busiest
+// moments named and the quietest week pointed at. Dragging moves your dates, same length.
+export function WhenStrip({ coming, arrive, depart, near, onDates }: Props) {
+  const { firstNight, values, holidays } = coming
+  const from = nightsBetween(firstNight, arrive)
+  const to = nightsBetween(firstNight, depart)
+  const labels = useMemo(() => {
+    const named = peaks(values, 3, 60).map((n) => {
+      const h = holidayOn(holidays, n)
+      return { night: n, text: h ? holidayName(h.name) : 'Busy' }
+    })
+    const quiet = quietestWeek(values)
+    const clear = quiet !== undefined && named.every((l) => Math.abs(l.night - quiet) > 40)
+    return clear ? [...named, { night: quiet + 3, text: 'Quietest week' }] : named
+  }, [values, holidays])
+
+  const said = (n: number) => {
+    const h = holidayOn(holidays, n)
+    const v = values[n]
+    const how = v === null ? 'usually closed' : `usually ${Math.round(v * 100)}% as busy as their busy nights`
+    return `${formatNight(nightDate(firstNight, n))}${h ? `, ${holidayName(h.name)}` : ''}: ${how}`
+  }
+
+  return (
+    <section className="explore-when" aria-label="The coming year">
+      <h2>
+        {near ? `Around ${near}` : 'Across Queensland'}: the coming year
+        <span>{' · drag to move your dates'}</span>
+      </h2>
+      <YearStrip
+        firstNight={firstNight}
+        values={values}
+        holidays={holidays}
+        night={Math.min(Math.max(from, 0), values.length - 1)}
+        onSeek={(n) => {
+          const arriving = nightDate(firstNight, n)
+          onDates(arriving, addDays(arriving, Math.max(1, to - from)))
+        }}
+        labels={labels}
+        stay={{ from, to }}
+        ariaLabel="Arrival night"
+        valueText={said}
+      />
+    </section>
+  )
+}

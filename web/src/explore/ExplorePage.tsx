@@ -5,10 +5,12 @@ import { fieldErrors } from '../api/errors'
 import { BandToggle } from './BandToggle'
 import { BAND_NAMES, bandOf } from './bands'
 import { Card } from './Card'
-import { apiQuery, type Band, type Filters } from './filters'
+import { comingYear } from './comingYear'
+import { apiQuery, localDay, type Band, type Filters } from './filters'
 import { LeaderLine } from './LeaderLine'
 import { QueryBar } from './QueryBar'
-import { useQuietMap } from './queries'
+import { useAreaYear, useQuietMap } from './queries'
+import { WhenStrip } from './WhenStrip'
 
 // MapLibre is most of the page's weight: the list can show before it arrives.
 const ExploreMap = lazy(() =>
@@ -26,6 +28,14 @@ export function ExplorePage() {
   const { review, band = 'quiet', sel, ...filters } = search
   const query = useQuietMap(filters)
   const rows = useMemo(() => query.data?.results ?? [], [query.data])
+  // The coming year for these campgrounds: this year's view and next year's, joined at today.
+  const today = localDay()
+  const thisYear = useAreaYear(filters, Number(today.slice(0, 4)))
+  const nextYear = useAreaYear(filters, Number(today.slice(0, 4)) + 1)
+  const coming = useMemo(
+    () => (thisYear.data && nextYear.data ? comingYear(today, [thisYear.data, nextYear.data]) : undefined),
+    [today, thisYear.data, nextYear.data],
+  )
 
   const counts = useMemo(() => {
     const counted: Record<Band, number> = { quiet: 0, ok: 0, busy: 0 }
@@ -135,6 +145,15 @@ export function ExplorePage() {
           onMap={setMap}
         />
       </Suspense>
+      {coming && (
+        <WhenStrip
+          coming={coming}
+          arrive={filters.arrive}
+          depart={filters.depart}
+          near={filters.near}
+          onDates={(arrive, depart) => setFilters({ ...filters, arrive, depart })}
+        />
+      )}
       <LeaderLine
         map={map}
         root={root}

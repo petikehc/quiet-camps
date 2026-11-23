@@ -30,3 +30,15 @@ export function usePlaces(q: string) {
     staleTime: Infinity, // the places change once a census
   })
 }
+
+// A year of typical busyness for the campgrounds the filters pick (all but the dates), for the
+// year strip. The answer depends on the place, not the nights, so moving dates reuses it.
+export function useAreaYear(filters: Filters, year: number) {
+  const { arrive: _arrive, depart: _depart, ...place } = apiQuery(filters)
+  return useQuery({
+    queryKey: ['campgrounds', 'quiet', 'year', year, place],
+    queryFn: ({ signal }) =>
+      unwrap(api.GET('/campgrounds/quiet/year', { params: { query: { ...place, year } }, signal })),
+    staleTime: 60 * 60_000, // the history changes once a quarter
+  })
+}
