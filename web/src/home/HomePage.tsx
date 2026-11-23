@@ -73,7 +73,7 @@ function Live({ trips }: { trips: Trips }) {
         <h2>Camping trips across Australia, {trips.year}</h2>
         <p className="home-date">{formatNight(nightDate(trips.first_night, night))}</p>
         <p className="home-hero">
-          <strong>{sitesOn(trips, offsets, night).toLocaleString()}</strong> trips arriving that night
+          <strong>{sitesOn(trips, offsets, night).toLocaleString()}</strong> campsites arriving that night
         </p>
       </div>
 
@@ -93,12 +93,8 @@ function Live({ trips }: { trips: Trips }) {
         </p>
       </div>
 
-      <button
-        type="button"
-        className="home-play"
-        onClick={() => setPlaying(!playing)}
-        aria-pressed={!playing}
-      >
+      {/* The label says what a press does; aria-pressed as well would announce "Play, pressed". */}
+      <button type="button" className="home-play" onClick={() => setPlaying(!playing)}>
         {playing ? 'Pause' : 'Play'}
       </button>
     </>
@@ -114,12 +110,13 @@ function About({ trips }: { trips: Trips }) {
       <p>
         Each line is a camping trip in {trips.year}: a site booked at a Queensland national park
         campground, flying from the camper's home postcode to the campground on the night they
-        arrived. {total.toLocaleString()} trips from {trips.origins.length.toLocaleString()}{' '}
-        postcodes to {trips.campgrounds.length.toLocaleString()} campgrounds; the year plays in about
-        a minute and a half, then starts again.
+        arrived. {total.toLocaleString()} campsites booked from{' '}
+        {trips.origins.length.toLocaleString()} postcodes at{' '}
+        {trips.campgrounds.length.toLocaleString()} campgrounds; the year plays in about a minute and
+        a half, then starts again.
       </p>
       <p className="muted small">
-        Not drawn: {overseas.toLocaleString()} trips from overseas,{' '}
+        Not drawn: {overseas.toLocaleString()} campsites booked from overseas,{' '}
         {(no_postcode + no_centroid).toLocaleString()} with no postcode or a PO-box postcode. A
         postcode is placed at its postal area's centre. Boundaries and postal areas: ABS
         Australian Statistical Geography Standard 2021, © Commonwealth of Australia, CC BY 4.0.
