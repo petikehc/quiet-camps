@@ -12,7 +12,6 @@ import {
   size,
   trailAlpha,
   TRAIL,
-  week,
   type Trips,
 } from './trips'
 
@@ -109,17 +108,6 @@ describe('inFlight', () => {
 
   it('sizes the buffers for the fullest window', () => {
     expect(mostInFlight(long)).toBe(size(inFlight(long, 20)))
-  })
-})
-
-describe('week', () => {
-  it('ranks the last 7 nights by sites and counts Queensland postcodes', () => {
-    const found = week(trips, offsets, 3)
-    expect(found.busiest).toEqual([
-      { campground: 1, sites: 10 },
-      { campground: 0, sites: 2 },
-    ])
-    expect(found.queensland).toBeCloseTo(8 / 12)
   })
 })
 

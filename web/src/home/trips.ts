@@ -87,45 +87,10 @@ export function size(ranges: Range[]): number {
   return ranges.reduce((sum, r) => sum + r.to - r.from, 0)
 }
 
-// The `days` nights up to and including `night`, wrapping into last loop's December.
-function recent(offsets: Uint32Array, night: number, days: number): [number, number][] {
-  const nights = offsets.length - 1
-  return Array.from({ length: Math.min(days, nights) }, (_, i) => {
-    const n = (((night - i) % nights) + nights) % nights
-    return [offsets[n], offsets[n + 1]]
-  })
-}
-
 export function sitesOn(trips: Trips, offsets: Uint32Array, night: number): number {
   let sites = 0
   for (let e = offsets[night]; e < offsets[night + 1]; e++) sites += trips.sites[e]
   return sites
-}
-
-export type Week = {
-  busiest: { campground: number; sites: number }[] // the top 5, busiest first
-  queensland: number // the share of sites from Queensland postcodes, 0 to 1
-}
-
-// The last 7 nights' arrivals: the busiest campgrounds and where campers came from.
-export function week(trips: Trips, offsets: Uint32Array, night: number): Week {
-  const byCampground = new Map<number, number>()
-  let all = 0
-  let queensland = 0
-  for (const [from, to] of recent(offsets, night, 7)) {
-    for (let e = from; e < to; e++) {
-      const sites = trips.sites[e]
-      byCampground.set(trips.campground[e], (byCampground.get(trips.campground[e]) ?? 0) + sites)
-      all += sites
-      // 4000–4999: Queensland. Its 9000s are PO boxes, which have no centre, so no entry.
-      if (trips.origins[trips.origin[e]].postcode.startsWith('4')) queensland += sites
-    }
-  }
-  const busiest = [...byCampground]
-    .map(([campground, sites]) => ({ campground, sites }))
-    .sort((a, b) => b.sites - a.sites || a.campground - b.campground)
-    .slice(0, 5)
-  return { busiest, queensland: all ? queensland / all : 0 }
 }
 
 // The night with the most arrivals: the still shown when motion is reduced.

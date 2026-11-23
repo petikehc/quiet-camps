@@ -6,7 +6,8 @@ import { unwrap } from '../api/errors'
 import { formatNight } from '../charts/scales'
 import { nightDate } from '../timelapse/timelapse'
 import australia from './australia.json'
-import { busiestNight, homeYear, nightOffsets, project, sitesOn, week, type Trips } from './trips'
+import { quietMask, usualWeekly, weekBoard, weekOf } from './quiet'
+import { busiestNight, homeYear, nightOffsets, project, sitesOn, type Trips } from './trips'
 
 // three.js is most of a megabyte: the page shows the outline below until it arrives.
 const TripsScene = lazy(() => import('./TripsScene'))
@@ -75,7 +76,11 @@ function Live({ trips }: { trips: Trips }) {
   const [start] = useState(() => (REDUCED_MOTION ? busiestNight(trips, offsets) : 0))
   const [night, setNight] = useState(start)
   const [playing, setPlaying] = useState(!REDUCED_MOTION)
-  const now = useMemo(() => week(trips, offsets, night), [trips, offsets, night])
+  // The board and the teal points change once a week, not every night.
+  const usual = useMemo(() => usualWeekly(trips), [trips])
+  const w = weekOf(night, trips.nights)
+  const board = useMemo(() => weekBoard(trips, offsets, usual, w), [trips, offsets, usual, w])
+  const quiet = useMemo(() => quietMask(trips, offsets, usual, w), [trips, offsets, usual, w])
 
   return (
     <>
@@ -86,6 +91,7 @@ function Live({ trips }: { trips: Trips }) {
             startNight={start}
             playing={playing}
             drift={!REDUCED_MOTION}
+            quiet={quiet}
             onNight={setNight}
           />
         </div>
@@ -98,20 +104,39 @@ function Live({ trips }: { trips: Trips }) {
         <strong>{sitesOn(trips, offsets, night).toLocaleString()}</strong> campsites arriving
       </p>
 
+      {/* Keyed by week, so each week's lists fade in once rather than flickering. */}
       <div className="home-board" aria-hidden="true">
-        <h3>Busiest this week</h3>
-        <ol>
-          {now.busiest.map(({ campground, sites }) => (
-            <li key={campground}>
-              <span>{trips.campgrounds[campground].name}</span>
-              <span>{sites.toLocaleString()}</span>
-            </li>
-          ))}
-        </ol>
-        <p>
-          From Queensland <strong>{Math.round(now.queensland * 100)}%</strong> · interstate{' '}
-          <strong>{100 - Math.round(now.queensland * 100)}%</strong>
-        </p>
+        <div key={w}>
+          <h3>
+            <span className="key key-busy" /> Busiest this week
+          </h3>
+          <ol>
+            {board.busy.map(({ campground, sites }) => (
+              <li key={campground}>
+                <span>{trips.campgrounds[campground].name}</span>
+                <span>{sites.toLocaleString()}</span>
+              </li>
+            ))}
+          </ol>
+          <h3>
+            <span className="key key-quiet" /> Quiet this week
+          </h3>
+          {board.quiet.length ? (
+            <ol>
+              {board.quiet.map(({ campground, sites, usual }) => (
+                <li key={campground}>
+                  <span>{trips.campgrounds[campground].name}</span>
+                  <span>
+                    {sites.toLocaleString()} <small>of {usual.toLocaleString()}</small>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p>None: every regular campground had at least half its usual week.</p>
+          )}
+          <p>Campsites arriving this week, and in a usual week there.</p>
+        </div>
       </div>
 
       {/* The label says what a press does; aria-pressed as well would announce "Play, pressed". */}

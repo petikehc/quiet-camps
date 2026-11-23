@@ -25,6 +25,7 @@ type Props = {
   startNight: number
   playing: boolean
   drift: boolean // false when motion is reduced
+  quiet: Float32Array // 1 for each campground quiet this week, by index into trips.campgrounds
   onNight: (night: number) => void // when the whole night changes
 }
 
@@ -56,6 +57,7 @@ function useTokens() {
       tail: token('--trail-tail'),
       trail: token('--trail'),
       head: token('--trail-head'),
+      quiet: token('--quiet'),
     }
   }, [])
 }
@@ -143,30 +145,40 @@ const TRAIL_FRAGMENT = /* glsl */ `
   }
 `
 
-// A soft round dot: a campground, brighter and bigger as trips arrive.
+// A soft round dot: a campground, brighter and bigger as trips arrive. A quiet one turns
+// reef teal and stays lit, so it shows even with hardly anyone arriving.
 const CAMP_VERTEX = /* glsl */ `
   attribute float aGlow;
+  attribute float aQuiet; // 0 to 1, eased toward this week's quiet
   uniform float uPixelRatio;
   varying float vGlow;
+  varying float vQuiet;
 
   void main() {
     vGlow = aGlow;
-    gl_PointSize = (2.0 + 7.0 * sqrt(aGlow)) * uPixelRatio;
+    vQuiet = aQuiet;
+    gl_PointSize = (2.0 + 7.0 * sqrt(aGlow) + 12.0 * aQuiet) * uPixelRatio;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
 `
 const CAMP_FRAGMENT = /* glsl */ `
   uniform vec3 uColour;
+  uniform vec3 uQuiet;
   varying float vGlow;
+  varying float vQuiet;
 
   void main() {
-    float fade = 1.0 - smoothstep(0.2, 0.5, distance(gl_PointCoord, vec2(0.5)));
-    gl_FragColor = vec4(uColour, fade * min(1.0, 0.25 + vGlow));
+    float d = distance(gl_PointCoord, vec2(0.5));
+    float dot = (1.0 - smoothstep(0.2, 0.5, d)) * min(1.0, 0.25 + vGlow);
+    // Quiet: a ring with a small core, so it reads as a different kind of place, not a
+    // dimmer busy one.
+    float ring = smoothstep(0.3, 0.36, d) * (1.0 - smoothstep(0.44, 0.5, d)) + (1.0 - smoothstep(0.1, 0.16, d));
+    gl_FragColor = vec4(mix(uColour, uQuiet, vQuiet), mix(dot, ring, vQuiet));
     #include <colorspace_fragment>
   }
 `
 
-function Flights({ trips, startNight, playing, drift, onNight }: Props) {
+function Flights({ trips, startNight, playing, drift, quiet, onNight }: Props) {
   const tokens = useTokens()
   const loop = trips.nights * DAY
 
@@ -235,10 +247,13 @@ function Flights({ trips, startNight, playing, drift, onNight }: Props) {
     const glow = new THREE.BufferAttribute(new Float32Array(plan.camps.length), 1)
     glow.setUsage(THREE.DynamicDrawUsage)
     geometry.setAttribute('aGlow', glow)
+    const calm = new THREE.BufferAttribute(new Float32Array(plan.camps.length), 1)
+    calm.setUsage(THREE.DynamicDrawUsage)
+    geometry.setAttribute('aQuiet', calm)
     const material = new THREE.ShaderMaterial({
       vertexShader: CAMP_VERTEX,
       fragmentShader: CAMP_FRAGMENT,
-      uniforms: { uColour: { value: tokens.head }, uPixelRatio: { value: 1 } },
+      uniforms: { uColour: { value: tokens.head }, uQuiet: { value: tokens.quiet }, uPixelRatio: { value: 1 } },
       transparent: true,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
@@ -262,6 +277,10 @@ function Flights({ trips, startNight, playing, drift, onNight }: Props) {
   const time = useRef(startNight * DAY) // seconds into the loop
   const shown = useRef(-1) // the night the buffers were filled for
   const drifted = useRef(0) // seconds of drift, which only moves while playing
+  const calmTarget = useRef(quiet) // what aQuiet eases toward, night by night
+  useEffect(() => {
+    calmTarget.current = quiet
+  }, [quiet])
   useEffect(() => {
     time.current = startNight * DAY
     shown.current = -1
@@ -322,6 +341,11 @@ function Flights({ trips, startNight, playing, drift, onNight }: Props) {
       glow.array[trips.campground[e]] += trips.sites[e] / 20
     }
     glow.needsUpdate = true
+
+    // Quiet fades in and out over a few nights rather than switching with the week.
+    const calm = dot.geometry.getAttribute('aQuiet') as THREE.BufferAttribute
+    for (let c = 0; c < calm.count; c++) calm.array[c] += (calmTarget.current[c] - calm.array[c]) * 0.4
+    calm.needsUpdate = true
   }
 
   return (
