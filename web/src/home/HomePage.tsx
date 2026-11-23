@@ -110,6 +110,7 @@ export function HomePage() {
           <Outline />
           {trips && <Live trips={trips} night={night} seek={seek} playing={playing} onNight={setNight} />}
         </div>
+        {trips && <WeekBoard trips={trips} night={night} />}
       </section>
       <div className="wrap">{trips && <About trips={trips} />}</div>
     </article>
@@ -139,15 +140,14 @@ type LiveProps = {
   onNight: (night: number) => void
 }
 
-// The map and its board, once a year of trips has loaded.
+// The map, once a year of trips has loaded.
 function Live({ trips, night, seek, playing, onNight }: LiveProps) {
   const offsets = useMemo(() => nightOffsets(trips.per_night), [trips])
   // Motion reduced: no autoplay, and the busiest night as a still until Play.
   const [start] = useState(() => (REDUCED_MOTION ? busiestNight(trips, offsets) : 0))
-  // The board and the teal points change once a week, not every night.
+  // The teal points change once a week, not every night.
   const usual = useMemo(() => usualWeekly(trips), [trips])
   const w = weekOf(night, trips.nights)
-  const board = useMemo(() => weekBoard(trips, offsets, usual, w), [trips, offsets, usual, w])
   const quiet = useMemo(() => quietMask(trips, offsets, usual, w), [trips, offsets, usual, w])
 
   return (
@@ -166,42 +166,53 @@ function Live({ trips, night, seek, playing, onNight }: LiveProps) {
         </div>
       </Suspense>
 
-      {/* Keyed by week, so each week's lists fade in once rather than flickering. */}
-      <div className="home-board" aria-hidden="true">
-        <div key={w}>
-          <h3>
-            <span className="key key-busy" /> Busiest this week
-          </h3>
+    </>
+  )
+}
+
+// This week's busiest and quiet campgrounds: beside the map on a wide screen, under the year
+// strip on a phone.
+function WeekBoard({ trips, night }: { trips: Trips; night: number }) {
+  const offsets = useMemo(() => nightOffsets(trips.per_night), [trips])
+  const usual = useMemo(() => usualWeekly(trips), [trips])
+  const w = weekOf(night, trips.nights)
+  const board = useMemo(() => weekBoard(trips, offsets, usual, w), [trips, offsets, usual, w])
+
+  // Keyed by week, so each week's lists fade in once rather than flickering.
+  return (
+    <div className="home-board" aria-hidden="true">
+      <div key={w}>
+        <h3>
+          <span className="key key-busy" /> Busiest this week
+        </h3>
+        <ol>
+          {board.busy.map(({ campground, sites }) => (
+            <li key={campground}>
+              <span>{trips.campgrounds[campground].name}</span>
+              <span>{sites.toLocaleString()}</span>
+            </li>
+          ))}
+        </ol>
+        <h3>
+          <span className="key key-quiet" /> Quiet this week
+        </h3>
+        {board.quiet.length ? (
           <ol>
-            {board.busy.map(({ campground, sites }) => (
+            {board.quiet.map(({ campground, sites, usual }) => (
               <li key={campground}>
                 <span>{trips.campgrounds[campground].name}</span>
-                <span>{sites.toLocaleString()}</span>
+                <span>
+                  {sites.toLocaleString()} <small>of {usual.toLocaleString()}</small>
+                </span>
               </li>
             ))}
           </ol>
-          <h3>
-            <span className="key key-quiet" /> Quiet this week
-          </h3>
-          {board.quiet.length ? (
-            <ol>
-              {board.quiet.map(({ campground, sites, usual }) => (
-                <li key={campground}>
-                  <span>{trips.campgrounds[campground].name}</span>
-                  <span>
-                    {sites.toLocaleString()} <small>of {usual.toLocaleString()}</small>
-                  </span>
-                </li>
-              ))}
-            </ol>
-          ) : (
-            <p>None: every regular campground had at least half its usual week.</p>
-          )}
-          <p>Campsites arriving this week, and in a usual week there.</p>
-        </div>
+        ) : (
+          <p>None: every regular campground had at least half its usual week.</p>
+        )}
+        <p>Campsites arriving this week, and in a usual week there.</p>
       </div>
-
-    </>
+    </div>
   )
 }
 

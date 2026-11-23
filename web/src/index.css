@@ -1073,8 +1073,9 @@ section:has(> .lead-time) {
   font: 800 1.5rem/1.2 var(--display);
 }
 
-/* Narrower than a laptop: the words go above the map instead of beside it, and the busiest
-   list under it, still on the night. */
+/* Narrower than a laptop: one column on the night, in reading order: the words, the map, where
+   the year is, then the week's board. The left column dissolves (display: contents) so its
+   two parts can sit either side of the map. */
 @media (max-width: 64rem) {
   /* The header may wrap here, so it takes its own space instead of floating over the words. */
   .site-header.over {
@@ -1083,9 +1084,11 @@ section:has(> .lead-time) {
   }
 
   .home-stage {
+    display: flex;
+    flex-direction: column;
     height: auto;
     min-height: 0;
-    padding-top: 1.5rem;
+    padding: 1.5rem 0;
   }
 
   .home-stage::before {
@@ -1093,10 +1096,53 @@ section:has(> .lead-time) {
   }
 
   .home-left {
-    position: static;
-    width: auto;
+    display: contents;
+  }
+
+  .home-intro,
+  .home-time,
+  .home-status,
+  .home-board {
     max-width: 40rem;
     padding: 0 var(--stage-pad);
+  }
+
+  .home-intro {
+    order: 1;
+  }
+
+  .home-map {
+    order: 2;
+    position: relative;
+    margin: 0.5rem 0 0.75rem;
+    padding-top: 75%; /* 4:3, so the continent fills the width */
+  }
+
+  .home-time,
+  .home-status {
+    order: 3;
+  }
+
+  .home-board {
+    order: 4;
+    position: static;
+    width: auto;
+    margin-top: 1.5rem;
+    background: none;
+  }
+
+  .home-board > div {
+    grid-template-columns: 1fr;
+    grid-auto-flow: row;
+    grid-template-rows: none;
+  }
+
+  .home-board > div > p:last-child {
+    grid-row: auto;
+  }
+
+  .home-board ol + h3 {
+    margin-top: 1rem;
   }
 
   .home-intro h2 {
@@ -1107,23 +1153,9 @@ section:has(> .lead-time) {
     margin: 1rem 0 1.25rem;
   }
 
-  .home-map {
-    position: relative;
-    margin-top: 1.5rem;
-    padding-top: 460px;
-  }
-
   .home-outline,
   .home-canvas {
-    inset: 0 0 auto;
-    height: 460px;
-  }
-
-  .home-board {
-    position: static;
-    width: auto;
-    padding: 0.5rem var(--stage-pad) 1.5rem;
-    background: none;
+    inset: 0;
   }
 }
 
