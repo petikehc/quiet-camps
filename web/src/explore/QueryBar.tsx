@@ -1,7 +1,5 @@
-import { useMutation } from '@tanstack/react-query'
 import { useDeferredValue, useState, type FormEvent } from 'react'
-import { api } from '../api/client'
-import { ApiError, unwrap } from '../api/errors'
+import { failedWords, filtersFrom, missedWords, useAsk } from './ask'
 import { KM_CHOICES, type Filters } from './filters'
 import { usePlaces, type Place } from './queries'
 
@@ -55,35 +53,13 @@ export function QueryBar({ filters, onChange }: Props) {
 function Ask({ filters, onChange }: Props) {
   const [text, setText] = useState('')
   const [note, setNote] = useState<string>()
-  const ask = useMutation({
-    mutationFn: (words: string) => unwrap(api.POST('/ask', { body: { text: words } })),
-    onSuccess: (answer) => {
-      const next: Filters = { ...filters }
-      if (answer.arrive && answer.depart) Object.assign(next, { arrive: answer.arrive, depart: answer.depart })
-      if (answer.place) {
-        Object.assign(next, {
-          near: answer.place.name,
-          lat: answer.place.lat,
-          lon: answer.place.lon,
-          km: answer.within_km ?? 50,
-        })
-      }
-      const missed = [
-        !answer.arrive && 'the dates',
-        !answer.place && answer.place_asked && `“${answer.place_asked}” in Queensland`,
-      ].filter(Boolean)
-      setNote(missed.length ? `Couldn't find ${missed.join(' or ')}: set it below.` : undefined)
-      onChange(next)
+  const ask = useAsk(
+    (answer) => {
+      setNote(missedWords(answer)?.replace('on the map page', 'below'))
+      onChange({ ...filters, ...filtersFrom(answer, filters) })
     },
-    onError: (error) => {
-      const status = error instanceof ApiError ? error.status : 0
-      setNote(
-        status === 429
-          ? "That's a lot of asking: try again in an hour, or set the dates and place below."
-          : "Plain words aren't working right now: set the dates and place below.",
-      )
-    },
-  })
+    (error) => setNote(failedWords(error).replace('on the map', 'below')),
+  )
 
   function submit(e: FormEvent) {
     e.preventDefault()

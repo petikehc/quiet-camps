@@ -1,11 +1,12 @@
 import { queryOptions, useQuery } from '@tanstack/react-query'
-import { Link } from '@tanstack/react-router'
-import { lazy, Suspense, useMemo, useState } from 'react'
+import { Link, useNavigate } from '@tanstack/react-router'
+import { lazy, Suspense, useMemo, useState, type FormEvent } from 'react'
 import { api } from '../api/client'
+import { nightDate } from '../charts/dates'
 import { unwrap } from '../api/errors'
 import australia from './australia.json'
-import { isTrip, sameNight, tripLabel } from './dates'
-import { quietMask, usualWeekly, weekBoard, weekOf } from './quiet'
+import { failedWords, filtersFrom, useAsk } from '../explore/ask'
+import { monthBoard, monthOf, months, quietMask, usualNightly, type Count } from './quiet'
 import { TimeControls } from './TimeControls'
 import type { Seek } from './TripsScene'
 import { busiestNight, homeYear, nightOffsets, project, type Trips } from './trips'
@@ -32,22 +33,10 @@ export function HomePage() {
   const [night, setNight] = useState(0)
   const [playing, setPlaying] = useState(!REDUCED_MOTION)
   const [seek, setSeek] = useState<Seek>()
-  const [arrive, setArrive] = useState('')
-  const [depart, setDepart] = useState('')
 
   function jump(to: number) {
     setSeek((last) => ({ night: to, id: (last?.id ?? 0) + 1 }))
   }
-
-  // Your arrival shows the same week last year, held still so the board can be read.
-  function pickArrive(day: string) {
-    setArrive(day)
-    if (!day) return
-    jump(sameNight(day, YEAR))
-    setPlaying(false)
-  }
-
-  const trip = isTrip(arrive, depart)
 
   return (
     <article className="home">
@@ -62,28 +51,7 @@ export function HomePage() {
               camper's home postcode. Watch where everyone went, and the campgrounds they left
               quiet.
             </p>
-            <div className="home-dates">
-              <label>
-                Arrive
-                <input type="date" value={arrive} onChange={(e) => pickArrive(e.target.value)} />
-              </label>
-              <label>
-                Leave
-                <input type="date" value={depart} onChange={(e) => setDepart(e.target.value)} />
-              </label>
-            </div>
-            <p className="home-hint" aria-live="polite">
-              {arrive && depart && !trip ? 'Leave after the day you arrive.' : ''}
-            </p>
-            {trip ? (
-              <Link to="/explore" search={{ arrive, depart }} className="cta">
-                Quiet camps for {tripLabel(arrive, depart)} <Arrow />
-              </Link>
-            ) : (
-              <Link to="/explore" className="cta">
-                Find a quiet campground <Arrow />
-              </Link>
-            )}
+            <HomeAsk />
           </div>
           {trips ? (
             <TimeControls
@@ -110,10 +78,51 @@ export function HomePage() {
           <Outline />
           {trips && <Live trips={trips} night={night} seek={seek} playing={playing} onNight={setNight} />}
         </div>
-        {trips && <WeekBoard trips={trips} night={night} />}
+        {trips && <Board trips={trips} night={night} />}
       </section>
       <div className="wrap">{trips && <About trips={trips} />}</div>
     </article>
+  )
+}
+
+// One question in plain words: /ask reads it, and the map page opens on what it understood.
+// If /ask can't be asked, it says so, and the map is a link away.
+function HomeAsk() {
+  const navigate = useNavigate()
+  const [text, setText] = useState('')
+  const [note, setNote] = useState<string>()
+  const ask = useAsk(
+    (answer) => void navigate({ to: '/explore', search: filtersFrom(answer) }),
+    (error) => setNote(failedWords(error)),
+  )
+
+  function submit(e: FormEvent) {
+    e.preventDefault()
+    if (text.trim().length >= 3) ask.mutate(text.trim())
+  }
+
+  return (
+    <form className="home-ask" role="search" onSubmit={submit}>
+      <label htmlFor="home-ask-text">Where and when?</label>
+      <div className="home-ask-row">
+        <input
+          id="home-ask-text"
+          value={text}
+          maxLength={200}
+          placeholder="next weekend around the Sunshine Coast"
+          onChange={(e) => setText(e.target.value)}
+        />
+        <button type="submit" className="cta" disabled={ask.isPending}>
+          {ask.isPending ? 'Reading…' : 'Find quiet camps'} <Arrow />
+        </button>
+      </div>
+      <p className="home-hint" aria-live="polite">
+        {note}
+      </p>
+      <Link to="/explore" className="home-browse">
+        Or browse the map
+      </Link>
+    </form>
   )
 }
 
@@ -145,10 +154,14 @@ function Live({ trips, night, seek, playing, onNight }: LiveProps) {
   const offsets = useMemo(() => nightOffsets(trips.per_night), [trips])
   // Motion reduced: no autoplay, and the busiest night as a still until Play.
   const [start] = useState(() => (REDUCED_MOTION ? busiestNight(trips, offsets) : 0))
-  // The teal points change once a week, not every night.
-  const usual = useMemo(() => usualWeekly(trips), [trips])
-  const w = weekOf(night, trips.nights)
-  const quiet = useMemo(() => quietMask(trips, offsets, usual, w), [trips, offsets, usual, w])
+  // The teal rings change once a month, not every night.
+  const monthList = useMemo(() => months(trips), [trips])
+  const nightly = useMemo(() => usualNightly(trips), [trips])
+  const m = monthOf(monthList, night)
+  const quiet = useMemo(
+    () => quietMask(trips, offsets, nightly, monthList[m]),
+    [trips, offsets, nightly, monthList, m],
+  )
 
   return (
     <>
@@ -170,47 +183,51 @@ function Live({ trips, night, seek, playing, onNight }: LiveProps) {
   )
 }
 
-// This week's busiest and quiet campgrounds: beside the map on a wide screen, under the year
-// strip on a phone.
-function WeekBoard({ trips, night }: { trips: Trips; night: number }) {
+// This month's campgrounds well over and well under their usual month: beside the map on a
+// wide screen, under the year strip on a phone. Against their own usual, so the same big
+// beach campgrounds don't top it every month.
+function Board({ trips, night }: { trips: Trips; night: number }) {
   const offsets = useMemo(() => nightOffsets(trips.per_night), [trips])
-  const usual = useMemo(() => usualWeekly(trips), [trips])
-  const w = weekOf(night, trips.nights)
-  const board = useMemo(() => weekBoard(trips, offsets, usual, w), [trips, offsets, usual, w])
+  const monthList = useMemo(() => months(trips), [trips])
+  const nightly = useMemo(() => usualNightly(trips), [trips])
+  const m = monthOf(monthList, night)
+  const board = useMemo(
+    () => monthBoard(trips, offsets, nightly, monthList[m]),
+    [trips, offsets, nightly, monthList, m],
+  )
+  const month = new Date(`${nightDate(trips.first_night, monthList[m].first)}T00:00:00Z`)
+    .toLocaleDateString('en-AU', { month: 'long', timeZone: 'UTC' })
 
-  // Keyed by week, so each week's lists fade in once rather than flickering.
+  const rows = (counts: Count[]) => (
+    <ol>
+      {counts.map(({ campground, sites, usual }) => (
+        <li key={campground}>
+          <span>{trips.campgrounds[campground].name}</span>
+          <span>
+            <b>{sites.toLocaleString()}</b> <small>· usually {usual.toLocaleString()}</small>
+          </span>
+        </li>
+      ))}
+    </ol>
+  )
+
+  // Keyed by month, so each month's lists fade in once.
   return (
     <div className="home-board" aria-hidden="true">
-      <div key={w}>
+      <div key={m}>
         <h3>
-          <span className="key key-busy" /> Busiest this week
+          <span className="key key-busy" /> Busier than usual in {month}
         </h3>
-        <ol>
-          {board.busy.map(({ campground, sites }) => (
-            <li key={campground}>
-              <span>{trips.campgrounds[campground].name}</span>
-              <span>{sites.toLocaleString()}</span>
-            </li>
-          ))}
-        </ol>
+        {board.busier.length ? rows(board.busier) : <p>None well over their usual {month}.</p>}
         <h3>
-          <span className="key key-quiet" /> Quiet this week
+          <span className="key key-quiet" /> Quiet in {month}
         </h3>
         {board.quiet.length ? (
-          <ol>
-            {board.quiet.map(({ campground, sites, usual }) => (
-              <li key={campground}>
-                <span>{trips.campgrounds[campground].name}</span>
-                <span>
-                  {sites.toLocaleString()} <small>of {usual.toLocaleString()}</small>
-                </span>
-              </li>
-            ))}
-          </ol>
+          rows(board.quiet)
         ) : (
-          <p>None: every regular campground had at least half its usual week.</p>
+          <p>None: every regular campground had at least half its usual {month}.</p>
         )}
-        <p>Campsites arriving this week, and in a usual week there.</p>
+        <p>Campsites arriving in the month, and in an average month there.</p>
       </div>
     </div>
   )
@@ -231,6 +248,11 @@ function About({ trips }: { trips: Trips }) {
         {trips.origins.length.toLocaleString()} postcodes at{' '}
         {trips.campgrounds.length.toLocaleString()} campgrounds. The year plays in about a minute
         and a half, then starts again.
+      </p>
+      <p>
+        Teal rings mark campgrounds having a quiet month: open, but at half their usual month or
+        less. Beside the map, the board names three of them each month, and three busier than
+        their usual, with the campsites booked to arrive and the usual for that month.
       </p>
       <p className="muted small">
         Not drawn: {overseas.toLocaleString()} campsites booked from overseas, and{' '}

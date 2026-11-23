@@ -24,6 +24,9 @@ Dates
 - arrive is the first night; depart is the morning they leave.
 - Today's date and the coming public holidays are given. For a named holiday or "the long \
 weekend", use those holiday dates.
+- A holiday on a Tuesday or Thursday, asked for as a "long weekend": people take the day \
+between off, so from the Friday night before a Tuesday, or to the Sunday morning after a \
+Thursday.
 - "This weekend" and "next weekend" mean the coming Friday night to Sunday morning; if it is \
 already Friday, Saturday or Sunday, "next weekend" is the one after.
 - "School holidays" and other dates you can't be sure of: leave arrive and depart null.

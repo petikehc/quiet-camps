@@ -19,6 +19,10 @@ const FOV = 32
 const TILT = (52 * Math.PI) / 180 // the camera's height above the horizon
 // The camera drifts while it plays: a few degrees either way and a little closer and back.
 const DRIFT = { turn: (6 * Math.PI) / 180, turnPeriod: 40, zoom: 0.04, zoomPeriod: 53 }
+// It opens on the whole continent, then pushes in on the Queensland coast, where the
+// campgrounds are: after `after` seconds of play, over `over`, to `closer` of the distance.
+const PUSH = { after: 4, over: 12, closer: 0.62, toward: project(149.6, -22.6) }
+const GLOW_CAP = 1.2 // a crowded campground glows amber, not white
 
 // A jump to a night, from the year strip or your dates. The id makes a second jump to the same
 // night a new one.
@@ -128,8 +132,9 @@ const TRAIL_VERTEX = /* glsl */ `
     float behind = (uTime - aFlight.x) / aFlight.y - t;
     vAlpha = (behind < 0.0 || behind > uTrail) ? 0.0 : 1.0 - behind / uTrail;
     vHead = vAlpha;
-    // More sites, a brighter line; overlapping lines add up where many people go.
-    vAlpha *= min(1.0, 0.45 + 0.15 * aFlight.z);
+    // More sites, a brighter line; overlapping lines add up where many people go, so each
+    // starts faint enough that a crowded coast stays amber rather than white.
+    vAlpha *= min(1.0, 0.3 + 0.12 * aFlight.z);
     float lift = 4.0 * t * (1.0 - t) * (0.1 + 0.2 * distance(aEnds.xy, aEnds.zw));
     vec2 ground = mix(aEnds.xy, aEnds.zw, t);
     gl_Position = projectionMatrix * modelViewMatrix * vec4(ground.x, lift, ground.y, 1.0);
@@ -151,18 +156,21 @@ const TRAIL_FRAGMENT = /* glsl */ `
 `
 
 // A soft round dot: a campground, brighter and bigger as trips arrive. A quiet one turns
-// reef teal and stays lit, so it shows even with hardly anyone arriving.
+// reef teal and stays lit, a ring that breathes slowly, so it shows with hardly anyone arriving.
 const CAMP_VERTEX = /* glsl */ `
   attribute float aGlow;
-  attribute float aQuiet; // 0 to 1, eased toward this week's quiet
+  attribute float aQuiet; // 0 to 1, eased toward this month's quiet
   uniform float uPixelRatio;
+  uniform float uBreath; // 0 to 1 and back, slowly; 0 with motion reduced
+  uniform float uScale; // smaller on a narrow canvas, where rings would pile up
   varying float vGlow;
   varying float vQuiet;
 
   void main() {
     vGlow = aGlow;
     vQuiet = aQuiet;
-    gl_PointSize = (2.0 + 7.0 * sqrt(aGlow) + 12.0 * aQuiet) * uPixelRatio;
+    float ring = (16.0 + 4.0 * uBreath) * uScale;
+    gl_PointSize = (2.0 + 7.0 * sqrt(aGlow) + ring * aQuiet) * uPixelRatio;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
 `
@@ -258,7 +266,13 @@ function Flights({ trips, startNight, seek, playing, drift, quiet, onNight }: Pr
     const material = new THREE.ShaderMaterial({
       vertexShader: CAMP_VERTEX,
       fragmentShader: CAMP_FRAGMENT,
-      uniforms: { uColour: { value: tokens.head }, uQuiet: { value: tokens.quiet }, uPixelRatio: { value: 1 } },
+      uniforms: {
+        uColour: { value: tokens.trail },
+        uQuiet: { value: tokens.quiet },
+        uPixelRatio: { value: 1 },
+        uBreath: { value: 0 },
+        uScale: { value: 1 },
+      },
       transparent: true,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
@@ -282,6 +296,7 @@ function Flights({ trips, startNight, seek, playing, drift, quiet, onNight }: Pr
   const time = useRef(startNight * DAY) // seconds into the loop
   const shown = useRef(-1) // the night the buffers were filled for
   const drifted = useRef(0) // seconds of drift, which only moves while playing
+  const played = useRef(0) // seconds played, for the push in on the coast
   const calmTarget = useRef(quiet) // what aQuiet eases toward, night by night
   useEffect(() => {
     calmTarget.current = quiet
@@ -299,6 +314,7 @@ function Flights({ trips, startNight, seek, playing, drift, quiet, onNight }: Pr
   const camera = useThree((state) => state.camera as THREE.PerspectiveCamera)
   const aspect = useThree((state) => state.size.width / state.size.height)
   const dpr = useThree((state) => state.viewport.dpr)
+  const width = useThree((state) => state.size.width)
   const view = useMemo(() => frame(aspect), [aspect])
 
   useFrame((_, delta) => {
@@ -306,6 +322,7 @@ function Flights({ trips, startNight, seek, playing, drift, quiet, onNight }: Pr
     if (playing) {
       time.current = (time.current + delta) % loop
       if (drift) drifted.current += delta
+      played.current += delta
     }
     const night = Math.min(trips.nights - 1, Math.floor(time.current / DAY))
     if (night !== shown.current) {
@@ -315,15 +332,29 @@ function Flights({ trips, startNight, seek, playing, drift, quiet, onNight }: Pr
     }
     lines.current.material.uniforms.uTime.value = time.current
     dots.current.material.uniforms.uPixelRatio.value = dpr
+    dots.current.material.uniforms.uScale.value = Math.min(1, Math.max(0.5, width / 900))
+    dots.current.material.uniforms.uBreath.value = drift
+      ? 0.5 - 0.5 * Math.cos((2 * Math.PI * drifted.current) / 3)
+      : 0
 
-    const turn = DRIFT.turn * Math.sin((2 * Math.PI * drifted.current) / DRIFT.turnPeriod)
-    const away = view.distance * (1 + DRIFT.zoom * Math.sin((2 * Math.PI * drifted.current) / DRIFT.zoomPeriod))
-    camera.position.set(
-      view.target.x + away * Math.cos(TILT) * Math.sin(turn),
-      away * Math.sin(TILT),
-      view.target.z + away * Math.cos(TILT) * Math.cos(turn),
+    // Eased in and out, and only with motion: reduced, the whole continent stays in view.
+    const t = drift ? Math.min(1, Math.max(0, (played.current - PUSH.after) / PUSH.over)) : 0
+    const push = t * t * (3 - 2 * t)
+    const target = new THREE.Vector3(
+      view.target.x + (PUSH.toward[0] - view.target.x) * push * 0.85,
+      0,
+      view.target.z + (PUSH.toward[1] - view.target.z) * push * 0.85,
     )
-    camera.lookAt(view.target)
+    const turn = DRIFT.turn * Math.sin((2 * Math.PI * drifted.current) / DRIFT.turnPeriod)
+    const close = 1 - (1 - PUSH.closer) * push
+    const away =
+      view.distance * close * (1 + DRIFT.zoom * Math.sin((2 * Math.PI * drifted.current) / DRIFT.zoomPeriod))
+    camera.position.set(
+      target.x + away * Math.cos(TILT) * Math.sin(turn),
+      away * Math.sin(TILT),
+      target.z + away * Math.cos(TILT) * Math.cos(turn),
+    )
+    camera.lookAt(target)
   })
 
   // Copy tonight's window into the buffers, and set each campground's glow from the trips
@@ -348,7 +379,8 @@ function Flights({ trips, startNight, seek, playing, drift, quiet, onNight }: Pr
     const glow = dot.geometry.getAttribute('aGlow') as THREE.BufferAttribute
     for (let c = 0; c < glow.count; c++) glow.array[c] *= 0.7
     for (let e = plan.offsets[night]; e < plan.offsets[night + 1]; e++) {
-      glow.array[trips.campground[e]] += trips.sites[e] / 20
+      const c = trips.campground[e]
+      glow.array[c] = Math.min(GLOW_CAP, glow.array[c] + trips.sites[e] / 20)
     }
     glow.needsUpdate = true
 
