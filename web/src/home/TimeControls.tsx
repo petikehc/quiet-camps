@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { formatNight, holidayName } from '../charts/scales'
-import { holidayOn, nightDate } from '../timelapse/timelapse'
+import { holidayOn, nightDate } from '../charts/dates'
 import { nightlySites, nightOffsets, peaks, type Trips } from './trips'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']

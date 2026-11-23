@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { locationNote, osmLink, shownLocation } from './location'
-import type { QuietCampground } from './ResultsTable'
+import type { QuietCampground } from './queries'
 
 const camp = (overrides: Partial<QuietCampground>): QuietCampground => ({
   id: 1,

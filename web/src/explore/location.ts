@@ -1,4 +1,4 @@
-import type { QuietCampground } from './ResultsTable'
+import type { QuietCampground } from './queries'
 
 // How sure we are where a campground is, from the location matching in the API's ingest.
 // Campers see two kinds of dot: the campground's own spot, or its park's centre. The review

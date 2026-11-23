@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addDays, isOldSearchLink, parseFilters, parseView } from './filters'
+import { addDays, apiQuery, isOldSearchLink, parseFilters, parseView } from './filters'
 
 const wednesday = new Date(2026, 10, 18) // months count from 0: 18 Nov 2026
 
@@ -46,9 +46,40 @@ describe('parseFilters', () => {
   })
 })
 
+describe('parseFilters near a place', () => {
+  const noosa = { near: 'Noosa', lat: -26.32, lon: 152.93, km: 50 }
+
+  it('keeps a place with its km', () => {
+    expect(parseFilters({ ...noosa }, wednesday)).toMatchObject(noosa)
+  })
+
+  it('reads numbers from strings, and keeps km within 10 to 400', () => {
+    const found = parseFilters({ lat: '-26.32', lon: '152.93', km: 1000 }, wednesday)
+    expect(found).toMatchObject({ lat: -26.32, lon: 152.93, km: 400 })
+  })
+
+  it('drops a half-given or far-off place', () => {
+    expect(parseFilters({ lat: -26.32 }, wednesday).lat).toBeUndefined()
+    expect(parseFilters({ lat: 51.5, lon: -0.1 }, wednesday).lat).toBeUndefined() // London
+  })
+
+  it('asks the API in its own names', () => {
+    expect(apiQuery(parseFilters({ ...noosa }, wednesday))).toMatchObject({
+      near_lat: -26.32,
+      near_lon: 152.93,
+      within_km: 50,
+    })
+  })
+})
+
 describe('parseView', () => {
   it('turns on the location review', () => {
     expect(parseView({ review: 'locations' })).toEqual({ review: 'locations' })
+  })
+
+  it('keeps a band and a picked campground', () => {
+    expect(parseView({ band: 'busy', sel: 12 })).toEqual({ band: 'busy', sel: 12 })
+    expect(parseView({ band: 'packed', sel: 1.5 })).toEqual({})
   })
 
   it('ignores anything else', () => {

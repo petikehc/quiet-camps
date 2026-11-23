@@ -76,11 +76,11 @@ export function HomePage() {
               {arrive && depart && !trip ? 'Leave after the day you arrive.' : ''}
             </p>
             {trip ? (
-              <Link to="/search" search={{ arrive, depart }} className="cta">
+              <Link to="/explore" search={{ arrive, depart }} className="cta">
                 Quiet camps for {tripLabel(arrive, depart)} <Arrow />
               </Link>
             ) : (
-              <Link to="/search" className="cta">
+              <Link to="/explore" className="cta">
                 Find a quiet campground <Arrow />
               </Link>
             )}

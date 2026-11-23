@@ -45,6 +45,9 @@
   --trail: #e8a24a;
   --trail-head: #ffd89a;
   --quiet: #35c2b0; /* reef teal: quiet campgrounds and the way to them; 8.4:1 on --night */
+  --band-ok: #d9b36a; /* not too busy: sand */
+  --band-busy: #ec6a43; /* busy: ember */
+  --bar: 3.875rem; /* the header's height, which the explorer fills the screen below */
 
   color-scheme: light dark;
   font: 16px/1.5 system-ui, 'Segoe UI', Roboto, sans-serif;
@@ -83,6 +86,7 @@
     --heat-ink-4: #0b0b0b;
     --pin-ring: #9eafa9;
   }
+
 }
 
 body {
@@ -110,10 +114,10 @@ a {
 .site-header {
   background: var(--night);
   color: var(--night-text);
-  padding: 1rem 0;
 }
 
 .site-header .wrap {
+  min-height: var(--bar);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -153,21 +157,6 @@ a {
   font-size: 0.875rem;
 }
 
-.search-form {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: end;
-  gap: 0.75rem 1rem;
-  margin: 1.5rem 0;
-}
-
-.search-form label {
-  display: grid;
-  gap: 0.25rem;
-  font-size: 0.875rem;
-  color: var(--muted);
-}
-
 input,
 button {
   font: inherit;
@@ -182,120 +171,8 @@ button {
   cursor: pointer;
 }
 
-button[type='submit'] {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--on-accent);
-  font-weight: 600;
-}
-
-.park-filter {
-  flex-basis: 100%;
-  margin: 0;
-}
-
 .error {
   color: var(--error);
-}
-
-.results {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.results caption {
-  caption-side: top;
-  text-align: left;
-  color: var(--muted);
-  font-size: 0.875rem;
-  padding-bottom: 0.75rem;
-}
-
-.results th,
-.results td {
-  text-align: left;
-  padding: 0.5rem 0.75rem 0.5rem 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.results th:nth-child(n + 3),
-.results td:nth-child(n + 3) {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-.results tbody tr {
-  cursor: pointer;
-}
-
-.results tbody tr.selected {
-  background: var(--surface);
-  box-shadow: inset 3px 0 0 var(--text);
-}
-
-.busy {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.location-mark {
-  margin-left: 0.375rem;
-  color: var(--muted);
-  font-size: 0.8125rem;
-  cursor: help;
-}
-
-.results-map {
-  position: relative;
-  margin-bottom: 1.5rem;
-}
-
-.selected-campground {
-  margin: -0.75rem 0 1.5rem;
-  padding: 0.6rem 0.8rem;
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--text);
-  border-radius: 6px;
-  background: var(--surface);
-  font-size: 0.875rem;
-}
-
-.map-canvas {
-  height: 380px;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid var(--border);
-}
-
-.pin {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-
-.pin {
-  box-sizing: border-box;
-}
-
-.pin-exact {
-  background: var(--heat-2);
-  border: 1.5px solid var(--pin-ring);
-}
-
-.pin-check {
-  border: 2.5px solid var(--heat-2);
-}
-
-.pin-park {
-  background: color-mix(in srgb, var(--heat-2) 35%, transparent);
-  border: 1.5px solid var(--pin-ring);
-}
-
-.load-more {
-  display: block;
-  margin: 1.5rem auto;
 }
 
 .site-header h1 a {
@@ -535,21 +412,6 @@ details summary {
   color: var(--muted);
 }
 
-/* The time-lapse */
-
-.timelapse-controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.75rem 1.25rem;
-  margin: 1.25rem 0 0.75rem;
-}
-
-.timelapse-controls label {
-  font-size: 0.875rem;
-  color: var(--muted);
-}
-
 select {
   font: inherit;
   padding: 0.35rem 0.5rem;
@@ -557,66 +419,6 @@ select {
   border-radius: 6px;
   background: var(--surface);
   color: var(--text);
-}
-
-.timelapse-controls button {
-  min-width: 5.5rem;
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--on-accent);
-  font-weight: 600;
-}
-
-.timelapse-date {
-  margin: 0 0 0.5rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.holiday-name {
-  margin-left: 0.5rem;
-  padding: 0.1rem 0.45rem;
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--series-muted) 50%, transparent);
-  font-size: 0.875rem;
-}
-
-.timelapse-canvas {
-  position: relative;
-  height: 560px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
-  cursor: grab;
-  touch-action: none; /* a drag turns the state instead of scrolling the page */
-}
-
-.scrubber {
-  margin-top: 1rem;
-}
-
-.scrubber svg {
-  touch-action: none;
-}
-
-.holiday-band {
-  fill: var(--series-muted);
-  background: var(--series-muted);
-  opacity: 0.7;
-}
-
-.playhead {
-  stroke: var(--text);
-  stroke-width: 2;
-}
-
-.scrubber-range {
-  display: block;
-  width: 100%;
-  max-width: 900px;
-  margin: 0.25rem 0 0;
-  padding: 0;
-  border: 0;
-  accent-color: var(--accent);
 }
 
 .small {
@@ -719,6 +521,7 @@ section:has(> .lead-time) {
   .home-canvas {
     animation: none;
   }
+
 }
 
 /* The left column is time: the headline and your dates at the top, where the year is at the
@@ -908,6 +711,7 @@ section:has(> .lead-time) {
   .home-board > div {
     animation: none;
   }
+
 }
 
 .home-board ol {
@@ -1146,26 +950,396 @@ section:has(> .lead-time) {
   .home-canvas {
     inset: 0;
   }
-}
 
-@media (max-width: 40rem) {
-  .map-canvas {
-    height: 280px;
-  }
-
-  .timelapse-canvas {
-    height: 380px;
-  }
-
-  /* Name, park and busyness are what matter on a phone. */
-  .results th:nth-child(n + 4),
-  .results td:nth-child(n + 4) {
-    display: none;
-  }
 }
 
 /* The footer's credits stay readable lines on a wide screen. */
 .site-footer p {
   max-width: 64ch;
   text-wrap: pretty;
+}
+
+/* The explorer: the map fills the screen under the header, the list beside it. Night, like
+   the homepage, whatever the page theme. */
+.explore {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(20rem, 26rem) 1fr;
+  height: calc(100svh - var(--bar));
+  background: var(--night);
+  color: var(--night-text);
+  color-scheme: dark;
+}
+
+.explore-side {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--night-land);
+}
+
+.query-bar {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem 0.75rem;
+}
+
+.query-bar label,
+.ask label,
+.place-field label {
+  display: grid;
+  gap: 0.25rem;
+  font: 600 0.8125rem/1.2 var(--display);
+  color: var(--night-muted);
+}
+
+.explore input,
+.explore select {
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--night-line);
+  border-radius: 8px;
+  background: var(--night-land);
+  color: var(--night-text);
+  font: inherit;
+}
+
+.ask-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.ask-row input {
+  flex: 1;
+  min-width: 0;
+  font-size: 1rem;
+}
+
+.ask-row button {
+  padding: 0 1rem;
+  border: 0;
+  border-radius: 8px;
+  background: var(--quiet);
+  color: var(--night);
+  font: 800 1rem/1 var(--display);
+}
+
+.ask-note {
+  min-height: 1rem;
+  margin: 0.3rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--trail-head);
+}
+
+.query-dates {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.place-field {
+  position: relative;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.place-options {
+  margin: 0;
+  padding: 0.25rem;
+  list-style: none;
+  border: 1px solid var(--night-line);
+  border-radius: 8px;
+  background: var(--night-land);
+}
+
+.place-options button {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--night-text);
+  text-align: left;
+  font: inherit;
+}
+
+.place-options button:hover {
+  background: color-mix(in srgb, var(--night-text) 10%, transparent);
+}
+
+.place-options .muted {
+  font-size: 0.8125rem;
+  color: var(--night-muted);
+}
+
+.place-chosen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--quiet);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  font: inherit;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  justify-self: start;
+  margin: 0;
+  padding: 0.25rem 0.4rem 0.25rem 0.75rem;
+  border: 1px solid var(--night-line);
+  border-radius: 999px;
+  font-size: 0.8125rem;
+}
+
+.chip button {
+  padding: 0 0.3rem;
+  border: 0;
+  background: none;
+  color: var(--night-muted);
+  font-size: 1rem;
+}
+
+/* Quiet / Not too busy / Busy: a pill slides under the band picked, in its colour. */
+.band-toggle {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin: 0.25rem 1.25rem 0;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--night-land);
+}
+
+.band-pill {
+  position: absolute;
+  inset: 3px auto 3px 3px;
+  width: calc((100% - 6px) / 3);
+  border-radius: 999px;
+  background: var(--quiet);
+  transform: translateX(calc(var(--at) * 100%));
+  transition:
+    transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 320ms ease-out;
+}
+
+.band-ok .band-pill {
+  background: var(--band-ok);
+}
+
+.band-busy .band-pill {
+  background: var(--band-busy);
+}
+
+.band-toggle button {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 0.1rem;
+  padding: 0.45rem 0.25rem;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--night-muted);
+  font: 600 0.875rem/1.2 var(--display);
+  transition: color 200ms ease-out;
+}
+
+.band-toggle button[aria-checked='true'] {
+  color: var(--night);
+}
+
+.band-count {
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.explore-status,
+.explore .error {
+  margin: 0;
+  padding: 0.75rem 1.25rem 0;
+  color: var(--night-muted);
+}
+
+.explore-cards {
+  --band: var(--quiet);
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  align-content: start;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.75rem 0.75rem 1rem 1.25rem;
+  overflow-y: auto;
+  list-style: none;
+  scrollbar-color: var(--night-line) transparent;
+}
+
+.explore-cards.band-ok {
+  --band: var(--band-ok);
+}
+
+.explore-cards.band-busy {
+  --band: var(--band-busy);
+}
+
+.card {
+  border: 1px solid var(--night-land);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--night-land) 55%, var(--night));
+}
+
+.card.selected {
+  border-color: var(--night-line);
+}
+
+.card-main {
+  display: grid;
+  gap: 0.15rem;
+  width: 100%;
+  padding: 0.7rem 0.85rem;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+}
+
+.card-main:hover {
+  background: var(--night-land);
+}
+
+.card-name {
+  font: 700 1rem/1.25 var(--display);
+}
+
+.card-name::before {
+  content: '';
+  display: inline-block;
+  width: 0.55rem;
+  height: 0.55rem;
+  margin-right: 0.45rem;
+  border-radius: 50%;
+  background: var(--band);
+  vertical-align: 0.08em;
+}
+
+.card-meta,
+.card-usual {
+  font-size: 0.8125rem;
+  color: var(--night-muted);
+}
+
+.card-usual {
+  color: var(--night-text);
+}
+
+.card-more {
+  padding: 0 0.85rem 0.8rem;
+  font-size: 0.875rem;
+}
+
+.card-more p {
+  margin: 0.35rem 0 0;
+}
+
+.card-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+}
+
+.card-links a {
+  color: var(--quiet);
+}
+
+.show-more button {
+  width: 100%;
+  padding: 0.6rem;
+  border: 1px dashed var(--night-line);
+  border-radius: 12px;
+  background: none;
+  color: var(--night-muted);
+}
+
+.explore-credits {
+  padding: 0.6rem 1.25rem 0.75rem;
+  border-top: 1px solid var(--night-land);
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  color: var(--night-muted);
+}
+
+.explore-map {
+  position: relative;
+  height: 100%;
+  min-height: 0;
+}
+
+/* Sized, not positioned: MapLibre makes its container position: relative. */
+.explore-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+/* One dashed line from the hovered or picked card to its pin. */
+.leader-line {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.leader-line path {
+  fill: none;
+  stroke: var(--night-text);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+  opacity: 0.85;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .band-pill,
+  .band-toggle button {
+    transition: none;
+  }
+}
+
+/* A phone: the map on top, the list under it, scrolling with the page; no line. */
+@media (max-width: 56rem) {
+  .explore {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+  }
+
+  .explore-map {
+    order: -1;
+    height: 45svh;
+  }
+
+  .explore-side {
+    border-right: 0;
+  }
+
+  .explore-cards {
+    overflow: visible;
+  }
+
+  .leader-line {
+    display: none;
+  }
 }
