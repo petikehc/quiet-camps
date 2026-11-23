@@ -8,12 +8,13 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from quiet_camps.api.campground_repository import HOLIDAY_NIGHTS
-from quiet_camps.api.campground_service import HolidayNight, holiday_spans
+from quiet_camps.api.campground_service import HolidayNight, holiday_spans, school_holiday_spans
 from quiet_camps.api.db import get_session
 from quiet_camps.api.problems import INVALID
 from quiet_camps.api.queries import After, Near, area_year, search_quiet
 from quiet_camps.api.year import HolidayOut
 from quiet_camps.db.derived import FIRST_NIGHT, YEARS_AHEAD
+from quiet_camps.ingest.school_holidays import school_holidays
 
 MAX_NIGHTS = 60
 NEAR_KM = (10, 400)  # from the next town over to a long drive
@@ -182,6 +183,9 @@ class AreaYearOut(BaseModel):
     busyness: list[float | None]
     open: list[int]  # how many of them are usually open each night
     holidays: list[HolidayOut]  # public holidays and their long weekends; Christmas twice
+    # Queensland state school holidays (autumn, winter, spring, summer), where the department
+    # has published them: 2026 to 2029 so far. Summer is cut at the year's ends.
+    school_holidays: list[HolidayOut]
 
 
 @search_router.get("/campgrounds/quiet/year")
@@ -200,4 +204,8 @@ async def quiet_campgrounds_year(
         busyness=[n.busyness for n in nights],
         open=[n.open for n in nights],
         holidays=[HolidayOut.model_validate(h) for h in holidays],
+        school_holidays=[
+            HolidayOut.model_validate(h)
+            for h in school_holiday_spans(school_holidays(), first, last)
+        ],
     )

@@ -1,0 +1,22 @@
+# Queensland state school holidays: the days off between terms, first to last, inclusive.
+# Source: Queensland Department of Education, "School holidays and term dates"
+# (https://education.qld.gov.au/about-us/calendar/term-dates, 2026) and "Future school dates"
+# (https://education.qld.gov.au/about-us/calendar/future-dates, 2027-2029). Checked 24 Nov 2026.
+# The 2029-30 summer is left out: its end is "to be published when approved by the Minister".
+# Some Far North and Western Queensland schools start the summer holidays a week earlier.
+first_day,last_day,name
+2026-04-03,2026-04-19,autumn
+2026-06-27,2026-07-12,winter
+2026-09-19,2026-10-05,spring
+2026-12-12,2027-01-26,summer
+2027-03-26,2027-04-11,autumn
+2027-06-26,2027-07-11,winter
+2027-09-18,2027-10-04,spring
+2027-12-11,2028-01-23,summer
+2028-04-01,2028-04-17,autumn
+2028-06-24,2028-07-09,winter
+2028-09-16,2028-10-02,spring
+2028-12-09,2029-01-21,summer
+2029-03-30,2029-04-15,autumn
+2029-06-23,2029-07-08,winter
+2029-09-15,2029-10-01,spring

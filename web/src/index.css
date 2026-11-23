@@ -1317,6 +1317,10 @@ section:has(> .lead-time) {
   color: var(--night-muted);
 }
 
+.year-school {
+  fill: color-mix(in srgb, var(--band-ok) 14%, transparent);
+}
+
 .year-stay {
   fill: color-mix(in srgb, var(--quiet) 35%, transparent);
 }
@@ -1384,4 +1388,24 @@ section:has(> .lead-time) {
   .leader-line {
     display: none;
   }
+}
+
+/* The strip's key, under it on the night. Swatches are spans here, not SVG, so they use the
+   same colours as backgrounds. */
+.when-key {
+  margin: 0.15rem 0 0;
+  color: var(--night-muted);
+  font-size: 0.75rem;
+}
+
+.when-key .swatch.year-school {
+  background: color-mix(in srgb, var(--band-ok) 30%, transparent);
+}
+
+.when-key .swatch.year-holiday {
+  background: var(--night-line);
+}
+
+.when-key .swatch.year-stay {
+  background: color-mix(in srgb, var(--quiet) 55%, transparent);
 }

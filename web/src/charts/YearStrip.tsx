@@ -9,6 +9,7 @@ type Props = {
   firstNight: string // YYYY-MM-DD of night 0
   values: (number | null)[] // one per night; null: nothing to show (all closed)
   holidays: Holiday[] // nights counted from firstNight
+  schoolHolidays?: Holiday[] // a broader shade, behind the public holidays
   night: number // where the playhead is
   onSeek: (night: number) => void
   labels?: { night: number; text: string }[] // named moments above the strip
@@ -23,6 +24,7 @@ export function YearStrip({
   firstNight,
   values,
   holidays,
+  schoolHolidays = [],
   night,
   onSeek,
   labels = [],
@@ -58,6 +60,16 @@ export function YearStrip({
         ))}
       </ol>
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true">
+        {schoolHolidays.map((h) => (
+          <rect
+            key={`school-${h.night}`}
+            className="year-school"
+            x={shape.x(h.night)}
+            width={Math.max(3, shape.x(h.night + h.nights) - shape.x(h.night))}
+            y={0}
+            height={H}
+          />
+        ))}
         {holidays.map((h) => (
           <rect
             key={h.night}

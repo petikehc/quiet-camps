@@ -9,6 +9,7 @@ function year(y: number, nights: number, holidays: AreaYear['holidays']): AreaYe
     busyness: Array.from({ length: nights }, (_, n) => n / nights),
     open: Array.from({ length: nights }, () => 5),
     holidays,
+    school_holidays: y === 2026 ? [{ name: 'summer', night: 344, nights: 21 }] : [],
   }
 }
 
@@ -25,6 +26,10 @@ describe('comingYear', () => {
     expect(coming.values).toHaveLength(365)
     expect(coming.values[0]).toBe(327 / 365) // 24 Nov is night 327 of 2026
     expect(coming.values[38]).toBe(0) // 1 Jan 2027
+  })
+
+  it('keeps the school holidays from today', () => {
+    expect(coming.schoolHolidays).toEqual([{ name: 'summer', night: 344 - 327, nights: 21 }])
   })
 
   it('counts its holidays from today', () => {

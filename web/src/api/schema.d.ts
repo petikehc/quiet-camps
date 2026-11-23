@@ -230,6 +230,8 @@ export interface components {
             nights: number;
             /** Open */
             open: number[];
+            /** School Holidays */
+            school_holidays: components["schemas"]["HolidayOut"][];
             /** Year */
             year: number;
         };

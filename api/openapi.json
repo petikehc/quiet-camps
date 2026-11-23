@@ -41,6 +41,13 @@
             "title": "Open",
             "type": "array"
           },
+          "school_holidays": {
+            "items": {
+              "$ref": "#/components/schemas/HolidayOut"
+            },
+            "title": "School Holidays",
+            "type": "array"
+          },
           "year": {
             "title": "Year",
             "type": "integer"
@@ -52,7 +59,8 @@
           "nights",
           "busyness",
           "open",
-          "holidays"
+          "holidays",
+          "school_holidays"
         ],
         "title": "AreaYearOut",
         "type": "object"

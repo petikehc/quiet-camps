@@ -17,7 +17,7 @@ type Props = {
 // When it's quiet around here: the coming year for the campgrounds asked about, the busiest
 // moments named and the quietest week pointed at. Dragging moves your dates, same length.
 export function WhenStrip({ coming, arrive, depart, near, onDates }: Props) {
-  const { firstNight, values, holidays } = coming
+  const { firstNight, values, holidays, schoolHolidays } = coming
   const from = nightsBetween(firstNight, arrive)
   const to = nightsBetween(firstNight, depart)
   const labels = useMemo(() => {
@@ -32,9 +32,11 @@ export function WhenStrip({ coming, arrive, depart, near, onDates }: Props) {
 
   const said = (n: number) => {
     const h = holidayOn(holidays, n)
+    const school = holidayOn(schoolHolidays, n)
     const v = values[n]
     const how = v === null ? 'usually closed' : `usually ${Math.round(v * 100)}% as busy as their busy nights`
-    return `${formatNight(nightDate(firstNight, n))}${h ? `, ${holidayName(h.name)}` : ''}: ${how}`
+    const names = [h && holidayName(h.name), school && 'school holidays'].filter(Boolean)
+    return `${formatNight(nightDate(firstNight, n))}${names.length ? `, ${names.join(', ')}` : ''}: ${how}`
   }
 
   return (
@@ -47,6 +49,7 @@ export function WhenStrip({ coming, arrive, depart, near, onDates }: Props) {
         firstNight={firstNight}
         values={values}
         holidays={holidays}
+        schoolHolidays={schoolHolidays}
         night={Math.min(Math.max(from, 0), values.length - 1)}
         onSeek={(n) => {
           const arriving = nightDate(firstNight, n)
@@ -57,6 +60,17 @@ export function WhenStrip({ coming, arrive, depart, near, onDates }: Props) {
         ariaLabel="Arrival night"
         valueText={said}
       />
+      <ul className="legend when-key" aria-label="Shaded on the strip">
+        <li>
+          <span className="swatch year-school" /> Queensland school holidays
+        </li>
+        <li>
+          <span className="swatch year-holiday" /> Public holidays and long weekends
+        </li>
+        <li>
+          <span className="swatch year-stay" /> Your nights
+        </li>
+      </ul>
     </section>
   )
 }

@@ -5,6 +5,7 @@ from typing import Protocol
 from quiet_camps.api.errors import NotFound
 from quiet_camps.api.queries import ACTIVE_DAYS
 from quiet_camps.db.models import Campground
+from quiet_camps.ingest.school_holidays import SchoolHoliday
 
 
 class CampgroundSource(Protocol):
@@ -285,6 +286,21 @@ def holiday_spans(nights: list[HolidayNight], first: date) -> list[HolidaySpan]:
             spans[-1] = replace(spans[-1], nights=spans[-1].nights + 1)
         else:
             spans.append(HolidaySpan(name=h.holiday, night=index, nights=1))
+    return spans
+
+
+def school_holiday_spans(
+    holidays: list[SchoolHoliday], first: date, last: date
+) -> list[HolidaySpan]:
+    """The school holidays' nights from first to last, as spans counted from first; summer,
+    which runs from December into January, is cut at the year's ends."""
+    spans: list[HolidaySpan] = []
+    for h in holidays:
+        start, end = max(h.first_night, first), min(h.last_night, last)
+        if start <= end:
+            spans.append(
+                HolidaySpan(name=h.name, night=(start - first).days, nights=(end - start).days + 1)
+            )
     return spans
 
 

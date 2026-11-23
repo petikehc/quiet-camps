@@ -8,7 +8,8 @@ export type AreaYear = components['schemas']['AreaYearOut']
 export type ComingYear = {
   firstNight: string // today
   values: (number | null)[]
-  holidays: Holiday[] // nights counted from today
+  holidays: Holiday[] // public holidays, nights counted from today
+  schoolHolidays: Holiday[] // Queensland state school holidays, where published
 }
 
 const NIGHTS = 365
@@ -21,19 +22,25 @@ export function nightsBetween(from: string, to: string): number {
 export function comingYear(today: string, years: AreaYear[]): ComingYear {
   const values: (number | null)[] = []
   const holidays: Holiday[] = []
+  const schoolHolidays: Holiday[] = []
   for (const year of years) {
     const start = values.length
     values.push(...year.busyness)
     holidays.push(...year.holidays.map((h) => ({ ...h, night: h.night + start })))
+    schoolHolidays.push(...year.school_holidays.map((h) => ({ ...h, night: h.night + start })))
   }
   const offset = nightsBetween(years[0]?.first_night ?? today, today)
+  // From today on, and cut at today: a span that started before begins tonight.
+  const fromToday = (spans: Holiday[]) =>
+    spans
+      .map((h) => ({ ...h, night: h.night - offset }))
+      .filter((h) => h.night + h.nights > 0 && h.night < NIGHTS)
+      .map((h) => (h.night < 0 ? { ...h, night: 0, nights: h.nights + h.night } : h))
   return {
     firstNight: today,
     values: values.slice(offset, offset + NIGHTS),
-    holidays: holidays
-      .map((h) => ({ ...h, night: h.night - offset }))
-      .filter((h) => h.night + h.nights > 0 && h.night < NIGHTS)
-      .map((h) => (h.night < 0 ? { ...h, night: 0, nights: h.nights + h.night } : h)),
+    holidays: fromToday(holidays),
+    schoolHolidays: fromToday(schoolHolidays),
   }
 }
 
