@@ -7,9 +7,13 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from quiet_camps.api.campground_repository import HOLIDAY_NIGHTS
+from quiet_camps.api.campground_service import HolidayNight, holiday_spans
 from quiet_camps.api.db import get_session
 from quiet_camps.api.problems import INVALID
-from quiet_camps.api.queries import After, Near, search_quiet
+from quiet_camps.api.queries import After, Near, area_year, search_quiet
+from quiet_camps.api.year import HolidayOut
+from quiet_camps.db.derived import FIRST_NIGHT, YEARS_AHEAD
 
 MAX_NIGHTS = 60
 NEAR_KM = (10, 400)  # from the next town over to a long drive
@@ -31,26 +35,15 @@ def decode_cursor(cursor: str) -> After:
         raise ValueError("after must be a `next` from a previous page") from e
 
 
-class QuietFilters(BaseModel):
-    """What to search for: the search's pages and its map share these, and their rules."""
+class PlaceFilters(BaseModel):
+    """Which campgrounds: the search and the year view share these, and their rules."""
 
-    arrive: date
-    depart: date
     park: str | None = None
     q: str | None = Field(None, min_length=2, max_length=100)  # part of a name or park name
     # Within within_km of a place (from GET /places): all three, or none.
     near_lat: float | None = Field(None, ge=-45, le=-9)  # Australia's latitudes
     near_lon: float | None = Field(None, ge=112, le=155)
     within_km: float | None = Field(None, ge=NEAR_KM[0], le=NEAR_KM[1])
-
-    @model_validator(mode="after")
-    def check_depart_after_arrive(self) -> Self:
-        if self.depart <= self.arrive:
-            raise ValueError("depart must be after arrive")
-
-        if (self.depart - self.arrive).days > MAX_NIGHTS:
-            raise ValueError(f"booking must be {MAX_NIGHTS} nights at most")
-        return self
 
     @model_validator(mode="after")
     def check_near_is_whole(self) -> Self:
@@ -63,6 +56,22 @@ class QuietFilters(BaseModel):
         if self.near_lat is None or self.near_lon is None or self.within_km is None:
             return None
         return Near(self.near_lat, self.near_lon, self.within_km)
+
+
+class QuietFilters(PlaceFilters):
+    """What to search for: the search's pages and its map share these, and their rules."""
+
+    arrive: date
+    depart: date
+
+    @model_validator(mode="after")
+    def check_depart_after_arrive(self) -> Self:
+        if self.depart <= self.arrive:
+            raise ValueError("depart must be after arrive")
+
+        if (self.depart - self.arrive).days > MAX_NIGHTS:
+            raise ValueError(f"booking must be {MAX_NIGHTS} nights at most")
+        return self
 
 
 class SearchParams(QuietFilters):
@@ -156,3 +165,39 @@ async def quiet_campgrounds_map(
         near=filters.near(),
     )
     return SearchMap(results=[QuietCampgroundOut.model_validate(c) for c in found])
+
+
+class YearParams(PlaceFilters):
+    year: int = Field(ge=FIRST_NIGHT.year, le=date.today().year + YEARS_AHEAD)
+
+
+class AreaYearOut(BaseModel):
+    """Each night of a year, how busy the chosen campgrounds usually are: for picking dates."""
+
+    year: int
+    first_night: date
+    nights: int
+    # The mean of their typical busyness, over those usually open that night (1.0 = as busy
+    # as their own busiest nights); None when none are.
+    busyness: list[float | None]
+    open: list[int]  # how many of them are usually open each night
+    holidays: list[HolidayOut]  # public holidays and their long weekends; Christmas twice
+
+
+@search_router.get("/campgrounds/quiet/year")
+async def quiet_campgrounds_year(
+    params: Annotated[YearParams, Query()],
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> AreaYearOut:
+    first, last = date(params.year, 1, 1), date(params.year, 12, 31)
+    nights = await area_year(session, first, last, params.park, params.q, params.near())
+    holiday_rows = await session.execute(HOLIDAY_NIGHTS, {"first": first, "last": last})
+    holidays = holiday_spans([HolidayNight(**row) for row in holiday_rows.mappings()], first)
+    return AreaYearOut(
+        year=params.year,
+        first_night=first,
+        nights=len(nights),
+        busyness=[n.busyness for n in nights],
+        open=[n.open for n in nights],
+        holidays=[HolidayOut.model_validate(h) for h in holidays],
+    )

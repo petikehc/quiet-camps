@@ -1,6 +1,62 @@
 {
   "components": {
     "schemas": {
+      "AreaYearOut": {
+        "description": "Each night of a year, how busy the chosen campgrounds usually are: for picking dates.",
+        "properties": {
+          "busyness": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Busyness",
+            "type": "array"
+          },
+          "first_night": {
+            "format": "date",
+            "title": "First Night",
+            "type": "string"
+          },
+          "holidays": {
+            "items": {
+              "$ref": "#/components/schemas/HolidayOut"
+            },
+            "title": "Holidays",
+            "type": "array"
+          },
+          "nights": {
+            "title": "Nights",
+            "type": "integer"
+          },
+          "open": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Open",
+            "type": "array"
+          },
+          "year": {
+            "title": "Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "year",
+          "first_night",
+          "nights",
+          "busyness",
+          "open",
+          "holidays"
+        ],
+        "title": "AreaYearOut",
+        "type": "object"
+      },
       "BookedByOut": {
         "properties": {
           "share": {
@@ -953,26 +1009,6 @@
         "parameters": [
           {
             "in": "query",
-            "name": "arrive",
-            "required": true,
-            "schema": {
-              "format": "date",
-              "title": "Arrive",
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "depart",
-            "required": true,
-            "schema": {
-              "format": "date",
-              "title": "Depart",
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
             "name": "park",
             "required": false,
             "schema": {
@@ -1057,6 +1093,26 @@
                 }
               ],
               "title": "Within Km"
+            }
+          },
+          {
+            "in": "query",
+            "name": "arrive",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Arrive",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "depart",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Depart",
+              "type": "string"
             }
           },
           {
@@ -1119,6 +1175,94 @@
         "parameters": [
           {
             "in": "query",
+            "name": "park",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Park"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "minLength": 2,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "near_lat",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": -9,
+                  "minimum": -45,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Near Lat"
+            }
+          },
+          {
+            "in": "query",
+            "name": "near_lon",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 155,
+                  "minimum": 112,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Near Lon"
+            }
+          },
+          {
+            "in": "query",
+            "name": "within_km",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 400,
+                  "minimum": 10,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Within Km"
+            }
+          },
+          {
+            "in": "query",
             "name": "arrive",
             "required": true,
             "schema": {
@@ -1136,7 +1280,37 @@
               "title": "Depart",
               "type": "string"
             }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchMap"
+                }
+              }
+            },
+            "description": "Successful Response"
           },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationProblem"
+                }
+              }
+            },
+            "description": "The request has invalid fields"
+          }
+        },
+        "summary": "Quiet Campgrounds Map"
+      }
+    },
+    "/campgrounds/quiet/year": {
+      "get": {
+        "operationId": "quiet_campgrounds_year_campgrounds_quiet_year_get",
+        "parameters": [
           {
             "in": "query",
             "name": "park",
@@ -1224,6 +1398,17 @@
               ],
               "title": "Within Km"
             }
+          },
+          {
+            "in": "query",
+            "name": "year",
+            "required": true,
+            "schema": {
+              "maximum": 2029,
+              "minimum": 2011,
+              "title": "Year",
+              "type": "integer"
+            }
           }
         ],
         "responses": {
@@ -1231,7 +1416,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SearchMap"
+                  "$ref": "#/components/schemas/AreaYearOut"
                 }
               }
             },
@@ -1248,7 +1433,7 @@
             "description": "The request has invalid fields"
           }
         },
-        "summary": "Quiet Campgrounds Map"
+        "summary": "Quiet Campgrounds Year"
       }
     },
     "/campgrounds/{campground_id}": {

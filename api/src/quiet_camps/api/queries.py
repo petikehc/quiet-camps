@@ -24,6 +24,14 @@ DISTANCE = f"""(2 * {EARTH_RADIUS_KM} * asin(sqrt(
     + cos(radians(CAST(:near_lat AS float8))) * cos(radians(c.lat))
       * sin(radians(c.lon - CAST(:near_lon AS float8)) / 2) ^ 2)))"""
 
+# The campgrounds a search is about: active, and in the park, matching q, and near the place
+# when those are asked for. The search and the year view both pick by it.
+CHOSEN = f"""{ACTIVE}
+      AND (CAST(:park AS text) IS NULL OR c.park_name = :park)
+      AND (CAST(:pattern AS text) IS NULL OR c.name ILIKE :pattern OR c.park_name ILIKE :pattern)
+      AND (CAST(:near_lat AS float8) IS NULL
+           OR (c.lat IS NOT NULL AND {DISTANCE} <= CAST(:within_km AS float8)))"""
+
 # ADR 0002: the nights asked for → their kind of night → each campground's typical night.
 # A campground must have a typical for every night asked for, with enough history: a missing
 # kind means it's usually closed then (Cape York in the wet), not quiet.
@@ -47,11 +55,7 @@ ranked AS (
     FROM asked a
     JOIN campground_typical t ON t.kind = a.kind
     JOIN campground c ON c.id = t.campground_id
-    WHERE {ACTIVE}
-      AND (CAST(:park AS text) IS NULL OR c.park_name = :park)
-      AND (CAST(:pattern AS text) IS NULL OR c.name ILIKE :pattern OR c.park_name ILIKE :pattern)
-      AND (CAST(:near_lat AS float8) IS NULL
-           OR (c.lat IS NOT NULL AND {DISTANCE} <= CAST(:within_km AS float8)))
+    WHERE {CHOSEN}
     GROUP BY c.id
     HAVING count(*) = (SELECT count(*) FROM asked) AND min(t.nights) >= :min_history
 )
@@ -126,19 +130,67 @@ async def search_quiet(
     result = await session.execute(
         SEARCH,
         {
+            **chosen(park, q, near),
             "arrive": arrive,
             "depart": depart,
-            "park": park,
-            "pattern": None if q is None else contains(q),
             "limit": limit,
             "after_busyness": None if after is None else after.busyness,
             "after_peak": None if after is None else after.peak,
             "after_id": None if after is None else after.id,
-            "active_days": ACTIVE_DAYS,
-            "near_lat": None if near is None else near.lat,
-            "near_lon": None if near is None else near.lon,
-            "within_km": None if near is None else near.km,
             "min_history": MIN_HISTORY,
         },
     )
     return [QuietCampground(**row) for row in result.mappings()]
+
+
+def chosen(park: str | None, q: str | None, near: Near | None) -> dict[str, object]:
+    """CHOSEN's parameters."""
+    return {
+        "active_days": ACTIVE_DAYS,
+        "park": park,
+        "pattern": None if q is None else contains(q),
+        "near_lat": None if near is None else near.lat,
+        "near_lon": None if near is None else near.lon,
+        "within_km": None if near is None else near.km,
+    }
+
+
+# Each night of a year, how busy the chosen campgrounds usually are together: the mean of
+# their typical busyness for that kind of night, over those open then (with enough history).
+# None when none are: a night they're all usually closed.
+AREA_YEAR = text(f"""
+WITH picked AS (
+    SELECT c.id FROM campground c WHERE {CHOSEN}
+)
+SELECT d.night, avg(t.busyness) AS busyness, count(t.campground_id)::int AS open
+FROM calendar_day d
+LEFT JOIN campground_typical t
+    ON t.kind = d.kind AND t.nights >= :min_history
+   AND t.campground_id IN (SELECT id FROM picked)
+WHERE d.night BETWEEN :first AND :last
+GROUP BY d.night
+ORDER BY d.night
+""")
+
+
+@dataclass(frozen=True)
+class AreaNight:
+    night: date
+    busyness: float | None  # the mean over the campgrounds open; None when none are
+    open: int  # how many of the chosen campgrounds are usually open that night
+
+
+async def area_year(
+    session: AsyncSession,
+    first: date,
+    last: date,
+    park: str | None,
+    q: str | None,
+    near: Near | None,
+) -> list[AreaNight]:
+    """How busy the chosen campgrounds usually are on each night from first to last."""
+    result = await session.execute(
+        AREA_YEAR,
+        {**chosen(park, q, near), "first": first, "last": last, "min_history": MIN_HISTORY},
+    )
+    return [AreaNight(**row) for row in result.mappings()]

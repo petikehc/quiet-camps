@@ -38,6 +38,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/campgrounds/quiet/year": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Quiet Campgrounds Year */
+        get: operations["quiet_campgrounds_year_campgrounds_quiet_year_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/campgrounds/{campground_id}": {
         parameters: {
             query?: never;
@@ -178,6 +195,27 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AreaYearOut
+         * @description Each night of a year, how busy the chosen campgrounds usually are: for picking dates.
+         */
+        AreaYearOut: {
+            /** Busyness */
+            busyness: (number | null)[];
+            /**
+             * First Night
+             * Format: date
+             */
+            first_night: string;
+            /** Holidays */
+            holidays: components["schemas"]["HolidayOut"][];
+            /** Nights */
+            nights: number;
+            /** Open */
+            open: number[];
+            /** Year */
+            year: number;
+        };
         /** BookedByOut */
         BookedByOut: {
             /** Share */
@@ -507,13 +545,13 @@ export interface operations {
     quiet_campgrounds_campgrounds_quiet_get: {
         parameters: {
             query: {
-                arrive: string;
-                depart: string;
                 park?: string | null;
                 q?: string | null;
                 near_lat?: number | null;
                 near_lon?: number | null;
                 within_km?: number | null;
+                arrive: string;
+                depart: string;
                 limit?: number;
                 after?: string | null;
             };
@@ -546,13 +584,13 @@ export interface operations {
     quiet_campgrounds_map_campgrounds_quiet_map_get: {
         parameters: {
             query: {
-                arrive: string;
-                depart: string;
                 park?: string | null;
                 q?: string | null;
                 near_lat?: number | null;
                 near_lon?: number | null;
                 within_km?: number | null;
+                arrive: string;
+                depart: string;
             };
             header?: never;
             path?: never;
@@ -567,6 +605,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SearchMap"];
+                };
+            };
+            /** @description The request has invalid fields */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ValidationProblem"];
+                };
+            };
+        };
+    };
+    quiet_campgrounds_year_campgrounds_quiet_year_get: {
+        parameters: {
+            query: {
+                park?: string | null;
+                q?: string | null;
+                near_lat?: number | null;
+                near_lon?: number | null;
+                within_km?: number | null;
+                year: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AreaYearOut"];
                 };
             };
             /** @description The request has invalid fields */

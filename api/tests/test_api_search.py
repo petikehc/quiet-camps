@@ -109,3 +109,8 @@ def _resolve(schema: dict[str, Any], node: dict[str, Any]) -> dict[str, Any]:
         return node
     name = node["$ref"].rsplit("/", 1)[-1]
     return schema["components"]["schemas"][name]
+
+
+@pytest.mark.parametrize("year", [2010, 2100, "x"])
+def test_a_year_outside_the_calendar_is_422(client: TestClient, year: int | str) -> None:
+    assert client.get("/campgrounds/quiet/year", params={"year": year}).status_code == 422

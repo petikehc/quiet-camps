@@ -1,5 +1,6 @@
 """The search over a small seeded history, built once per test session by `seeded_client`."""
 
+from datetime import date
 from typing import Any
 
 import pytest
@@ -182,3 +183,45 @@ def test_each_result_near_a_place_says_how_far(seeded_client: TestClient) -> Non
 
 def test_without_a_place_there_is_no_distance(seeded_client: TestClient) -> None:
     assert {c["distance_km"] for c in results(seeded_client)} == {None}
+
+
+YEAR = "/campgrounds/quiet/year"
+
+
+def year_view(client: TestClient, **params: Any) -> dict[str, Any]:
+    response = client.get(YEAR, params={"year": 2027, **params})
+    assert response.status_code == 200
+    return response.json()
+
+
+def test_the_year_view_agrees_with_the_search_night_by_night(seeded_client: TestClient) -> None:
+    body = year_view(seeded_client)
+    saturday = (date(2027, 3, 13) - date(2027, 1, 1)).days
+    found = results(seeded_client)  # the same Saturday
+
+    assert (body["first_night"], body["nights"]) == ("2027-01-01", 365)
+    assert body["open"][saturday] == len(found)
+    assert body["busyness"][saturday] == pytest.approx(
+        sum(c["busyness"] for c in found) / len(found), abs=1e-5
+    )
+
+
+def test_a_night_they_are_all_usually_closed_is_none(seeded_client: TestClient) -> None:
+    body = year_view(seeded_client)
+    april = (date(2027, 4, 20) - date(2027, 1, 1)).days  # the seed books March only, mostly
+
+    assert (body["busyness"][april], body["open"][april]) == (None, 0)
+
+
+def test_the_year_view_names_its_holidays(seeded_client: TestClient) -> None:
+    holidays = {(h["name"], h["night"], h["nights"]) for h in year_view(seeded_client)["holidays"]}
+
+    easter = (date(2027, 3, 25) - date(2027, 1, 1)).days  # Thursday night to Sunday night
+    assert ("easter", easter, 4) in holidays
+
+
+def test_an_area_with_no_campgrounds_is_a_year_of_none(seeded_client: TestClient) -> None:
+    body = year_view(seeded_client, near_lat=-16.9, near_lon=145.8, within_km=10)  # Cairns
+
+    assert set(body["busyness"]) == {None}
+    assert set(body["open"]) == {0}
