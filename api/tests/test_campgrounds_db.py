@@ -59,6 +59,46 @@ def test_a_campground_shows_its_most_recent_names(conn: Conn) -> None:
     assert conn.execute("SELECT last_night FROM campground").fetchone() == (date(2025, 1, 1),)
 
 
+MAIN_RANGE = "Main Range National Park"
+POINT_PURE = (MAIN_RANGE, "Point Pure remote bush camp")
+POINT_PURE_RETIRED = (MAIN_RANGE, "Point Pure remote bush camp - OBSELETE")
+
+
+def test_a_name_marked_retired_gives_way_to_the_places_earlier_name(conn: Conn) -> None:
+    ids = ensure_areas(conn, [POINT_PURE, POINT_PURE_RETIRED])
+    add_night(conn, ids[POINT_PURE], date(2024, 11, 2))
+    add_night(conn, ids[POINT_PURE_RETIRED], date(2025, 5, 4))  # booked later, but retired
+    assign_campgrounds(conn, {})
+
+    assert campground_of(conn)[POINT_PURE_RETIRED] == POINT_PURE
+    # Its last night is still its latest, whichever name it shows.
+    assert conn.execute("SELECT last_night FROM campground").fetchone() == (date(2025, 5, 4),)
+
+
+def test_a_retired_mark_with_no_other_name_is_taken_off(conn: Conn) -> None:
+    areas = [
+        (MAIN_RANGE, "Repulse Creek camp (obsolete)"),
+        (MAIN_RANGE, "Mount Superbus-South Peak remote bush camp - OBSEL"),
+        (MAIN_RANGE, "z_Thorsborne Trail"),
+    ]
+    ensure_areas(conn, areas)
+    assign_campgrounds(conn, {})
+
+    assert sorted(name for _, name in campground_of(conn).values()) == [
+        "Mount Superbus-South Peak remote bush camp",
+        "Repulse Creek camp",
+        "Thorsborne Trail",
+    ]
+
+
+def test_a_name_that_only_contains_the_letters_is_left_alone(conn: Conn) -> None:
+    area = (MAIN_RANGE, "Obsel Creek camping area")  # obsel as a word, but not at the end
+    ensure_areas(conn, [area])
+    assign_campgrounds(conn, {})
+
+    assert campground_of(conn)[area] == area
+
+
 def test_running_it_again_keeps_the_same_campgrounds(conn: Conn) -> None:
     ensure_areas(conn, [OLD, NEW, OTHER])
     assign_campgrounds(conn, {})

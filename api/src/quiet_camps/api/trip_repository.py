@@ -3,8 +3,9 @@ from datetime import date, timedelta
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from quiet_camps.api.campground_repository import HISTORY_END, HOLIDAY_NIGHTS
+from quiet_camps.api.campground_repository import HOLIDAY_NIGHTS
 from quiet_camps.api.campground_service import HolidayNight
+from quiet_camps.api.queries import HISTORY_END
 from quiet_camps.api.trip_service import Arrivals, Origin, TripCampground
 
 # camp_night has a row per site per night. A trip is a stay: a run of consecutive nights at

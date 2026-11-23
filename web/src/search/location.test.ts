@@ -9,6 +9,7 @@ const camp = (overrides: Partial<QuietCampground>): QuietCampground => ({
   busyness: 0.1,
   typical_sites: 2,
   history: 10,
+  busy_night_sites: 6,
   lat: -21.1,
   lon: 148.5,
   location_source: 'osm',

@@ -4,30 +4,39 @@ from datetime import date
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from quiet_camps.db.locations import ACTIVE_SINCE
-
 # A typical night resting on fewer past nights than this is noise, not a pattern.
 MIN_HISTORY = 3
+
+# The last night of history: the latest quarter isn't complete yet (ADR 0002).
+HISTORY_END = """
+SELECT (date_trunc('quarter', max(last_night)) - interval '1 day')::date AS last FROM campground
+"""
+# A campground is active if it was booked in the year before the history ends. A campground
+# open every season is; one renamed "... - OBSELETE" and retired, or closed for good, isn't.
+ACTIVE_DAYS = 365
 
 # ADR 0002: the nights asked for → their kind of night → each campground's typical night.
 # A campground must have a typical for every night asked for, with enough history: a missing
 # kind means it's usually closed then (Cape York in the wet), not quiet.
-# Pages are keyset: (busyness, id) is unique and ordered, so "after this one" never skips or
-# repeats a row. busyness is rounded because a float average can differ in its last bits
-# between runs, and the cursor compares it exactly.
-SEARCH = text("""
+# Equally quiet campgrounds go bigger first: peak is the campground's busy night (95th
+# percentile, in sites), so a real campground at 0% comes before a bush camp whose busy night
+# is one site.
+# Pages are keyset: (busyness, -peak, id) is unique and ordered, so "after this one" never
+# skips or repeats a row. busyness is rounded because a float average can differ in its last
+# bits between runs, and the cursor compares it exactly.
+SEARCH = text(f"""
 WITH asked AS (
     SELECT kind FROM calendar_day WHERE night >= :arrive AND night < :depart
 ),
 ranked AS (
     SELECT c.id, c.name, c.park_name,
            CAST(round(CAST(avg(t.busyness) AS numeric), 6) AS float8) AS busyness,
-           avg(t.sites) AS typical_sites, min(t.nights) AS history,
+           avg(t.sites) AS typical_sites, min(t.nights) AS history, max(t.peak) AS peak,
            c.lat, c.lon, c.location_source, c.location_flags, c.osm_type, c.osm_id
     FROM asked a
     JOIN campground_typical t ON t.kind = a.kind
     JOIN campground c ON c.id = t.campground_id
-    WHERE c.last_night >= :active_since
+    WHERE c.last_night > ({HISTORY_END}) - CAST(:active_days AS integer)
       AND (CAST(:park AS text) IS NULL OR c.park_name = :park)
       AND (CAST(:pattern AS text) IS NULL OR c.name ILIKE :pattern OR c.park_name ILIKE :pattern)
     GROUP BY c.id
@@ -35,8 +44,9 @@ ranked AS (
 )
 SELECT * FROM ranked
 WHERE CAST(:after_id AS integer) IS NULL
-   OR (busyness, id) > (CAST(:after_busyness AS float8), :after_id)
-ORDER BY busyness, id
+   OR (busyness, -peak, id)
+      > (CAST(:after_busyness AS float8), -CAST(:after_peak AS float8), :after_id)
+ORDER BY busyness, peak DESC, id
 LIMIT :limit
 """)
 
@@ -49,6 +59,7 @@ class QuietCampground:
     busyness: float  # mean over the nights asked for; 1.0 = as busy as its own busiest nights
     typical_sites: float
     history: int  # past nights behind the thinnest typical night
+    peak: float  # its busy night: the 95th percentile of its open nights, in sites
     lat: float | None
     lon: float | None
     location_source: str | None
@@ -59,9 +70,10 @@ class QuietCampground:
 
 @dataclass(frozen=True)
 class After:
-    """Where the previous page ended: the last campground's busyness and id."""
+    """Where the previous page ended: the last campground's busyness, peak and id."""
 
     busyness: float
+    peak: float
     id: int
 
 
@@ -95,8 +107,9 @@ async def search_quiet(
             "pattern": None if q is None else contains(q),
             "limit": limit,
             "after_busyness": None if after is None else after.busyness,
+            "after_peak": None if after is None else after.peak,
             "after_id": None if after is None else after.id,
-            "active_since": ACTIVE_SINCE,
+            "active_days": ACTIVE_DAYS,
             "min_history": MIN_HISTORY,
         },
     )

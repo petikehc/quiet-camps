@@ -9,6 +9,7 @@ SEARCH = "/campgrounds/quiet"
 # The Saturday of ISO week 10 in 2027: compared with week-10 Saturdays in 2022-2025.
 SATURDAY = {"arrive": "2027-03-13", "depart": "2027-03-14"}
 
+BIG = "Big Hollow camping area"  # also 0 on these Saturdays, but its busy night is 20 sites
 QUIET = "Quiet Creek camping area"
 TWIN = "Twin Hollow camping area"  # the same history as QUIET: a tie at 0
 MIDDLE = "Middle Creek camping area"
@@ -32,9 +33,17 @@ def names(client: TestClient, **params: Any) -> list[str]:
 def test_quietest_comes_first(seeded_client: TestClient) -> None:
     found = results(seeded_client)
 
-    assert {c["name"] for c in found[:2]} == {QUIET, TWIN}
-    assert found[0]["id"] < found[1]["id"]  # a tie goes to the lower id
-    assert [c["name"] for c in found[2:]] == [MIDDLE, BUSY]
+    assert found[0]["name"] == BIG  # equally quiet: the bigger campground first
+    assert {c["name"] for c in found[1:3]} == {QUIET, TWIN}
+    assert found[1]["id"] < found[2]["id"]  # the same size too: the lower id
+    assert [c["name"] for c in found[3:]] == [MIDDLE, BUSY]
+
+
+def test_a_result_says_how_big_its_busy_night_is(seeded_client: TestClient) -> None:
+    found = {c["name"]: c for c in results(seeded_client)}
+
+    assert found[BIG]["busy_night_sites"] == 20
+    assert found[QUIET]["busy_night_sites"] == 0  # booked on 4 of its ~124 open nights
 
 
 def test_busyness_is_against_each_campgrounds_own_busy_nights(seeded_client: TestClient) -> None:
@@ -50,8 +59,13 @@ def test_a_campground_closed_in_march_is_left_out_not_quiet(seeded_client: TestC
     assert "Closed Gorge camping area" not in names(seeded_client)
 
 
-def test_a_campground_not_booked_since_2024_is_left_out(seeded_client: TestClient) -> None:
-    assert "Retired Ridge camping area" not in names(seeded_client)
+def test_a_campground_not_booked_in_the_last_year_of_history_is_left_out(
+    seeded_client: TestClient,
+) -> None:
+    found = names(seeded_client)
+
+    assert "Retired Ridge camping area" not in found
+    assert "Lapsed Lagoon camping area" not in found  # March 2024; the history ends Dec 2025
 
 
 def test_a_campground_with_too_little_history_is_left_out(seeded_client: TestClient) -> None:
@@ -98,7 +112,7 @@ def test_next_continues_where_the_page_ended(seeded_client: TestClient) -> None:
     rest = page(seeded_client, limit=3, after=first["next"])
 
     assert first["next"] is not None
-    assert [c["name"] for c in rest["results"]] == [BUSY]
+    assert [c["name"] for c in rest["results"]] == [MIDDLE, BUSY]
     assert rest["next"] is None
 
 

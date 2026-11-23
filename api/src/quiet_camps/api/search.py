@@ -18,14 +18,15 @@ search_router = APIRouter(responses=INVALID)
 
 def encode_cursor(after: After) -> str:
     """Opaque to clients, so the paging can change without breaking them."""
-    return base64.urlsafe_b64encode(json.dumps([after.busyness, after.id]).encode()).decode()
+    position = [after.busyness, after.peak, after.id]
+    return base64.urlsafe_b64encode(json.dumps(position).encode()).decode()
 
 
 def decode_cursor(cursor: str) -> After:
     try:
-        busyness, campground_id = json.loads(base64.urlsafe_b64decode(cursor))
-        return After(float(busyness), int(campground_id))
-    except (ValueError, TypeError) as e:  # bad base64 or JSON, or not [number, number]
+        busyness, peak, campground_id = json.loads(base64.urlsafe_b64decode(cursor))
+        return After(float(busyness), float(peak), int(campground_id))
+    except (ValueError, TypeError) as e:  # bad base64 or JSON, or not 3 numbers
         raise ValueError("after must be a `next` from a previous page") from e
 
 
@@ -71,6 +72,9 @@ class QuietCampgroundOut(BaseModel):
     busyness: float  # 1.0 = as busy as its own busiest nights; can go above 1
     typical_sites: float
     history: int  # past nights behind the thinnest typical night
+    # Its busy night: the 95th percentile of its open nights, in sites. 1 or less is a
+    # campground that's rarely booked at all, so 0% says little about it.
+    busy_night_sites: float = Field(validation_alias="peak")
     lat: float | None
     lon: float | None
     location_source: str | None
@@ -101,7 +105,7 @@ async def quiet_campgrounds(
     shown = found[: params.limit]
     cursor = None
     if len(found) > params.limit:
-        cursor = encode_cursor(After(shown[-1].busyness, shown[-1].id))
+        cursor = encode_cursor(After(shown[-1].busyness, shown[-1].peak, shown[-1].id))
     return SearchPage(results=[QuietCampgroundOut.model_validate(c) for c in shown], next=cursor)
 
 

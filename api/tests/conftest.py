@@ -138,8 +138,13 @@ def seed_search_history(conn: Conn) -> None:
         book(conn, RANGE, "Closed Gorge camping area", date(year, 8, 13), sites=5)
     for year in (2024, 2025):  # below MIN_HISTORY
         book(conn, RANGE, "Thin Creek camping area", date.fromisocalendar(year, 10, 2))
-    for year in range(2012, 2016):  # not booked since ACTIVE_SINCE
+    for year in range(2022, 2026):  # empty Saturdays too, but a real campground: 20 sites
+        for day in range(1, 6):  # 1-5 March, before week 10's Saturday every year
+            book(conn, RANGE, "Big Hollow camping area", date(year, 3, day), sites=20)
+    for year in range(2012, 2016):  # long retired
         book(conn, RANGE, "Retired Ridge camping area", date.fromisocalendar(year, 10, 2))
+    for year in range(2021, 2025):  # last booked March 2024: over a year before history ends
+        book(conn, RANGE, "Lapsed Lagoon camping area", date.fromisocalendar(year, 10, 2))
     # The latest quarter isn't history yet; this night makes all of 2025 count.
     book(conn, RANGE, "Quiet Creek camping area", date(2026, 1, 15))
     book(conn, RANGE, "Twin Hollow camping area", date(2026, 1, 15))

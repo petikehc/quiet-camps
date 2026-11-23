@@ -11,13 +11,8 @@ from quiet_camps.api.campground_service import (
     NightCampers,
     YearCampground,
 )
-from quiet_camps.api.queries import MIN_HISTORY
+from quiet_camps.api.queries import HISTORY_END, MIN_HISTORY
 from quiet_camps.db.models import Campground
-
-# The last night of history: the latest quarter isn't complete yet (ADR 0002).
-HISTORY_END = """
-SELECT (date_trunc('quarter', max(last_night)) - interval '1 day')::date AS last FROM campground
-"""
 
 # Every night of the year for one campground (none if it doesn't exist): its typical night
 # from campground_typical, as the search reads it, and the sites actually booked. Booked

@@ -3,12 +3,14 @@ from datetime import date, timedelta
 from typing import Protocol
 
 from quiet_camps.api.errors import NotFound
-from quiet_camps.db.locations import ACTIVE_SINCE
+from quiet_camps.api.queries import ACTIVE_DAYS
 from quiet_camps.db.models import Campground
 
 
 class CampgroundSource(Protocol):
     async def get(self, campground_id: int) -> Campground | None: ...
+
+    async def history_end(self) -> date | None: ...
 
 
 class CampgroundNotFound(NotFound):
@@ -35,7 +37,7 @@ async def get_campground(source: CampgroundSource, campground_id: int) -> Campgr
     if campground is None:
         raise CampgroundNotFound(campground_id=campground_id)
 
-    active = False if campground.last_night is None else campground.last_night >= ACTIVE_SINCE
+    active = is_active(campground.last_night, await source.history_end())
 
     return CampgroundDetail(
         id=campground.id,
@@ -48,6 +50,13 @@ async def get_campground(source: CampgroundSource, campground_id: int) -> Campgr
         location_source=campground.location_source,
         location_flags=campground.location_flags,
     )
+
+
+def is_active(last_night: date | None, history_end: date | None) -> bool:
+    """Booked in the year before the history ends: the search's rule too (queries.SEARCH)."""
+    if last_night is None or history_end is None:
+        return False
+    return last_night > history_end - timedelta(days=ACTIVE_DAYS)
 
 
 @dataclass(frozen=True, kw_only=True)

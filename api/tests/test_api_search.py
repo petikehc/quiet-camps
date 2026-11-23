@@ -14,6 +14,7 @@ RESULT_FIELDS = {
     "busyness",
     "typical_sites",
     "history",
+    "busy_night_sites",
     "lat",
     "lon",
     "location_source",
@@ -58,7 +59,7 @@ BAD_PAGING = [
     ({**EASTER_2027, "limit": 0}, "limit below 1"),
     ({**EASTER_2027, "limit": 101}, "limit above 100"),
     ({**EASTER_2027, "after": "not-a-cursor"}, "after isn't base64 JSON"),
-    ({**EASTER_2027, "after": "WzFd"}, "after is [1], not [busyness, id]"),
+    ({**EASTER_2027, "after": "WzFd"}, "after is [1], not [busyness, peak, id]"),
 ]
 
 

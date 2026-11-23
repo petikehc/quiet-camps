@@ -406,6 +406,10 @@
       "QuietCampgroundOut": {
         "description": "One campground in a search: how busy it usually is on the nights asked for.",
         "properties": {
+          "busy_night_sites": {
+            "title": "Busy Night Sites",
+            "type": "number"
+          },
           "busyness": {
             "title": "Busyness",
             "type": "number"
@@ -500,6 +504,7 @@
           "busyness",
           "typical_sites",
           "history",
+          "busy_night_sites",
           "lat",
           "lon",
           "location_source",

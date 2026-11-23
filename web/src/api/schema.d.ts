@@ -300,6 +300,8 @@ export interface components {
          * @description One campground in a search: how busy it usually is on the nights asked for.
          */
         QuietCampgroundOut: {
+            /** Busy Night Sites */
+            busy_night_sites: number;
             /** Busyness */
             busyness: number;
             /** History */
