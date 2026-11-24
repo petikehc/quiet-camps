@@ -10,6 +10,7 @@ from quiet_camps.api.ask_service import (
     ask,
     coming_school_holidays,
     first_week,
+    long_weekends,
 )
 from quiet_camps.api.place_service import Place
 from quiet_camps.ingest.school_holidays import SchoolHoliday
@@ -118,3 +119,38 @@ def test_only_coming_school_holidays_are_offered() -> None:
     coming = coming_school_holidays(date(2026, 11, 24), [spring, summer, far])
 
     assert [h.name for h in coming] == ["summer school holidays, first week"]
+
+
+QLD_2026_27 = {
+    date(2026, 12, 25): "Christmas Day",
+    date(2026, 12, 26): "Boxing Day",
+    date(2026, 12, 28): "Boxing Day (observed)",
+    date(2027, 1, 1): "New Year's Day",
+    date(2027, 1, 26): "Australia Day",
+    date(2027, 8, 11): "The Royal Queensland Show",
+}
+
+
+def test_long_weekends_are_runs_of_three_or_more_days_off() -> None:
+    weekends = long_weekends(date(2026, 11, 24), QLD_2026_27)
+
+    assert [(w.name, w.arrive, w.depart) for w in weekends] == [
+        # Christmas Day on a Friday, Boxing Day on Saturday and its Monday off: Thursday night
+        # to Monday morning.
+        ("Christmas Day long weekend", date(2026, 12, 24), date(2026, 12, 28)),
+        ("New Year's Day long weekend", date(2026, 12, 31), date(2027, 1, 3)),
+    ]
+
+
+def test_a_midweek_holiday_is_not_a_long_weekend() -> None:
+    """Australia Day 2027 is a Tuesday, the Ekka a Wednesday: one day off each."""
+    names = [w.name for w in long_weekends(date(2027, 1, 5), QLD_2026_27)]
+
+    assert names == []
+
+
+def test_the_next_long_weekend_from_today_is_christmas() -> None:
+    """From the real Queensland calendar, as /ask gives the model."""
+    first = long_weekends(date(2026, 11, 24))[0]
+
+    assert (first.arrive, first.depart) == (date(2026, 12, 24), date(2026, 12, 28))

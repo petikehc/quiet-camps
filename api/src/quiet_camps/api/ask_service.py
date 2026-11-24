@@ -1,10 +1,12 @@
 """Plain words to dates and a place: "next weekend around Sunshine Coast". A model reads the
 words (bedrock_reader.py); this checks what it read and finds the place (ADR 0005)."""
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Literal, Protocol
 
+import holidays as public_holidays
 from pydantic import BaseModel, Field
 
 from quiet_camps.api.place_service import Place, PlaceSource, find_place
@@ -52,6 +54,37 @@ def first_week(holiday: SchoolHoliday) -> Holiday:
         arrive=arrive,
         depart=min(arrive + WEEK, holiday.last_night + timedelta(days=1)),
     )
+
+
+def queensland_holidays(today: date) -> Mapping[date, str]:
+    """Queensland's public holidays this year and next, by date."""
+    return public_holidays.country_holidays("AU", subdiv="QLD", years=[today.year, today.year + 1])
+
+
+def long_weekends(today: date, public: Mapping[date, str] | None = None) -> list[Holiday]:
+    """Runs of three or more days off (a public holiday joined to a weekend) in the next year,
+    as stays: from the night before the first day off to the morning of the last. Worked out
+    here, so "the next long weekend" is never the model's arithmetic."""
+    public = queensland_holidays(today) if public is None else public
+
+    def day_off(day: date) -> bool:
+        return day.weekday() >= SATURDAY or day in public
+
+    weekends: list[Holiday] = []
+    for day in sorted(d for d in public if today < d <= today + AHEAD):
+        if weekends and day <= weekends[-1].depart:
+            continue  # inside the run already found (Christmas and Boxing Day)
+        start, end = day, day
+        while day_off(start - timedelta(days=1)):
+            start -= timedelta(days=1)
+        while day_off(end + timedelta(days=1)):
+            end += timedelta(days=1)
+        if (end - start).days + 1 >= 3:
+            name = public[day].split("; ")[0]
+            weekends.append(
+                Holiday(name=f"{name} long weekend", arrive=start - timedelta(days=1), depart=end)
+            )
+    return weekends
 
 
 def coming_school_holidays(today: date, holidays: list[SchoolHoliday]) -> list[Holiday]:
