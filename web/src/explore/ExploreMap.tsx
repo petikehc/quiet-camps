@@ -9,6 +9,7 @@ import { BAND_NAMES, bandOf } from './bands'
 import type { Band } from './filters'
 import { shownLocation, type Certainty } from './location'
 import { nightStyle } from './nightStyle'
+import { OUTSIDE_QUEENSLAND } from './queensland'
 import type { QuietCampground } from './queries'
 
 // MapLibre parses tiles in a web worker it loads from a file beside its own module. Vite moves
@@ -22,6 +23,12 @@ const STYLE = 'https://tiles.openfreemap.org/styles/dark'
 const QUEENSLAND: [[number, number], [number, number]] = [
   [137.9, -29.2],
   [153.6, -9.1],
+]
+// As far as the map pans or zooms out: Queensland and a little sea, north to the Torres Strait,
+// and south far enough that its southern edge can be dragged up clear of the year strip.
+const MAX_BOUNDS: [[number, number], [number, number]] = [
+  [137.0, -33],
+  [155.6, -9.05],
 ]
 const CAMPGROUNDS = 'campgrounds'
 const PINS = 'campground-points'
@@ -88,6 +95,7 @@ export function ExploreMap({
         })
       },
       bounds: QUEENSLAND,
+      maxBounds: MAX_BOUNDS,
       attributionControl: false,
     })
     // The credits at the top: the year strip covers the foot of the map.
@@ -252,6 +260,16 @@ function addLayers(map: maplibregl.Map) {
     ['get', 'certainty'],
     certainty,
   ]
+
+  // Outside Queensland sinks into the night: over the sea its edge can't be seen, over land the
+  // neighbours and their names fade. Drawn over the basemap, under the circle and the pins.
+  map.addSource('outside', { type: 'geojson', data: OUTSIDE_QUEENSLAND })
+  map.addLayer({
+    id: 'outside-queensland',
+    type: 'fill',
+    source: 'outside',
+    paint: { 'fill-color': token('--night'), 'fill-opacity': 0.82 },
+  })
 
   map.addSource(NEAR, { type: 'geojson', data: circle(undefined) })
   map.addLayer({

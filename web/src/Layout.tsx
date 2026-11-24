@@ -1,4 +1,5 @@
 import { Link, Outlet, useMatchRoute } from '@tanstack/react-router'
+import { NightSoundsProvider, SoundSwitch } from './sound/NightSoundsProvider'
 
 export function Layout() {
   // The homepage runs its night map edge to edge, with the header floating over it; the
@@ -9,7 +10,7 @@ export function Layout() {
   const explore = Boolean(matchRoute({ to: '/explore' }))
 
   return (
-    <>
+    <NightSoundsProvider>
       <header className={home ? 'site-header over' : 'site-header'}>
         <div className="wrap">
           <h1>
@@ -28,7 +29,9 @@ export function Layout() {
             </Link>
           </h1>
           <nav className="site-nav" aria-label="Pages">
-            <Link to="/explore" activeOptions={{ includeSearch: false }}>
+            <SoundSwitch />
+            {/* On the map already: keep your search, so the link to this page doesn't wipe it. */}
+            <Link to="/explore" search={explore ? true : undefined} activeOptions={{ includeSearch: false }}>
               Map
             </Link>
           </nav>
@@ -49,7 +52,8 @@ export function Layout() {
             , © State of Queensland,{' '}
             <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Locations: ©{' '}
             <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors.
-            Boundaries and postal areas: ABS, © Commonwealth of Australia, CC BY 4.0.
+            Boundaries and postal areas: ABS, © Commonwealth of Australia, CC BY 4.0. Night
+            sounds: <a href="/sounds/CREDITS.md">public-domain recordings</a> from Freesound.
           </p>
           <p>
             Past bookings, not live availability. Not affiliated with or endorsed by Queensland
@@ -58,6 +62,6 @@ export function Layout() {
         </div>
       </footer>
       )}
-    </>
+    </NightSoundsProvider>
   )
 }

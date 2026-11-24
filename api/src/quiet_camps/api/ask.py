@@ -23,6 +23,7 @@ from quiet_camps.api.ask_service import (
     ReaderUnavailable,
     ask,
     coming_school_holidays,
+    long_weekends,
 )
 from quiet_camps.api.bedrock_reader import make_reader
 from quiet_camps.api.campground_repository import HOLIDAY_NIGHTS
@@ -117,7 +118,7 @@ def reader_for(state: AskState, settings: Settings) -> Reader:
 
 async def coming_holidays(session: AsyncSession, today: date) -> list[Holiday]:
     """The next year's public holidays from the calendar, so the model needn't work out Easter,
-    and the school holidays' first weeks, in date order."""
+    its long weekends, and the school holidays' first weeks, in date order."""
     last = today + timedelta(days=365)
     rows = await session.execute(HOLIDAY_NIGHTS, {"first": today, "last": last})
     spans = holiday_spans([HolidayNight(**row) for row in rows.mappings()], today)
@@ -130,7 +131,7 @@ async def coming_holidays(session: AsyncSession, today: date) -> list[Holiday]:
         for s in spans
     ]
     school = coming_school_holidays(today, school_holidays())
-    return sorted([*public, *school], key=lambda h: h.arrive)
+    return sorted([*public, *long_weekends(today), *school], key=lambda h: h.arrive)
 
 
 def normalised(text: str) -> str:

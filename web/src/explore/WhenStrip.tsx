@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { addDays } from './filters'
 import { holidayOn, nightDate } from '../charts/dates'
 import { formatNight, holidayName } from '../charts/scales'
@@ -39,41 +39,62 @@ export function WhenStrip({ coming, arrive, depart, near, onDates }: Props) {
     return `${formatNight(nightDate(firstNight, n))}${names.length ? `, ${names.join(', ')}` : ''}: ${how}`
   }
 
+  // Folds down to its heading, to free the foot of the map.
+  const [open, setOpen] = useState(true)
+
   return (
-    <section className="explore-when" aria-label="The coming year">
-      <h2>
-        {near ? `Around ${near}` : 'Across Queensland'}: the coming year{' '}
-        <span>Drag to move your dates</span>
-      </h2>
-      {values.every((v) => v === null) && (
-        <p className="when-empty">None of these campgrounds is usually open in the coming year.</p>
+    <section className={open ? 'explore-when' : 'explore-when closed'} aria-label="The coming year">
+      <div className="when-head">
+        <h2>
+          {near ? `Around ${near}` : 'Across Queensland'}: the coming year{' '}
+          {open && <span>Drag to move your dates</span>}
+        </h2>
+        <button
+          type="button"
+          className="when-toggle"
+          aria-expanded={open}
+          aria-controls="when-body"
+          aria-label="The coming year"
+          onClick={() => setOpen(!open)}
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+            <path d="M3 5l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      </div>
+      {open && (
+        <div id="when-body">
+          {values.every((v) => v === null) && (
+            <p className="when-empty">None of these campgrounds is usually open in the coming year.</p>
+          )}
+          <YearStrip
+            firstNight={firstNight}
+            values={values}
+            holidays={holidays}
+            schoolHolidays={schoolHolidays}
+            night={Math.min(Math.max(from, 0), values.length - 1)}
+            onSeek={(n) => {
+              const arriving = nightDate(firstNight, n)
+              onDates(arriving, addDays(arriving, Math.max(1, to - from)))
+            }}
+            labels={labels}
+            stay={{ from, to }}
+            ariaLabel="Arrival night"
+            valueText={said}
+          />
+          <ul className="legend when-key" aria-label="Shaded on the strip">
+            <li>
+              <span className="swatch year-school" /> Queensland school holidays
+            </li>
+            <li>
+              <span className="swatch year-holiday" /> Public holidays and long weekends
+            </li>
+            <li>
+              <span className="swatch year-stay" /> Your nights
+            </li>
+          </ul>
+        </div>
       )}
-      <YearStrip
-        firstNight={firstNight}
-        values={values}
-        holidays={holidays}
-        schoolHolidays={schoolHolidays}
-        night={Math.min(Math.max(from, 0), values.length - 1)}
-        onSeek={(n) => {
-          const arriving = nightDate(firstNight, n)
-          onDates(arriving, addDays(arriving, Math.max(1, to - from)))
-        }}
-        labels={labels}
-        stay={{ from, to }}
-        ariaLabel="Arrival night"
-        valueText={said}
-      />
-      <ul className="legend when-key" aria-label="Shaded on the strip">
-        <li>
-          <span className="swatch year-school" /> Queensland school holidays
-        </li>
-        <li>
-          <span className="swatch year-holiday" /> Public holidays and long weekends
-        </li>
-        <li>
-          <span className="swatch year-stay" /> Your nights
-        </li>
-      </ul>
     </section>
   )
 }

@@ -26,6 +26,27 @@ export function paceByNight(nights: number, holidays: Trips['holidays']): Float3
   return pace
 }
 
+const SWELL_NIGHTS = 14 // a fortnight around the night: the sound follows stretches, not nights
+
+// How busy the fortnight around each night is, from 0 (an ordinary stretch: the year's median
+// night) to 1 (as busy as its busiest nights, the 95th percentile), wrapping round the year as
+// the loop does. The night sounds' busy layer follows it.
+export function swellByNight(totals: ArrayLike<number>): Float32Array {
+  const n = totals.length
+  const sorted = Array.from(totals).sort((a, b) => a - b)
+  const median = sorted[Math.floor(n / 2)] ?? 0
+  const busy = sorted[Math.floor(n * 0.95)] ?? 0
+  const swell = new Float32Array(n)
+  if (busy <= median) return swell
+  const half = SWELL_NIGHTS / 2
+  for (let night = 0; night < n; night++) {
+    let sum = 0
+    for (let k = -half; k < half; k++) sum += totals[(((night + k) % n) + n) % n]
+    swell[night] = Math.min(1, Math.max(0, (sum / SWELL_NIGHTS - median) / (busy - median)))
+  }
+  return swell
+}
+
 // Where the year starts playing: today's date a year ago, "this time last year", kept inside the
 // trips' nights. 29 February becomes the 28th.
 export function startNight(trips: Pick<Trips, 'first_night' | 'nights'>, today: string): number {

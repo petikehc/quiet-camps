@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bandNote, bandOf, ordinal, rankWords, usually } from './bands'
+import { bandNote, bandOf, ordinal, rankWords, soundSwell, usually } from './bands'
 
 describe('bandOf', () => {
   it('splits busyness at a quarter and 60%', () => {
@@ -92,5 +92,17 @@ describe('rankWords', () => {
 
   it('says when it is the only one in its band', () => {
     expect(rankWords('quiet', 1, 1)).toBe('The only quiet one for these nights.')
+  })
+})
+
+describe('soundSwell', () => {
+  it('is silent for quiet nights and full for busy ones, as the bands are', () => {
+    expect(soundSwell([0.1, 0.2, null], 0, 3)).toBe(0) // usually quiet
+    expect(soundSwell([0.7, 0.9], 0, 2)).toBe(1) // usually busy
+    expect(soundSwell([0.1, 0.425, 0.1], 1, 2)).toBeCloseTo(0.5) // halfway between the bands' edges
+  })
+
+  it('is the quiet bed when no night has a value', () => {
+    expect(soundSwell([null, null], 0, 2)).toBe(0)
   })
 })

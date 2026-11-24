@@ -3,8 +3,9 @@ import { holidayOn, nightDate } from '../charts/dates'
 import { formatNight, holidayName } from '../charts/scales'
 import { peaks } from '../charts/strip'
 import { YearStrip } from '../charts/YearStrip'
-import { nightlySites, nightOffsets, type Trips } from './trips'
+import { nightlySites, nightOffsets, swellByNight, type Trips } from './trips'
 import { useEased } from './useEased'
+import { useSoundScene } from '../sound/scene'
 
 const NAMED = 3 // peaks named on the strip
 const APART = 60 // nights between them, so their names don't collide
@@ -28,6 +29,10 @@ export function TimeControls({ trips, night, playing, onPlaying, onSeek }: Props
       }),
     [totals, trips],
   )
+  // The night sounds (switched in the header) follow the stretch the year is playing through.
+  const swell = useMemo(() => swellByNight(totals), [totals])
+  useSoundScene(swell[night] ?? 0, playing)
+
   const said = (n: number) => {
     const h = holidayOn(trips.holidays, n)
     const on = formatNight(nightDate(trips.first_night, n))

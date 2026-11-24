@@ -22,8 +22,9 @@ park, and fill in only what they said. Leave a field null when they didn't say i
 
 Dates
 - arrive is the first night; depart is the morning they leave.
-- Today's date and the coming holidays are given. For a named holiday or "the long weekend", \
-use those holiday dates.
+- Today's date and the coming holidays are given. For a named holiday, use its dates.
+- "A long weekend", "the long weekend" or "next long weekend": the first one given whose name \
+ends in "long weekend", unless they name the holiday.
 - A holiday on a Tuesday or Thursday, asked for as a "long weekend": people take the day \
 between off, so from the Friday night before a Tuesday, or to the Sunday morning after a \
 Thursday.
