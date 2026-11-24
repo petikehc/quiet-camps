@@ -3,10 +3,28 @@ import { projection } from '../projection'
 
 export type Trips = components['schemas']['TripsOut']
 
-export const DAY = 0.25 // seconds of animation per night: a year in about 90 seconds
+export const DAY = 0.5 // seconds of animation per night: a year in about 3 minutes, a month in 15 s
 export const TRAIL = 0.35 // a trail's tail, as a share of its flight
 // Australia's middle, so the continent keeps its shape.
 export const project = projection({ lon: 134, lat: -28 })
+
+export const HOLIDAY_PACE = 0.5 // the year slows to half speed for its holidays
+
+// How fast each night plays, as a share of DAY: full speed, half on holidays and their long
+// weekends, and three quarters on the night either side, so it eases in and out.
+export function paceByNight(nights: number, holidays: Trips['holidays']): Float32Array {
+  const pace = new Float32Array(nights).fill(1)
+  const ease = (HOLIDAY_PACE + 1) / 2
+  for (const h of holidays) {
+    for (const n of [h.night - 1, h.night + h.nights]) {
+      if (n >= 0 && n < nights) pace[n] = Math.min(pace[n], ease)
+    }
+    for (let n = Math.max(0, h.night); n < Math.min(nights, h.night + h.nights); n++) {
+      pace[n] = HOLIDAY_PACE
+    }
+  }
+  return pace
+}
 
 // Where the year starts playing: today's date a year ago, "this time last year", kept inside the
 // trips' nights. 29 February becomes the 28th.
@@ -48,8 +66,9 @@ export function jitter(entry: number): number {
 
 // Seconds in the air for a trip this long (in degrees of latitude): a short hop to the coast
 // still reads as a trip, and a trip across the country doesn't take all week.
+// In nights, so trails slow down with the days and the map stays as full.
 export function flightSeconds(distance: number): number {
-  return 0.6 + 0.35 * Math.sqrt(distance)
+  return (2.4 + 1.4 * Math.sqrt(distance)) * DAY
 }
 const LONGEST_FLIGHT = flightSeconds(45) // corner to corner
 

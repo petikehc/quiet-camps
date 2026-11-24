@@ -10,7 +10,16 @@ import { localDay } from '../explore/filters'
 import { monthBoard, monthOf, months, quietMask, usualNightly, type Count } from './quiet'
 import { NightFigure, TimeControls } from './TimeControls'
 import type { Seek } from './TripsScene'
-import { busiestNight, nightOffsets, periodWords, project, startNight, type Trips } from './trips'
+import {
+  busiestNight,
+  DAY,
+  nightOffsets,
+  paceByNight,
+  periodWords,
+  project,
+  startNight,
+  type Trips,
+} from './trips'
 
 // three.js is most of a megabyte: the page shows the outline below until it arrives.
 const TripsScene = lazy(() => import('./TripsScene'))
@@ -266,7 +275,7 @@ function Board({ trips, night }: { trips: Trips; night: number }) {
         ) : (
           <p>None: every regular campground had at least half its usual {month}.</p>
         )}
-        <p>Campsites arriving in the month, and in an average month there.</p>
+        <p>Campsites booked from a night in the month, and in an average month there.</p>
       </div>
     </div>
   )
@@ -285,8 +294,9 @@ function About({ trips }: { trips: Trips }) {
         campsites, and a campground glows as they land. {capitalised(periodWords(trips))},{' '}
         {total.toLocaleString()} campsites were booked from{' '}
         {trips.origins.length.toLocaleString()} postcodes at{' '}
-        {trips.campgrounds.length.toLocaleString()} campgrounds. The year plays in about a minute
-        and a half, then starts again.
+        {trips.campgrounds.length.toLocaleString()} campgrounds. The year plays in about{' '}
+        {Math.round(playSeconds(trips) / 60)} minutes, slowing down for the holidays, then starts
+        again.
       </p>
       <p>
         Teal rings mark campgrounds having a quiet month: open, but at half their usual month or
@@ -301,6 +311,11 @@ function About({ trips }: { trips: Trips }) {
       </p>
     </div>
   )
+}
+
+// How long the year takes to play, in seconds of real time.
+function playSeconds(trips: Trips): number {
+  return paceByNight(trips.nights, trips.holidays).reduce((sum, pace) => sum + DAY / pace, 0)
 }
 
 function capitalised(words: string): string {

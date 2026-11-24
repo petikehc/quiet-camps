@@ -549,6 +549,11 @@ body:has(.home) {
     animation: none;
   }
 
+  .home-now .home-holiday,
+  .year-holiday {
+    transition: none;
+  }
+
 }
 
 /* The left column is time: the headline and your dates at the top, where the year is at the
@@ -683,9 +688,23 @@ body:has(.home) {
   color: var(--night-text);
 }
 
-.home-now b {
-  font-weight: 600;
+/* The holiday being played through, large over the date. Its line is always there, so the
+   figure doesn't jump when it fades in. */
+.home-now .home-holiday {
+  min-height: 1.2em;
+  margin-bottom: 0.2rem;
+  font: 800 clamp(1.25rem, 2.2vw, 1.875rem) / 1.1 var(--display);
   color: var(--trail-head);
+  opacity: 0;
+  transform: translateY(0.3rem);
+  transition:
+    opacity 500ms ease-out,
+    transform 500ms ease-out;
+}
+
+.home-now .home-holiday.on {
+  opacity: 1;
+  transform: none;
 }
 
 .home-now strong {
@@ -880,6 +899,12 @@ body:has(.home) {
 
 .year-holiday {
   fill: var(--night-land);
+  transition: fill 400ms ease-out;
+}
+
+/* The holiday the playhead is in lights up: the slow stretch of the year. */
+.year-holiday.lit {
+  fill: color-mix(in srgb, var(--trail) 32%, var(--night-land));
 }
 
 .year-area {

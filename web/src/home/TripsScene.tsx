@@ -4,6 +4,7 @@ import * as THREE from 'three'
 import australia from './australia.json'
 import {
   DAY,
+  paceByNight,
   flightSeconds,
   inFlight,
   jitter,
@@ -294,6 +295,7 @@ function Flights({ trips, startNight, seek, playing, drift, quiet, onNight }: Pr
   const lines = useRef<THREE.LineSegments<THREE.InstancedBufferGeometry, THREE.ShaderMaterial>>(null)
   const dots = useRef<THREE.Points<THREE.BufferGeometry, THREE.ShaderMaterial>>(null)
   const time = useRef(startNight * DAY) // seconds into the loop
+  const pace = useMemo(() => paceByNight(trips.nights, trips.holidays), [trips])
   const shown = useRef(-1) // the night the buffers were filled for
   const drifted = useRef(0) // seconds of drift, which only moves while playing
   const played = useRef(0) // seconds played, for the push in on the coast
@@ -320,7 +322,9 @@ function Flights({ trips, startNight, seek, playing, drift, quiet, onNight }: Pr
   useFrame((_, delta) => {
     if (!lines.current || !dots.current) return
     if (playing) {
-      time.current = (time.current + delta) % loop
+      // Slower through the holidays: the trails slow too, since they're timed in nights.
+      const now = Math.min(trips.nights - 1, Math.floor(time.current / DAY))
+      time.current = (time.current + delta * pace[now]) % loop
       if (drift) drifted.current += delta
       played.current += delta
     }

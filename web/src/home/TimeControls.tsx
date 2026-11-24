@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { holidayOn, nightDate } from '../charts/dates'
 import { formatNight, holidayName } from '../charts/scales'
 import { peaks } from '../charts/strip'
@@ -31,7 +31,7 @@ export function TimeControls({ trips, night, playing, onPlaying, onSeek }: Props
   const said = (n: number) => {
     const h = holidayOn(trips.holidays, n)
     const on = formatNight(nightDate(trips.first_night, n))
-    return `${on}${h ? `, ${holidayName(h.name)}` : ''}: ${totals[n].toLocaleString()} campsites arriving`
+    return `${on}${h ? `, ${holidayName(h.name)}` : ''}: ${totals[n].toLocaleString()} campsites booked from that night`
   }
 
   return (
@@ -70,13 +70,16 @@ export function NightFigure({ trips, night }: { trips: Trips; night: number }) {
   const totals = useMemo(() => nightlySites(trips, nightOffsets(trips.per_night)), [trips])
   const holiday = holidayOn(trips.holidays, night)
   const count = useEased(totals[night])
+  // The holiday's name fades in while the year plays through it, and keeps its words while it
+  // fades out again.
+  const name = holiday && holidayName(holiday.name)
+  const [lastName, setLastName] = useState(name)
+  if (name && name !== lastName) setLastName(name)
   return (
     <p className="home-now" aria-hidden="true">
-      <span>
-        {formatNight(nightDate(trips.first_night, night))}
-        {holiday && <b> · {holidayName(holiday.name)}</b>}
-      </span>
-      <strong>{Math.round(count).toLocaleString()}</strong> campsites arriving
+      <span className={name ? 'home-holiday on' : 'home-holiday'}>{lastName}</span>
+      <span>{formatNight(nightDate(trips.first_night, night))}</span>
+      <strong>{Math.round(count).toLocaleString()}</strong> campsites booked from that night
     </p>
   )
 }

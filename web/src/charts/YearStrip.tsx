@@ -92,7 +92,7 @@ export function YearStrip({
         {holidays.map((h) => (
           <rect
             key={h.night}
-            className="year-holiday"
+            className={night >= h.night && night < h.night + h.nights ? 'year-holiday lit' : 'year-holiday'}
             x={shape.x(h.night)}
             width={Math.max(3, shape.x(h.night + h.nights) - shape.x(h.night))}
             y={0}

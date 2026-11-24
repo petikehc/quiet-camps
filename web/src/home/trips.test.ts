@@ -8,6 +8,7 @@ import {
   nightlySites,
   mostInFlight,
   nightOffsets,
+  paceByNight,
   periodWords,
   startNight,
   sitesOn,
@@ -59,7 +60,7 @@ describe('jitter', () => {
 })
 
 describe('trailAlpha', () => {
-  const flight = flightSeconds(4) // 1.3 s
+  const flight = flightSeconds(4) // 5.2 nights
 
   it('has no trail before it leaves', () => {
     expect(trailAlpha(-0.1, flight, 0)).toBe(0)
@@ -151,5 +152,22 @@ describe('startNight', () => {
 
   it('takes 28 February for a 29 February', () => {
     expect(startNight({ first_night: '2026-04-01', nights: 365 }, '2028-02-29')).toBe(333) // 28 Feb 2027
+  })
+})
+
+describe('paceByNight', () => {
+  // Ten nights, a two-night holiday on nights 4 and 5.
+  const pace = paceByNight(10, [{ name: 'easter', night: 4, nights: 2 }])
+
+  it('plays holidays at half speed, easing in and out over a night either side', () => {
+    expect([...pace]).toEqual([1, 1, 1, 0.75, 0.5, 0.5, 0.75, 1, 1, 1])
+  })
+
+  it('eases into a holiday that starts the year, without reaching outside it', () => {
+    expect([...paceByNight(3, [{ name: 'christmas', night: 0, nights: 1 }])]).toEqual([0.5, 0.75, 1])
+  })
+
+  it('plays an ordinary year at full speed', () => {
+    expect([...paceByNight(3, [])]).toEqual([1, 1, 1])
   })
 })
