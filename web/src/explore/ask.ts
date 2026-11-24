@@ -28,7 +28,7 @@ export function missedWords(answer: Answer): string | undefined {
     !answer.arrive && 'the dates',
     !answer.place && answer.place_asked && `“${answer.place_asked}” in Queensland`,
   ].filter(Boolean)
-  return missed.length ? `Couldn't find ${missed.join(' or ')}: set it on the map page.` : undefined
+  return missed.length ? `Couldn't find ${missed.join(' or ')}: set it on the map.` : undefined
 }
 
 export function failedWords(error: Error): string {

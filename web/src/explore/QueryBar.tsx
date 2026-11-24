@@ -55,7 +55,7 @@ function Ask({ filters, onChange }: Props) {
   const [note, setNote] = useState<string>()
   const ask = useAsk(
     (answer) => {
-      setNote(missedWords(answer)?.replace('on the map page', 'below'))
+      setNote(missedWords(answer)?.replace('on the map', 'below'))
       onChange({ ...filters, ...filtersFrom(answer, filters) })
     },
     (error) => setNote(failedWords(error).replace('on the map', 'below')),

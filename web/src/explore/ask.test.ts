@@ -37,7 +37,7 @@ describe('filtersFrom', () => {
 describe('missedWords', () => {
   it('says what it could not find', () => {
     expect(missedWords(answer({ place_asked: 'Tweed Heads' }))).toBe(
-      "Couldn't find the dates or “Tweed Heads” in Queensland: set it on the map page.",
+      "Couldn't find the dates or “Tweed Heads” in Queensland: set it on the map.",
     )
     expect(missedWords(answer({ arrive: '2027-03-25', depart: '2027-03-29', place: noosa }))).toBeUndefined()
   })

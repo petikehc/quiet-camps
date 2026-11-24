@@ -29,7 +29,7 @@ export function Layout() {
           </h1>
           <nav className="site-nav" aria-label="Pages">
             <Link to="/explore" activeOptions={{ includeSearch: false }}>
-              Explore
+              Map
             </Link>
           </nav>
         </div>

@@ -27,8 +27,6 @@ export function TimeControls({ trips, night, playing, onPlaying, onSeek }: Props
       }),
     [totals, trips],
   )
-  const date = nightDate(trips.first_night, night)
-  const holiday = holidayOn(trips.holidays, night)
   const said = (n: number) => {
     const h = holidayOn(trips.holidays, n)
     const on = formatNight(nightDate(trips.first_night, n))
@@ -38,14 +36,13 @@ export function TimeControls({ trips, night, playing, onPlaying, onSeek }: Props
   return (
     <div className="home-time">
       <div className="home-now-row">
-        {/* Numbers that change four times a second: not live regions, or a screen reader
-            would never stop. The strip's slider says where the year is when asked. */}
-        <p className="home-now" aria-hidden="true">
+        <p className="home-key">
           <span>
-            {formatNight(date)}
-            {holiday && <b> · {holidayName(holiday.name)}</b>}
+            <span className="key-trip" /> a trip, home to campground
+          </span>{' '}
+          <span>
+            <span className="key-ring" /> a quiet month: half its usual or less
           </span>
-          <strong>{totals[night].toLocaleString()}</strong> campsites arriving
         </p>
         {/* The label says what a press does; aria-pressed as well would announce "Play, pressed". */}
         <button type="button" className="home-play" onClick={() => onPlaying(!playing)}>
@@ -63,6 +60,22 @@ export function TimeControls({ trips, night, playing, onPlaying, onSeek }: Props
         valueText={said}
       />
     </div>
+  )
+}
+
+// Tonight's date and arrivals, big over the map. Numbers that change four times a second: not a
+// live region, or a screen reader would never stop; the strip's slider says it when asked.
+export function NightFigure({ trips, night }: { trips: Trips; night: number }) {
+  const totals = useMemo(() => nightlySites(trips, nightOffsets(trips.per_night)), [trips])
+  const holiday = holidayOn(trips.holidays, night)
+  return (
+    <p className="home-now" aria-hidden="true">
+      <span>
+        {formatNight(nightDate(trips.first_night, night))}
+        {holiday && <b> · {holidayName(holiday.name)}</b>}
+      </span>
+      <strong>{totals[night].toLocaleString()}</strong> campsites arriving
+    </p>
   )
 }
 

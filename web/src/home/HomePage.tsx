@@ -1,13 +1,13 @@
 import { queryOptions, useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { lazy, Suspense, useMemo, useState, type FormEvent } from 'react'
+import { lazy, Suspense, useMemo, useRef, useState, type FormEvent } from 'react'
 import { api } from '../api/client'
 import { nightDate } from '../charts/dates'
 import { unwrap } from '../api/errors'
 import australia from './australia.json'
 import { failedWords, filtersFrom, useAsk } from '../explore/ask'
 import { monthBoard, monthOf, months, quietMask, usualNightly, type Count } from './quiet'
-import { TimeControls } from './TimeControls'
+import { NightFigure, TimeControls } from './TimeControls'
 import type { Seek } from './TripsScene'
 import { busiestNight, homeYear, nightOffsets, project, type Trips } from './trips'
 
@@ -45,11 +45,11 @@ export function HomePage() {
       <section className="home-stage" aria-labelledby="home-title">
         <div className="home-left">
           <div className="home-intro">
-            <h2 id="home-title">A year of Queensland camping.</h2>
+            <h2 id="home-title">The map you need to beat the crowd.</h2>
             <p>
-              Each line is a camping trip in Queensland's national parks in {YEAR}, from the
-              camper's home postcode. Watch where everyone went, and the campgrounds they left
-              quiet.
+              Each line is a camping trip to a Queensland national park in {YEAR}, from the
+              camper's home postcode. Most end up in the same few places; the campgrounds in
+              between stay quiet. Tell us where and when, and we'll find you one.
             </p>
             <HomeAsk />
           </div>
@@ -76,6 +76,7 @@ export function HomePage() {
         </div>
         <div className="home-map">
           <Outline />
+          {trips && <NightFigure trips={trips} night={night} />}
           {trips && <Live trips={trips} night={night} seek={seek} playing={playing} onNight={setNight} />}
         </div>
         {trips && <Board trips={trips} night={night} />}
@@ -85,12 +86,17 @@ export function HomePage() {
   )
 }
 
-// One question in plain words: /ask reads it, and the map page opens on what it understood.
-// If /ask can't be asked, it says so, and the map is a link away.
+// Asked with nothing typed, the box offers these: each one asks.
+const EXAMPLES = ['Easter near Noosa', 'next long weekend from Brisbane', 'school holidays around Cairns']
+
+// One question in plain words: /ask reads it, and the map opens on what it understood. If /ask
+// can't be asked, it says so, and the map is a link away.
 function HomeAsk() {
   const navigate = useNavigate()
+  const input = useRef<HTMLInputElement>(null)
   const [text, setText] = useState('')
   const [note, setNote] = useState<string>()
+  const [examples, setExamples] = useState(false)
   const ask = useAsk(
     (answer) => void navigate({ to: '/explore', search: filtersFrom(answer) }),
     (error) => setNote(failedWords(error)),
@@ -98,7 +104,16 @@ function HomeAsk() {
 
   function submit(e: FormEvent) {
     e.preventDefault()
-    if (text.trim().length >= 3) ask.mutate(text.trim())
+    if (text.trim().length >= 3) return ask.mutate(text.trim())
+    setNote(undefined)
+    setExamples(true)
+    input.current?.focus()
+  }
+
+  function askExample(example: string) {
+    setText(example)
+    setExamples(false)
+    ask.mutate(example)
   }
 
   return (
@@ -107,6 +122,7 @@ function HomeAsk() {
       <div className="home-ask-row">
         <input
           id="home-ask-text"
+          ref={input}
           value={text}
           maxLength={200}
           placeholder="next weekend around the Sunshine Coast"
@@ -117,8 +133,17 @@ function HomeAsk() {
         </button>
       </div>
       <p className="home-hint" aria-live="polite">
-        {note}
+        {note ?? (examples && 'Type where and when, or try one of these:')}
       </p>
+      {examples && (
+        <div className="chips home-examples">
+          {EXAMPLES.map((example) => (
+            <button key={example} type="button" className="chip-button" onClick={() => askExample(example)}>
+              {example}
+            </button>
+          ))}
+        </div>
+      )}
       <Link to="/explore" className="home-browse">
         Or browse the map
       </Link>
@@ -202,7 +227,13 @@ function Board({ trips, night }: { trips: Trips; night: number }) {
     <ol>
       {counts.map(({ campground, sites, usual }) => (
         <li key={campground}>
-          <span>{trips.campgrounds[campground].name}</span>
+          <Link
+            to="/campgrounds/$campgroundId"
+            params={{ campgroundId: String(trips.campgrounds[campground].id) }}
+            search={{ year: trips.year }}
+          >
+            {trips.campgrounds[campground].name}
+          </Link>
           <span>
             <b>{sites.toLocaleString()}</b> <small>· usually {usual.toLocaleString()}</small>
           </span>
@@ -211,9 +242,10 @@ function Board({ trips, night }: { trips: Trips; night: number }) {
     </ol>
   )
 
-  // Keyed by month, so each month's lists fade in once.
+  // Keyed by month, so each month's lists fade in once. A real list a screen reader can read and
+  // follow, but not a live region: it changes every 7 seconds while the year plays.
   return (
-    <div className="home-board" aria-hidden="true">
+    <div className="home-board" aria-label={`The board for ${month}`} role="region">
       <div key={m}>
         <h3>
           <span className="key key-busy" /> Busier than usual in {month}
@@ -252,7 +284,8 @@ function About({ trips }: { trips: Trips }) {
       <p>
         Teal rings mark campgrounds having a quiet month: open, but at half their usual month or
         less. Beside the map, the board names three of them each month, and three busier than
-        their usual, with the campsites booked to arrive and the usual for that month.
+        their usual, with the campsites booked to arrive and the usual for that month; each name
+        opens that campground's year.
       </p>
       <p className="muted small">
         Not drawn: {overseas.toLocaleString()} campsites booked from overseas, and{' '}

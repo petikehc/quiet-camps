@@ -436,6 +436,25 @@ section:has(> .lead-time) {
   overflow-x: auto;
 }
 
+/* The homepage is night from top to foot, whatever the page theme: no light seam under the
+   stage. The tokens are switched on body, so the footer outside <main> follows. */
+/* The page under them too, past the foot of a short page. */
+:root:has(.home),
+:root:has(.explore) {
+  background: var(--night);
+}
+
+body:has(.home) {
+  --text: var(--night-text);
+  --muted: var(--night-muted);
+  --bg: var(--night);
+  --border: var(--night-land);
+  --accent: var(--quiet);
+  color-scheme: dark;
+  color: var(--text);
+  background: var(--night);
+}
+
 /* The homepage: a night stage edge to edge, the header floating over it. Words sit on the
    left over a scrim; the map takes the right, so nothing covers the continent. */
 .site-header.over {
@@ -449,7 +468,7 @@ section:has(> .lead-time) {
   position: relative;
   isolation: isolate;
   height: min(100svh, 60rem);
-  min-height: 52rem;
+  min-height: 40rem;
   overflow: hidden;
   background: var(--night);
   color: var(--night-text);
@@ -464,7 +483,8 @@ section:has(> .lead-time) {
   z-index: 1;
   background:
     linear-gradient(180deg, var(--night) 0, transparent 7rem),
-    linear-gradient(90deg, var(--night) 0 18%, transparent 46%);
+    linear-gradient(0deg, var(--night) 0 6.5rem, transparent 15rem), /* under the board */
+    linear-gradient(90deg, var(--night) 0 22%, transparent 52%);
   pointer-events: none;
 }
 
@@ -544,10 +564,14 @@ section:has(> .lead-time) {
   gap: 1.5rem;
 }
 
+/* Bigger than its column: the headline runs out over the map, the trails passing under it. */
 .home-intro h2 {
+  width: max-content;
+  max-width: 62vw;
   margin: 0;
-  font: 800 clamp(2.75rem, 5.4vw, 5.75rem) / 0.95 var(--display);
-  letter-spacing: -0.025em;
+  /* By height too: a wide, short laptop screen must still fit the year strip under it. */
+  font: 800 clamp(2.75rem, min(7.4vw, 10.5vh), 8.5rem) / 0.9 var(--display);
+  letter-spacing: -0.035em;
   text-wrap: balance;
 }
 
@@ -630,6 +654,19 @@ section:has(> .lead-time) {
 .home-board {
   position: absolute;
   z-index: 2;
+}
+
+/* Tonight's arrivals, big over the map's top right. */
+.home-now {
+  position: absolute;
+  z-index: 2;
+  top: clamp(5.5rem, 13vh, 9rem);
+  right: var(--stage-pad);
+  margin: 0;
+  text-align: right;
+  color: var(--night-muted);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 12px var(--night), 0 0 4px var(--night); /* over trails, still legible */
   pointer-events: none;
 }
 
@@ -638,12 +675,6 @@ section:has(> .lead-time) {
   align-items: end;
   justify-content: space-between;
   gap: 1rem;
-}
-
-.home-now {
-  margin: 0;
-  color: var(--night-muted);
-  font-variant-numeric: tabular-nums;
 }
 
 .home-now span {
@@ -658,19 +689,68 @@ section:has(> .lead-time) {
 }
 
 .home-now strong {
-  font: 800 1.75rem/1 var(--display);
+  display: block;
+  font: 800 clamp(2.5rem, 4.6vw, 4.75rem) / 1 var(--display);
+  letter-spacing: -0.02em;
   color: var(--trail);
+}
+
+/* The map's key, beside Pause: a trail and a quiet ring, drawn as they are on the map. */
+.home-key > span {
+  white-space: nowrap;
+}
+
+/* A gap, not a margin: a key item that wraps starts at the left edge. */
+.home-key {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 0.9rem;
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.8;
+  color: var(--night-muted);
+}
+
+.key-trip,
+.key-ring {
+  display: inline-block;
+  margin-right: 0.35rem;
+  vertical-align: middle;
+}
+
+.key-trip {
+  width: 1.4rem;
+  height: 2px;
+  background: linear-gradient(90deg, var(--trail-tail), var(--trail-head));
+}
+
+.key-ring {
+  width: 0.7rem;
+  height: 0.7rem;
+  border: 2px solid var(--quiet);
+  border-radius: 50%;
+}
+
+.home-examples {
+  margin: 0 0 0.75rem;
 }
 
 .home-board {
   right: var(--stage-pad);
   bottom: 1.5rem;
   width: min(44rem, 58%);
-  padding: 0.6rem 0.9rem;
-  border-radius: 8px;
-  /* Lines pass under the names, not through them. */
-  background: color-mix(in srgb, var(--night) 82%, transparent);
   font-size: 0.875rem;
+}
+
+.home-board a {
+  color: var(--night-text);
+  text-decoration: none;
+}
+
+.home-board a:hover {
+  color: var(--quiet);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
 }
 
 .home-board h3 {
@@ -754,7 +834,7 @@ section:has(> .lead-time) {
   font-variant-numeric: tabular-nums;
 }
 
-.home-board li span:first-child {
+.home-board li a {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -938,16 +1018,32 @@ section:has(> .lead-time) {
     padding: 0 var(--stage-pad);
   }
 
+  /* The map first, the headline over its foot, where the map fades into the night. */
   .home-intro {
     order: 1;
+    position: relative;
+    z-index: 2;
   }
 
   .home-map {
-    order: 2;
+    order: 0;
     position: relative;
     overflow: hidden; /* the tilted outline stays inside the map */
-    margin: 0.5rem 0 0.75rem;
-    padding-top: 75%; /* 4:3, so the continent fills the width */
+    margin: -1.5rem 0 -24vw;
+    padding-top: 80%;
+  }
+
+  /* Just above the headline, where the map fades out: clear of the campgrounds up the coast. */
+  .home-now {
+    top: auto;
+    bottom: 27vw;
+    left: var(--stage-pad);
+    right: auto;
+    text-align: left;
+  }
+
+  .home-now strong {
+    font-size: clamp(2rem, 9vw, 3rem);
   }
 
   .home-time,
@@ -978,7 +1074,9 @@ section:has(> .lead-time) {
   }
 
   .home-intro h2 {
-    font-size: clamp(2.5rem, 9vw, 4.5rem);
+    width: auto;
+    max-width: none;
+    font-size: clamp(3rem, 13vw, 6rem);
   }
 
   .home-intro > p:first-of-type {
@@ -988,7 +1086,7 @@ section:has(> .lead-time) {
   .home-outline,
   .home-canvas {
     inset: 0;
-    mask-image: none;
+    mask-image: linear-gradient(#000 55%, transparent);
   }
 
 }
