@@ -296,7 +296,7 @@ function About({ trips }: { trips: Trips }) {
         {trips.origins.length.toLocaleString()} postcodes at{' '}
         {trips.campgrounds.length.toLocaleString()} campgrounds. The year plays in about{' '}
         {Math.round(playSeconds(trips) / 60)} minutes, slowing down for the holidays, then starts
-        again.
+        again. Night sounds, if you switch them on, swell with the busy stretches.
       </p>
       <p>
         Teal rings mark campgrounds having a quiet month: open, but at half their usual month or

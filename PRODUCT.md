@@ -38,7 +38,8 @@ Built on every QPWS camping permit since 2011, not on reviews or guesses. "Quiet
 ## Brand Commitments
 
 - Not affiliated with or endorsed by Queensland Parks and Wildlife Service or the Queensland Government, and must never look like it.
-- Attribution stays visible: camping permits © State of Queensland (CC BY 4.0); locations © OpenStreetMap contributors (ODbL); boundaries and postal areas © Commonwealth of Australia, ABS (CC BY 4.0).
+- Attribution stays visible: camping permits © State of Queensland (CC BY 4.0); locations © OpenStreetMap contributors (ODbL); boundaries and postal areas © Commonwealth of Australia, ABS (CC BY 4.0). The homepage's night sounds are public-domain (CC0) recordings from Freesound, credited in `web/public/sounds/CREDITS.md`.
+- Sound is never automatic: night sounds are off on every visit until switched on.
 - Voice: plain Australian English, specific and honest about what the data can and can't say.
 
 ## Brand Feeling

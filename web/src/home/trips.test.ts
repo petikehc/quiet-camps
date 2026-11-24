@@ -11,6 +11,7 @@ import {
   paceByNight,
   periodWords,
   startNight,
+  swellByNight,
   sitesOn,
   size,
   trailAlpha,
@@ -169,5 +170,26 @@ describe('paceByNight', () => {
 
   it('plays an ordinary year at full speed', () => {
     expect([...paceByNight(3, [])]).toEqual([1, 1, 1])
+  })
+})
+
+describe('swellByNight', () => {
+  it('stays flat through a steady year', () => {
+    expect([...swellByNight(Array(30).fill(100))].every((s) => s === 0)).toBe(true)
+  })
+
+  it('swells through a busy stretch and settles after it, smoothed over a fortnight', () => {
+    const totals = Array.from({ length: 100 }, (_, n) => (n >= 40 && n < 54 ? 400 : 100))
+    const swell = swellByNight(totals)
+
+    expect(swell[47]).toBeCloseTo(1) // the middle of the busy fortnight
+    expect(swell[10]).toBe(0) // far from it
+    expect(swell[38]).toBeGreaterThan(0) // easing in
+    expect(swell[38]).toBeLessThan(swell[44])
+  })
+
+  it('wraps around the year, as the loop does', () => {
+    const totals = Array.from({ length: 100 }, (_, n) => (n < 5 ? 400 : 100))
+    expect(swellByNight(totals)[98]).toBeGreaterThan(0) // the busy start is 2 nights ahead
   })
 })

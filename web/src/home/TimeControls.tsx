@@ -3,8 +3,9 @@ import { holidayOn, nightDate } from '../charts/dates'
 import { formatNight, holidayName } from '../charts/scales'
 import { peaks } from '../charts/strip'
 import { YearStrip } from '../charts/YearStrip'
-import { nightlySites, nightOffsets, type Trips } from './trips'
+import { nightlySites, nightOffsets, swellByNight, type Trips } from './trips'
 import { useEased } from './useEased'
+import { useNightSounds } from './useNightSounds'
 
 const NAMED = 3 // peaks named on the strip
 const APART = 60 // nights between them, so their names don't collide
@@ -28,6 +29,11 @@ export function TimeControls({ trips, night, playing, onPlaying, onSeek }: Props
       }),
     [totals, trips],
   )
+  // Off until switched on, on every visit: the site never makes a sound you didn't just ask for.
+  const [sound, setSound] = useState(false)
+  const swell = useMemo(() => swellByNight(totals), [totals])
+  const nightSounds = useNightSounds(sound, playing, swell[night] ?? 0)
+
   const said = (n: number) => {
     const h = holidayOn(trips.holidays, n)
     const on = formatNight(nightDate(trips.first_night, n))
@@ -45,10 +51,26 @@ export function TimeControls({ trips, night, playing, onPlaying, onSeek }: Props
             <span className="key-ring" /> a quiet month: half its usual or less
           </span>
         </p>
-        {/* The label says what a press does; aria-pressed as well would announce "Play, pressed". */}
-        <button type="button" className="home-play" onClick={() => onPlaying(!playing)}>
-          {playing ? 'Pause' : 'Play'}
-        </button>
+        <div className="home-buttons">
+          {/* A fixed label, so aria-pressed says whether it's on. */}
+          {nightSounds.supported && (
+            <button
+              type="button"
+              className="home-play home-sound"
+              aria-pressed={sound}
+              onClick={() => {
+                if (!sound) nightSounds.unlock()
+                setSound(!sound)
+              }}
+            >
+              Night sounds
+            </button>
+          )}
+          {/* The label says what a press does; aria-pressed as well would announce "Play, pressed". */}
+          <button type="button" className="home-play" onClick={() => onPlaying(!playing)}>
+            {playing ? 'Pause' : 'Play'}
+          </button>
+        </div>
       </div>
       <YearStrip
         firstNight={trips.first_night}
