@@ -42,8 +42,8 @@ export function WhenStrip({ coming, arrive, depart, near, onDates }: Props) {
   return (
     <section className="explore-when" aria-label="The coming year">
       <h2>
-        {near ? `Around ${near}` : 'Across Queensland'}: the coming year
-        <span>{' · drag to move your dates'}</span>
+        {near ? `Around ${near}` : 'Across Queensland'}: the coming year{' '}
+        <span>Drag to move your dates</span>
       </h2>
       <YearStrip
         firstNight={firstNight}

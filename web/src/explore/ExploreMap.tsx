@@ -72,8 +72,10 @@ export function ExploreMap({
       container: container.current,
       style: STYLE,
       bounds: QUEENSLAND,
-      attributionControl: { compact: true },
+      attributionControl: false,
     })
+    // The credits at the top: the year strip covers the foot of the map.
+    created.addControl(new maplibregl.AttributionControl({ compact: true }), 'top-right')
     created.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right')
     created.on('load', () => {
       addLayers(created)
