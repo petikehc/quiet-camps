@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { NightSounds } from './sound'
 
 const SUPPORTED = typeof window !== 'undefined' && 'AudioContext' in window
@@ -25,12 +25,14 @@ export function useNightSounds(on: boolean, playing: boolean, swell: number) {
     sounds.current?.setSwell(swell)
   }, [swell])
 
-  return {
-    supported: SUPPORTED,
-    unlock: () => {
-      sounds.current ??= new NightSounds()
-      sounds.current.setSwell(swell)
-      sounds.current.unlock()
-    },
-  }
+  const latestSwell = useRef(swell)
+  useEffect(() => {
+    latestSwell.current = swell
+  }, [swell])
+  const unlock = useCallback(() => {
+    sounds.current ??= new NightSounds()
+    sounds.current.setSwell(latestSwell.current)
+    sounds.current.unlock()
+  }, [])
+  return { supported: SUPPORTED, unlock }
 }

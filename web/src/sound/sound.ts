@@ -3,6 +3,7 @@
 // (CREDITS.md). Every change is smoothed over seconds, so nothing jumps.
 
 const LAYERS = ['night', 'night-busy', 'campfire'] as const
+const VOLUME = 0.3 // the whole mix: about 10 dB down, background under anything else playing
 const BED = 0.45 // the cricket chorus, always
 const BUSY = 0.6 // the busy chorus at full swell
 const FIRE = [0.12, 0.3] // the campfire, from a quiet stretch to a busy one
@@ -48,7 +49,7 @@ export class NightSounds {
     await context.resume()
     this.loading ??= this.load(context)
     await this.loading
-    this.master!.gain.setTargetAtTime(1, context.currentTime, FADE)
+    this.master!.gain.setTargetAtTime(VOLUME, context.currentTime, FADE)
   }
 
   stop(): void {

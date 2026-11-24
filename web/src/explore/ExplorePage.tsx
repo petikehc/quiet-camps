@@ -1,11 +1,12 @@
 import { getRouteApi } from '@tanstack/react-router'
 import type * as maplibregl from 'maplibre-gl'
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { useSoundScene } from '../sound/scene'
 import { fieldErrors } from '../api/errors'
 import { nightDate } from '../charts/dates'
 import { holidayName } from '../charts/scales'
 import { BandToggle } from './BandToggle'
-import { BAND_NAMES, bandNote, bandOf } from './bands'
+import { BAND_NAMES, bandNote, bandOf, soundSwell } from './bands'
 import { Card } from './Card'
 import {
   comingYear,
@@ -106,6 +107,16 @@ export function ExplorePage() {
       ? { lat: filters.lat, lon: filters.lon, km: filters.km ?? 50 }
       : undefined
   const holiday = coming && holidayFor(coming, filters.arrive)
+  // The night sounds follow how busy your nights usually are around here.
+  useSoundScene(
+    coming
+      ? soundSwell(
+          coming.values,
+          nightsBetween(coming.firstNight, filters.arrive),
+          nightsBetween(coming.firstNight, filters.depart),
+        )
+      : 0,
+  )
   const schoolHoliday = coming !== undefined && inSchoolHolidays(coming, filters.arrive)
 
   return (
@@ -170,7 +181,8 @@ export function ExplorePage() {
       <footer className="explore-credits">
         Past bookings, not live availability. Camping permits © State of Queensland; places and
         boundaries © Commonwealth of Australia (ABS), CC BY 4.0. Map © OpenStreetMap
-        contributors. Not affiliated with Queensland Parks and Wildlife Service.
+        contributors. Night sounds: <a href="/sounds/CREDITS.md">public-domain recordings</a>. Not
+        affiliated with Queensland Parks and Wildlife Service.
       </footer>
       <Suspense fallback={<div className="explore-map" />}>
         <ExploreMap

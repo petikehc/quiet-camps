@@ -68,3 +68,12 @@ export function rankWords(band: Band, rank: number, of: number): string {
   const end = band === 'busy' ? 'busiest' : 'quietest'
   return `${rank === 1 ? 'The' : ordinal(rank)} ${end} of ${of} ${ones} for these nights.`
 }
+
+// How busy the chosen nights usually are around here, for the night sounds: 0 under the quiet
+// band's edge, 1 at the busy band's, eased between.
+export function soundSwell(values: (number | null)[], from: number, to: number): number {
+  const known = values.slice(Math.max(0, from), Math.max(from + 1, to)).filter((v) => v !== null)
+  if (known.length === 0) return 0
+  const busyness = known.reduce((sum, v) => sum + v, 0) / known.length
+  return Math.min(1, Math.max(0, (busyness - QUIET_BELOW) / (BUSY_FROM - QUIET_BELOW)))
+}

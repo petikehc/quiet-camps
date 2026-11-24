@@ -1,4 +1,5 @@
 import { Link, Outlet, useMatchRoute } from '@tanstack/react-router'
+import { NightSoundsProvider, SoundSwitch } from './sound/NightSoundsProvider'
 
 export function Layout() {
   // The homepage runs its night map edge to edge, with the header floating over it; the
@@ -9,7 +10,7 @@ export function Layout() {
   const explore = Boolean(matchRoute({ to: '/explore' }))
 
   return (
-    <>
+    <NightSoundsProvider>
       <header className={home ? 'site-header over' : 'site-header'}>
         <div className="wrap">
           <h1>
@@ -28,6 +29,7 @@ export function Layout() {
             </Link>
           </h1>
           <nav className="site-nav" aria-label="Pages">
+            <SoundSwitch />
             <Link to="/explore" activeOptions={{ includeSearch: false }}>
               Map
             </Link>
@@ -59,6 +61,6 @@ export function Layout() {
         </div>
       </footer>
       )}
-    </>
+    </NightSoundsProvider>
   )
 }

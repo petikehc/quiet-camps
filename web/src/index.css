@@ -143,9 +143,45 @@ a {
   font-size: 0.9375rem;
 }
 
+.site-nav {
+  align-items: baseline;
+}
+
 .site-nav a {
   color: inherit;
   opacity: 0.85;
+}
+
+/* Night sounds, in the header on every page: text like the links beside it, with a small ring
+   that fills teal while they're on. */
+.sound-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  opacity: 0.85;
+  cursor: pointer;
+}
+
+.sound-switch::before {
+  content: '';
+  width: 0.55rem;
+  height: 0.55rem;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+}
+
+.sound-switch[aria-pressed='true'] {
+  opacity: 1;
+  color: var(--quiet);
+}
+
+.sound-switch[aria-pressed='true']::before {
+  background: currentColor;
 }
 
 .site-nav a.active {
@@ -873,18 +909,6 @@ body:has(.home) {
   text-wrap: pretty;
 }
 
-.home-buttons {
-  display: flex;
-  flex-shrink: 0;
-  gap: 0.5rem;
-}
-
-/* On: a teal edge and a small dot, like the quiet rings. */
-.home-sound[aria-pressed='true'] {
-  border-color: var(--quiet);
-  color: var(--quiet);
-}
-
 .home-play {
   flex-shrink: 0;
   min-width: 5.5rem;
@@ -1175,6 +1199,10 @@ body:has(.home) {
 .explore-credits {
   grid-column: 1;
   border-right: 1px solid var(--night-land);
+}
+
+.explore-credits a {
+  color: inherit;
 }
 
 .explore-side {
