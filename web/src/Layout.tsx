@@ -30,7 +30,8 @@ export function Layout() {
           </h1>
           <nav className="site-nav" aria-label="Pages">
             <SoundSwitch />
-            <Link to="/explore" activeOptions={{ includeSearch: false }}>
+            {/* On the map already: keep your search, so the link to this page doesn't wipe it. */}
+            <Link to="/explore" search={explore ? true : undefined} activeOptions={{ includeSearch: false }}>
               Map
             </Link>
           </nav>
