@@ -62,6 +62,7 @@ def test_asks_haiku_for_a_reading_with_the_calendar() -> None:
     assert asked["output_config"] == {}  # Haiku 4.5 takes no effort
     content = asked["messages"][0]["content"]
     assert "Today is Monday 23 November 2026." in content
+    assert "Coming holidays:" in content
     assert "- easter: arrive Thu 25 Mar 2027, depart Mon 29 Mar 2027" in content
     assert content.endswith("<request>Easter near Noosa</request>")
 

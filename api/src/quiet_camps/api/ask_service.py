@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 from quiet_camps.api.place_service import Place, PlaceSource, find_place
 from quiet_camps.api.search import MAX_NIGHTS, NEAR_KM
+from quiet_camps.ingest.school_holidays import SchoolHoliday
 
 STAY_NIGHTS = 2  # arriving with no leaving day: a weekend
 # How far to look when they don't say: a weekend's drive from home, or around a place.
@@ -29,11 +30,35 @@ class Reading(BaseModel):
 
 @dataclass(frozen=True, kw_only=True)
 class Holiday:
-    """A public holiday's nights, for reading "Easter" or "the long weekend"."""
+    """A holiday's nights, for reading "Easter", "the long weekend" or "school holidays"."""
 
     name: str
     arrive: date  # its first night
     depart: date  # the morning after its last night
+
+
+SATURDAY = 5  # date.weekday()
+WEEK = timedelta(days=7)
+AHEAD = timedelta(days=365)  # as far as the public holidays the model is given
+
+
+def first_week(holiday: SchoolHoliday) -> Holiday:
+    """ "School holidays" read as a trip: a week from the first Saturday off (the holidays may
+    start on Good Friday), cut short if they end sooner."""
+    first_day = holiday.first_night + timedelta(days=1)
+    arrive = first_day + timedelta(days=(SATURDAY - first_day.weekday()) % 7)
+    return Holiday(
+        name=f"{holiday.name} school holidays, first week",
+        arrive=arrive,
+        depart=min(arrive + WEEK, holiday.last_night + timedelta(days=1)),
+    )
+
+
+def coming_school_holidays(today: date, holidays: list[SchoolHoliday]) -> list[Holiday]:
+    """The first weeks still to come in the next year, so the model copies dates and never
+    works them out."""
+    weeks = [first_week(h) for h in holidays]
+    return [w for w in weeks if today <= w.arrive <= today + AHEAD]
 
 
 class Reader(Protocol):

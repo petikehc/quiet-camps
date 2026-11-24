@@ -16,7 +16,14 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from quiet_camps.api.ask_service import Answer, Holiday, Reader, ReaderUnavailable, ask
+from quiet_camps.api.ask_service import (
+    Answer,
+    Holiday,
+    Reader,
+    ReaderUnavailable,
+    ask,
+    coming_school_holidays,
+)
 from quiet_camps.api.bedrock_reader import make_reader
 from quiet_camps.api.campground_repository import HOLIDAY_NIGHTS
 from quiet_camps.api.campground_service import HolidayNight, holiday_spans
@@ -25,6 +32,7 @@ from quiet_camps.api.place_service import PlaceSource
 from quiet_camps.api.places import PlaceOut, get_place_source
 from quiet_camps.api.problems import INVALID, Problem
 from quiet_camps.api.settings import Settings
+from quiet_camps.ingest.school_holidays import school_holidays
 
 log = logging.getLogger(__name__)
 
@@ -108,11 +116,12 @@ def reader_for(state: AskState, settings: Settings) -> Reader:
 
 
 async def coming_holidays(session: AsyncSession, today: date) -> list[Holiday]:
-    """The next year's public holidays from the calendar, so the model needn't work out Easter."""
+    """The next year's public holidays from the calendar, so the model needn't work out Easter,
+    and the school holidays' first weeks, in date order."""
     last = today + timedelta(days=365)
     rows = await session.execute(HOLIDAY_NIGHTS, {"first": today, "last": last})
     spans = holiday_spans([HolidayNight(**row) for row in rows.mappings()], today)
-    return [
+    public = [
         Holiday(
             name=s.name,
             arrive=today + timedelta(days=s.night),
@@ -120,6 +129,8 @@ async def coming_holidays(session: AsyncSession, today: date) -> list[Holiday]:
         )
         for s in spans
     ]
+    school = coming_school_holidays(today, school_holidays())
+    return sorted([*public, *school], key=lambda h: h.arrive)
 
 
 def normalised(text: str) -> str:

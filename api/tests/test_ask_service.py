@@ -3,8 +3,16 @@
 import asyncio
 from datetime import date
 
-from quiet_camps.api.ask_service import Answer, Holiday, Reading, ask
+from quiet_camps.api.ask_service import (
+    Answer,
+    Holiday,
+    Reading,
+    ask,
+    coming_school_holidays,
+    first_week,
+)
 from quiet_camps.api.place_service import Place
+from quiet_camps.ingest.school_holidays import SchoolHoliday
 
 TODAY = date(2026, 11, 23)  # a Monday
 SUNSHINE_COAST = Place(name="Sunshine Coast", kind="council", lat=-26.65, lon=152.96)
@@ -72,3 +80,41 @@ def test_a_place_that_matches_nothing_is_said_back() -> None:
     assert answer.place is None
     assert answer.place_asked == "Tweed Heads"
     assert answer.within_km is None  # no place to be near
+
+
+def test_school_holidays_offer_their_first_week_from_the_first_saturday() -> None:
+    """2026's summer holidays: the first day off is Saturday 12 December."""
+    summer = SchoolHoliday(
+        name="summer", first_night=date(2026, 12, 11), last_night=date(2027, 1, 25)
+    )
+
+    assert first_week(summer) == Holiday(
+        name="summer school holidays, first week",
+        arrive=date(2026, 12, 12),
+        depart=date(2026, 12, 19),
+    )
+
+
+def test_a_school_holiday_starting_on_good_friday_starts_its_week_on_the_saturday() -> None:
+    autumn = SchoolHoliday(
+        name="autumn", first_night=date(2026, 4, 2), last_night=date(2026, 4, 18)
+    )
+
+    assert (first_week(autumn).arrive, first_week(autumn).depart) == (
+        date(2026, 4, 4),
+        date(2026, 4, 11),
+    )
+
+
+def test_only_coming_school_holidays_are_offered() -> None:
+    spring = SchoolHoliday(
+        name="spring", first_night=date(2026, 9, 18), last_night=date(2026, 10, 4)
+    )
+    summer = SchoolHoliday(
+        name="summer", first_night=date(2026, 12, 11), last_night=date(2027, 1, 25)
+    )
+    far = SchoolHoliday(name="winter", first_night=date(2028, 6, 23), last_night=date(2028, 7, 8))
+
+    coming = coming_school_holidays(date(2026, 11, 24), [spring, summer, far])
+
+    assert [h.name for h in coming] == ["summer school holidays, first week"]
