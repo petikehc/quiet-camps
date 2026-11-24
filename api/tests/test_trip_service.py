@@ -3,12 +3,13 @@ from datetime import date, timedelta
 
 import pytest
 
-from quiet_camps.api.campground_service import HolidayNight, HolidaySpan, NoHistory
+from quiet_camps.api.campground_service import HolidayNight, HolidaySpan, NoHistory, NotFound
 from quiet_camps.api.trip_service import (
     Arrivals,
     LeftOut,
     Origin,
     TripCampground,
+    latest_trips,
     year_trips,
 )
 
@@ -134,3 +135,24 @@ def test_the_year_history_ends_in_stops_there() -> None:
 def test_a_year_after_the_history_has_no_trips(history_end: date | None) -> None:
     with pytest.raises(NoHistory):
         asyncio.run(year_trips(FakeTrips(history_end, []), 2026))
+
+
+def test_the_latest_trips_are_the_12_months_to_the_history_end() -> None:
+    source = FakeTrips(date(2026, 9, 30), [arrive(date(2025, 10, 1), 3, "4000")])
+
+    found = asyncio.run(latest_trips(source))
+
+    assert (found.year, found.first_night, found.nights) == (None, date(2025, 10, 1), 365)
+    assert source.asked == source.asked_holidays == (date(2025, 10, 1), date(2026, 9, 30))
+    assert found.per_night[0] == 1  # the window's first night is night 0
+
+
+def test_the_latest_trips_cross_a_leap_day() -> None:
+    found = asyncio.run(latest_trips(FakeTrips(date(2028, 3, 31), [])))
+
+    assert (found.first_night, found.nights) == (date(2027, 4, 1), 366)
+
+
+def test_no_latest_trips_without_history() -> None:
+    with pytest.raises(NotFound):
+        asyncio.run(latest_trips(FakeTrips(None, [])))

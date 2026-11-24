@@ -3,12 +3,12 @@ import {
   busiestNight,
   DAY,
   flightSeconds,
-  homeYear,
   inFlight,
   jitter,
   nightlySites,
   mostInFlight,
   nightOffsets,
+  periodWords,
   sitesOn,
   size,
   trailAlpha,
@@ -124,8 +124,14 @@ describe('busiestNight', () => {
   })
 })
 
-describe('homeYear', () => {
-  it('is last year', () => {
-    expect(homeYear(new Date('2026-11-22T10:00:00'))).toBe(2025)
+describe('periodWords', () => {
+  it('names a calendar year', () => {
+    expect(periodWords({ year: 2025, first_night: '2025-01-01', nights: 365 })).toBe('in 2025')
+  })
+
+  it('names the month the latest 12 months end in', () => {
+    expect(periodWords({ year: null, first_night: '2025-10-01', nights: 365 })).toBe(
+      'in the 12 months to September 2026',
+    )
   })
 })

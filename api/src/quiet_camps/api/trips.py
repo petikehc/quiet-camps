@@ -1,8 +1,9 @@
-"""GET /trips/{year}: every camping trip of a year, home to campground, for the homepage."""
+"""GET /trips/{year} and /trips/latest: every camping trip of a calendar year, or of the
+latest 12 months of history, home to campground, for the homepage."""
 
 import hashlib
 from datetime import date
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Header, Path, Response
 from pydantic import BaseModel, ConfigDict
@@ -11,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from quiet_camps.api.db import get_session
 from quiet_camps.api.problems import INVALID, NOT_FOUND
 from quiet_camps.api.trip_repository import TripRepository
-from quiet_camps.api.trip_service import TripSource, year_trips
+from quiet_camps.api.trip_service import TripSource, YearTrips, latest_trips, year_trips
 from quiet_camps.api.year import CACHE_CONTROL, HolidayOut, etag_matches
 from quiet_camps.db.derived import FIRST_NIGHT, YEARS_AHEAD
 
@@ -55,7 +56,7 @@ class TripsOut(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-    year: int
+    year: int | None  # null for the latest 12 months, which cross a year's end
     first_night: date
     nights: int  # 365 or 366, fewer in the year the history ends
     origins: list[OriginOut]
@@ -65,24 +66,37 @@ class TripsOut(BaseModel):
     campground: list[int]  # an index into campgrounds
     sites: list[int]
     left_out: LeftOutOut
-    holidays: list[HolidayOut]  # public holidays and their long weekends; Christmas twice
+    holidays: list[HolidayOut]  # public holidays and their long weekends, cut at the ends
 
 
 def get_trip_source(session: Annotated[AsyncSession, Depends(get_session)]) -> TripSource:
     return TripRepository(session)
 
 
-@trips_router.get(
-    "/trips/{year}",
-    response_model=TripsOut,
-    responses={304: {"description": "Not Modified: the If-None-Match ETag still matches"}},
-)
+NOT_MODIFIED: dict[int | str, dict[str, Any]] = {
+    304: {"description": "Not Modified: the If-None-Match ETag still matches"}
+}
+
+
+# Before /trips/{year}, which would take "latest" for a year and turn it away.
+@trips_router.get("/trips/latest", response_model=TripsOut, responses=NOT_MODIFIED)
+async def latest_trips_by_night(
+    source: Annotated[TripSource, Depends(get_trip_source)],
+    if_none_match: Annotated[str | None, Header()] = None,
+) -> Response:
+    return cached(await latest_trips(source), if_none_match)
+
+
+@trips_router.get("/trips/{year}", response_model=TripsOut, responses=NOT_MODIFIED)
 async def trips_by_night(
     year: Annotated[int, Path(ge=FIRST_NIGHT.year, le=date.today().year + YEARS_AHEAD)],
     source: Annotated[TripSource, Depends(get_trip_source)],
     if_none_match: Annotated[str | None, Header()] = None,
 ) -> Response:
-    found = await year_trips(source, year)
+    return cached(await year_trips(source, year), if_none_match)
+
+
+def cached(found: YearTrips, if_none_match: str | None) -> Response:
     # As /year: serialised here, because the ETag is a hash of the body.
     body = TripsOut.model_validate(found).model_dump_json().encode()
     etag = f'W/"{hashlib.sha256(body).hexdigest()[:32]}"'

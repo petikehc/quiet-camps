@@ -929,6 +929,15 @@ body:has(.home) {
   top: 0.9rem;
 }
 
+/* Near an end, a label starts or ends at its night, so it stays over the strip. */
+.year-peaks li.align-start {
+  transform: none;
+}
+
+.year-peaks li.align-end {
+  transform: translateX(-100%);
+}
+
 .year-months li {
   bottom: 0;
   color: var(--night-muted);

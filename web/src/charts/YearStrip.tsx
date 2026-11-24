@@ -69,7 +69,11 @@ export function YearStrip({
     <div className={placed.some((l) => l.row === 1) ? 'year-strip two-rows' : 'year-strip'} ref={box}>
       <ol className="year-peaks" aria-hidden="true">
         {placed.map((l) => (
-          <li key={l.night} className={l.row === 1 ? 'row-1' : undefined} style={{ left: at(l.night) }}>
+          <li
+            key={l.night}
+            className={[l.row === 1 && 'row-1', l.align !== 'centre' && `align-${l.align}`].filter(Boolean).join(' ') || undefined}
+            style={{ left: at(l.night) }}
+          >
             {l.text}
           </li>
         ))}

@@ -8,9 +8,13 @@ export const TRAIL = 0.35 // a trail's tail, as a share of its flight
 // Australia's middle, so the continent keeps its shape.
 export const project = projection({ lon: 134, lat: -28 })
 
-// The homepage plays last year, the latest with every night.
-export function homeYear(today = new Date()): number {
-  return today.getFullYear() - 1
+// When the trips are, in words: "in 2025", or for the latest 12 months, "in the 12 months to
+// September 2026".
+export function periodWords(trips: Pick<Trips, 'year' | 'first_night' | 'nights'>): string {
+  if (trips.year !== null) return `in ${trips.year}`
+  const [year, month, day] = trips.first_night.split('-').map(Number)
+  const last = new Date(Date.UTC(year, month - 1, day + trips.nights - 1))
+  return `in the 12 months to ${last.toLocaleDateString('en-AU', { month: 'long', year: 'numeric', timeZone: 'UTC' })}`
 }
 
 // A night's entries run from offsets[night] to offsets[night + 1]: the API sends how many

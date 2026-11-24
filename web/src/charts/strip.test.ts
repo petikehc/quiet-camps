@@ -40,15 +40,15 @@ describe('placeLabels', () => {
 
   it('keeps labels on one row when there is room', () => {
     expect(placeLabels([easter, quietest], 364, 1000, 7)).toEqual([
-      { ...easter, row: 0 },
-      { ...quietest, row: 0 },
+      { ...easter, row: 0, align: 'centre' },
+      { ...quietest, row: 0, align: 'centre' },
     ])
   })
 
   it('moves a label that would overlap to a second row on a narrow strip', () => {
     expect(placeLabels([easter, quietest], 364, 330, 7)).toEqual([
-      { ...easter, row: 0 },
-      { ...quietest, row: 1 },
+      { ...easter, row: 0, align: 'centre' },
+      { ...quietest, row: 1, align: 'centre' },
     ])
   })
 
@@ -56,9 +56,16 @@ describe('placeLabels', () => {
     const anzac = { night: 140, text: 'Anzac Day' }
 
     expect(placeLabels([easter, quietest, anzac], 364, 330, 7)).toEqual([
-      { ...easter, row: 0 },
-      { ...quietest, row: 1 },
+      { ...easter, row: 0, align: 'centre' },
+      { ...quietest, row: 1, align: 'centre' },
     ])
+  })
+
+  it('keeps a label near either end over the strip', () => {
+    const kings = { night: 4, text: "King's Birthday" } // early October, at the strip's start
+    const christmas = { night: 360, text: 'Christmas' }
+
+    expect(placeLabels([kings, christmas], 364, 600, 7).map((l) => l.align)).toEqual(['start', 'end'])
   })
 
   it('places everything on one row before the strip has a width', () => {

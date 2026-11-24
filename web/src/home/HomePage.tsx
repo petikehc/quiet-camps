@@ -9,25 +9,23 @@ import { failedWords, filtersFrom, useAsk } from '../explore/ask'
 import { monthBoard, monthOf, months, quietMask, usualNightly, type Count } from './quiet'
 import { NightFigure, TimeControls } from './TimeControls'
 import type { Seek } from './TripsScene'
-import { busiestNight, homeYear, nightOffsets, project, type Trips } from './trips'
+import { busiestNight, nightOffsets, periodWords, project, type Trips } from './trips'
 
 // three.js is most of a megabyte: the page shows the outline below until it arrives.
 const TripsScene = lazy(() => import('./TripsScene'))
 
-const YEAR = homeYear()
-
-const tripsQuery = (year: number) =>
-  queryOptions({
-    queryKey: ['trips', year],
-    queryFn: ({ signal }) => unwrap(api.GET('/trips/{year}', { params: { path: { year } }, signal })),
-    staleTime: Infinity, // the API caches a year for a day; within a visit it can't change
-  })
+// The latest 12 months of history, whenever the page is opened: not last calendar year's.
+const latestTrips = queryOptions({
+  queryKey: ['trips', 'latest'],
+  queryFn: ({ signal }) => unwrap(api.GET('/trips/latest', { signal })),
+  staleTime: Infinity, // the API caches it for a day; within a visit it can't change
+})
 
 // Read once: the page doesn't restart its animation if the setting changes mid-visit.
 const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 export function HomePage() {
-  const query = useQuery(tripsQuery(YEAR))
+  const query = useQuery(latestTrips)
   const trips = query.data
   // The year's clock lives in the scene; the page hears each night, and asks for jumps.
   const [night, setNight] = useState(0)
@@ -47,8 +45,8 @@ export function HomePage() {
           <div className="home-intro">
             <h2 id="home-title">The map you need to beat the crowd.</h2>
             <p>
-              Each line is a camping trip to a Queensland national park in {YEAR}, from the
-              camper's home postcode. Most end up in the same few places; the campgrounds in
+              Each line is a camping trip to a Queensland national park in the latest 12 months,
+              from the camper's home postcode. Most end up in the same few places; the campgrounds in
               between stay quiet. Tell us where and when, and we'll find you one.
             </p>
             <HomeAsk />
@@ -220,8 +218,12 @@ function Board({ trips, night }: { trips: Trips; night: number }) {
     () => monthBoard(trips, offsets, nightly, monthList[m]),
     [trips, offsets, nightly, monthList, m],
   )
-  const month = new Date(`${nightDate(trips.first_night, monthList[m].first)}T00:00:00Z`)
-    .toLocaleDateString('en-AU', { month: 'long', timeZone: 'UTC' })
+  const firstDay = nightDate(trips.first_night, monthList[m].first)
+  const month = new Date(`${firstDay}T00:00:00Z`).toLocaleDateString('en-AU', {
+    month: 'long',
+    timeZone: 'UTC',
+  })
+  const year = Number(firstDay.slice(0, 4)) // a name opens that campground's year at this month
 
   const rows = (counts: Count[]) => (
     <ol>
@@ -230,7 +232,7 @@ function Board({ trips, night }: { trips: Trips; night: number }) {
           <Link
             to="/campgrounds/$campgroundId"
             params={{ campgroundId: String(trips.campgrounds[campground].id) }}
-            search={{ year: trips.year }}
+            search={{ year }}
           >
             {trips.campgrounds[campground].name}
           </Link>
@@ -275,7 +277,7 @@ function About({ trips }: { trips: Trips }) {
       <p>
         Each line is a camping trip: campsites booked at a Queensland national park campground,
         flying from the camper's home postcode on the night they arrive. Brighter lines carry more
-        campsites, and a campground glows as they land. In {trips.year},{' '}
+        campsites, and a campground glows as they land. {capitalised(periodWords(trips))},{' '}
         {total.toLocaleString()} campsites were booked from{' '}
         {trips.origins.length.toLocaleString()} postcodes at{' '}
         {trips.campgrounds.length.toLocaleString()} campgrounds. The year plays in about a minute
@@ -294,6 +296,10 @@ function About({ trips }: { trips: Trips }) {
       </p>
     </div>
   )
+}
+
+function capitalised(words: string): string {
+  return words.charAt(0).toUpperCase() + words.slice(1)
 }
 
 // The continent as plain SVG, drawn before three.js and the trips arrive.

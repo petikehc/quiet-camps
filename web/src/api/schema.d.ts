@@ -174,6 +174,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/trips/latest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Latest Trips By Night */
+        get: operations["latest_trips_by_night_trips_latest_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/trips/{year}": {
         parameters: {
             query?: never;
@@ -501,7 +518,7 @@ export interface components {
             /** Sites */
             sites: number[];
             /** Year */
-            year: number;
+            year: number | null;
         };
         /** ValidationProblem */
         ValidationProblem: {
@@ -949,6 +966,53 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PlacesOut"];
+                };
+            };
+            /** @description The request has invalid fields */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ValidationProblem"];
+                };
+            };
+        };
+    };
+    latest_trips_by_night_trips_latest_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "if-none-match"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TripsOut"];
+                };
+            };
+            /** @description Not Modified: the If-None-Match ETag still matches */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Nothing with that id or year */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             /** @description The request has invalid fields */
