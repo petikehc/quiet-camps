@@ -15,31 +15,31 @@ describe('bandOf', () => {
 })
 
 describe('usually', () => {
-  it('says booked sites on these nights against a busy night', () => {
+  it('says booked sites on these nights in past years, against its busiest nights', () => {
     expect(usually({ typical_sites: 2.4, busy_night_sites: 40 })).toBe(
-      'These nights: usually 2 sites booked · 40 on a busy night',
+      'These nights: usually 2 sites booked in past years. Its busiest nights: about 40.',
     )
     expect(usually({ typical_sites: 1, busy_night_sites: 7 })).toBe(
-      'These nights: usually 1 site booked · 7 on a busy night',
+      'These nights: usually 1 site booked in past years. Its busiest nights: about 7.',
     )
   })
 
-  it('says no sites, not none, when a typical night has nothing booked', () => {
+  it('says no sites, in past years, so it never reads as free', () => {
     expect(usually({ typical_sites: 0.2, busy_night_sites: 26 })).toBe(
-      'These nights: usually no sites booked · 26 on a busy night',
+      'These nights: usually no sites booked in past years. Its busiest nights: about 26.',
     )
   })
 
-  it("says when these nights are busier than its usual busy night, so usual isn't over busy", () => {
+  it("says when these nights pass its usual busiest nights, so usual isn't over busy", () => {
     expect(usually({ typical_sites: 51, busy_night_sites: 36 })).toBe(
-      'These nights: usually 51 sites booked, more than on a usual busy night (36)',
+      'These nights: usually 51 sites booked in past years, more than on its usual busiest nights (36).',
     )
     expect(usually({ typical_sites: 36.2, busy_night_sites: 36 })).toBe(
-      'These nights: usually 36 sites booked, as many as on a busy night',
+      'These nights: usually 36 sites booked in past years, as many as on its busiest nights.',
     )
   })
 
-  it('says a campground whose busy nights have a site or two hardly ever has more', () => {
+  it('says a campground whose busiest nights have a site or two hardly ever has more', () => {
     expect(usually({ typical_sites: 0, busy_night_sites: 0 })).toBe(
       'Hardly ever more than 1 site booked',
     )
@@ -50,10 +50,16 @@ describe('usually', () => {
 })
 
 describe('bandNote', () => {
-  it('says what each band means, from its thresholds', () => {
-    expect(bandNote('quiet')).toBe('In past years, under 25% as busy as its own busy nights.')
-    expect(bandNote('ok')).toBe('In past years, 25–60% as busy as its own busy nights.')
-    expect(bandNote('busy')).toBe('In past years, 60% as busy as its own busy nights, or busier.')
+  it('says what each band means, from its thresholds, and what its busiest nights are', () => {
+    expect(bandNote('quiet')).toBe(
+      'In past years, under 25% as busy as its busiest nights (its busiest 1 night in 20).',
+    )
+    expect(bandNote('ok')).toBe(
+      'In past years, 25–60% as busy as its busiest nights (its busiest 1 night in 20).',
+    )
+    expect(bandNote('busy')).toBe(
+      'In past years, 60% as busy as its busiest nights or more (its busiest 1 night in 20).',
+    )
   })
 })
 
@@ -76,11 +82,15 @@ describe('ordinal', () => {
 })
 
 describe('rankWords', () => {
-  it('counts from the nearer end', () => {
-    expect(rankWords(1, 38)).toBe('The quietest of 38 for these nights.')
-    expect(rankWords(3, 38)).toBe('3rd quietest of 38 for these nights.')
-    expect(rankWords(19, 38)).toBe('19th quietest of 38 for these nights.')
-    expect(rankWords(36, 38)).toBe('3rd busiest of 38 for these nights.')
-    expect(rankWords(38, 38)).toBe('The busiest of 38 for these nights.')
+  it('ranks within the band, from its quiet end, or its busy end for the busy band', () => {
+    expect(rankWords('quiet', 1, 5)).toBe('The quietest of 5 quiet ones for these nights.')
+    expect(rankWords('quiet', 3, 5)).toBe('3rd quietest of 5 quiet ones for these nights.')
+    expect(rankWords('ok', 2, 9)).toBe('2nd quietest of 9 not too busy ones for these nights.')
+    expect(rankWords('busy', 1, 32)).toBe('The busiest of 32 busy ones for these nights.')
+    expect(rankWords('busy', 4, 32)).toBe('4th busiest of 32 busy ones for these nights.')
+  })
+
+  it('says when it is the only one in its band', () => {
+    expect(rankWords('quiet', 1, 1)).toBe('The only quiet one for these nights.')
   })
 })

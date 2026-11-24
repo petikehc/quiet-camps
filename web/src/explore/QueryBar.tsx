@@ -74,7 +74,7 @@ function Ask({ filters, onChange }: Props) {
           id="ask-text"
           value={text}
           maxLength={200}
-          placeholder="next weekend around the Sunshine Coast"
+          placeholder="Easter near Noosa"
           onChange={(e) => setText(e.target.value)}
         />
         <button type="submit" disabled={ask.isPending}>

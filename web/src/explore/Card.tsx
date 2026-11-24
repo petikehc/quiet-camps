@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import type { Holiday } from '../charts/dates'
 import { rankWords, usually } from './bands'
+import type { Band } from './filters'
 import { BookingHint } from './BookingHint'
 import { osmLink, shownLocation } from './location'
 import type { QuietCampground } from './queries'
@@ -8,8 +9,9 @@ import type { QuietCampground } from './queries'
 type Props = {
   campground: QuietCampground
   selected: boolean
-  rank: number // its place among all the results, quietest first
-  of: number
+  band: Band
+  rank: number // its place in its band's list
+  of: number // how many are in that list
   arrive: string
   holiday: Holiday | undefined // the holiday the arrival falls in, if any
   schoolHoliday: boolean // the arrival is in the school holidays
@@ -22,6 +24,7 @@ type Props = {
 export function Card({
   campground: c,
   selected,
+  band,
   rank,
   of,
   arrive,
@@ -62,7 +65,7 @@ export function Card({
             schoolHoliday={schoolHoliday}
             today={today}
           />
-          <p>{rankWords(rank, of)}</p>
+          <p>{rankWords(band, rank, of)}</p>
           {notes.map((note) => (
             <p key={note} className="muted">
               {note}

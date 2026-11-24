@@ -24,9 +24,9 @@ function sites(n: number): string {
   return `${rounded} ${rounded === 1 ? 'site' : 'sites'}`
 }
 
-// What a typical night there looks like, in plain words: booked sites on nights like these
-// against a busy night there (there's no capacity to say how full). At Easter the usual can
-// pass the busy night, which is over the whole year: then it says so rather than "51 · 36".
+// What a typical night there looks like, in plain words: booked sites on nights like these in
+// past years, against its busiest nights (there's no capacity to say how full). At Easter the
+// usual can pass the busiest nights, which are over the whole year: then it says so.
 export function usually(c: Pick<QuietCampground, 'typical_sites' | 'busy_night_sites'>): string {
   // Its busy night is the 95th percentile of its open nights: in plain words, hardly ever more.
   if (c.busy_night_sites <= RARELY_BOOKED) {
@@ -34,22 +34,23 @@ export function usually(c: Pick<QuietCampground, 'typical_sites' | 'busy_night_s
   }
   const busy = Math.round(c.busy_night_sites)
   const typical = Math.round(c.typical_sites)
-  const booked = `These nights: usually ${typical === 0 ? 'no sites' : sites(typical)} booked`
-  if (typical > busy) return `${booked}, more than on a usual busy night (${busy})`
-  if (typical === busy) return `${booked}, as many as on a busy night`
-  return `${booked} · ${busy} on a busy night`
+  const booked = `These nights: usually ${typical === 0 ? 'no sites' : sites(typical)} booked in past years`
+  if (typical > busy) return `${booked}, more than on its usual busiest nights (${busy}).`
+  if (typical === busy) return `${booked}, as many as on its busiest nights.`
+  return `${booked}. Its busiest nights: about ${busy}.`
 }
 
 const percent = (share: number) => `${Math.round(share * 100)}%`
+const BUSIEST = '(its busiest 1 night in 20)' // the 95th percentile, in words
 
 // What a band means, under the toggle: quiet is against the campground's own history.
 export function bandNote(band: Band): string {
   const how = {
-    quiet: `under ${percent(QUIET_BELOW)} as busy as its own busy nights.`,
-    ok: `${percent(QUIET_BELOW).slice(0, -1)}–${percent(BUSY_FROM)} as busy as its own busy nights.`,
-    busy: `${percent(BUSY_FROM)} as busy as its own busy nights, or busier.`,
+    quiet: `under ${percent(QUIET_BELOW)} as busy as its busiest nights`,
+    ok: `${percent(QUIET_BELOW).slice(0, -1)}–${percent(BUSY_FROM)} as busy as its busiest nights`,
+    busy: `${percent(BUSY_FROM)} as busy as its busiest nights or more`,
   }[band]
-  return `In past years, ${how}`
+  return `In past years, ${how} ${BUSIEST}.`
 }
 
 const ORDINAL = new Intl.PluralRules('en-AU', { type: 'ordinal' })
@@ -59,10 +60,11 @@ export function ordinal(n: number): string {
   return `${n}${SUFFIX[ORDINAL.select(n)]}`
 }
 
-// Where it ranks among all the results for these nights, counted from the nearer end.
-export function rankWords(rank: number, of: number): string {
-  if (rank === 1) return `The quietest of ${of} for these nights.`
-  if (rank === of) return `The busiest of ${of} for these nights.`
-  if (rank <= of / 2) return `${ordinal(rank)} quietest of ${of} for these nights.`
-  return `${ordinal(of - rank + 1)} busiest of ${of} for these nights.`
+// Where it ranks in its band's list for these nights: from the quiet end, or for the busy band
+// (listed busiest first) from the busy end, so a quiet card never says "busiest".
+export function rankWords(band: Band, rank: number, of: number): string {
+  const ones = `${BAND_NAMES[band].toLowerCase()} ones`
+  if (of === 1) return `The only ${BAND_NAMES[band].toLowerCase()} one for these nights.`
+  const end = band === 'busy' ? 'busiest' : 'quietest'
+  return `${rank === 1 ? 'The' : ordinal(rank)} ${end} of ${of} ${ones} for these nights.`
 }

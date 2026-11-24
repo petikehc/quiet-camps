@@ -157,8 +157,9 @@ export function ExplorePage() {
               key={c.id}
               campground={c}
               selected={c.id === sel}
-              rank={rows.indexOf(c) + 1}
-              of={rows.length}
+              band={band}
+              rank={listed.indexOf(c) + 1}
+              of={listed.length}
               arrive={filters.arrive}
               holiday={holiday}
               schoolHoliday={schoolHoliday}
