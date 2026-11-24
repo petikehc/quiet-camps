@@ -47,6 +47,11 @@
   --quiet: #35c2b0; /* reef teal: quiet campgrounds and the way to them; 8.4:1 on --night */
   --band-ok: #d9b36a; /* not too busy: sand */
   --band-busy: #ec6a43; /* busy: ember */
+  /* The explorer's basemap: the night lifted, so places read. Pins are 3.6:1 or more on all
+     three, names 4.9:1 or more. */
+  --map-land: #1a2e33;
+  --map-park: #1f4036; /* national parks and forest */
+  --map-built: #22383e; /* towns */
   --bar: 3.875rem; /* the header's height, which the explorer fills the screen below */
 
   color-scheme: light dark;

@@ -8,6 +8,7 @@ import { Tooltip } from '../charts/Tooltip'
 import { BAND_NAMES, bandOf } from './bands'
 import type { Band } from './filters'
 import { shownLocation, type Certainty } from './location'
+import { nightStyle } from './nightStyle'
 import type { QuietCampground } from './queries'
 
 // MapLibre parses tiles in a web worker it loads from a file beside its own module. Vite moves
@@ -15,8 +16,8 @@ import type { QuietCampground } from './queries'
 // ?worker&url makes Vite build the worker as its own file and give us its URL.
 maplibregl.setWorkerUrl(workerUrl)
 
-// OpenFreeMap's dark style (OpenStreetMap, no key): the explorer is night, like the homepage,
-// whatever the page theme.
+// OpenFreeMap's dark style (OpenStreetMap, no key), recoloured in the site's night: the
+// explorer is night, like the homepage, whatever the page theme.
 const STYLE = 'https://tiles.openfreemap.org/styles/dark'
 const QUEENSLAND: [[number, number], [number, number]] = [
   [137.9, -29.2],
@@ -24,6 +25,7 @@ const QUEENSLAND: [[number, number], [number, number]] = [
 ]
 const CAMPGROUNDS = 'campgrounds'
 const PINS = 'campground-points'
+const GLOW = 'campground-glow'
 const NEAR = 'near'
 const DRAW_ORDER: Record<Certainty, number> = { none: 0, park: 1, check: 2, exact: 3 }
 const KM_PER_DEGREE = 111.32
@@ -71,6 +73,19 @@ export function ExploreMap({
     const created = new maplibregl.Map({
       container: container.current,
       style: STYLE,
+      // Recoloured as it arrives, so the stock grey is never drawn.
+      transformStyle: (_, next) => {
+        const token = tokens()
+        return nightStyle(next, {
+          land: token('--map-land'),
+          park: token('--map-park'),
+          built: token('--map-built'),
+          sea: token('--night'),
+          road: token('--night-line'),
+          label: token('--night-muted'),
+          halo: token('--night'),
+        })
+      },
       bounds: QUEENSLAND,
       attributionControl: false,
     })
@@ -214,10 +229,14 @@ function circle(near: Near | undefined): FeatureCollection {
   }
 }
 
-// The canvas can't read CSS variables, so the colours are read from the page once.
-function addLayers(map: maplibregl.Map) {
+// The canvas can't read CSS variables, so the colours are read from the page.
+function tokens(): (name: string) => string {
   const css = getComputedStyle(document.documentElement)
-  const token = (name: string) => css.getPropertyValue(name).trim()
+  return (name) => css.getPropertyValue(name).trim()
+}
+
+function addLayers(map: maplibregl.Map) {
+  const token = tokens()
   const bandColour: maplibregl.ExpressionSpecification = [
     'match',
     ['get', 'band'],
@@ -251,13 +270,26 @@ function addLayers(map: maplibregl.Map) {
     type: 'geojson',
     data: { type: 'FeatureCollection', features: [] },
   })
+  // The band listed glows softly, like a campground on the homepage as trips land.
+  map.addLayer({
+    id: GLOW,
+    type: 'circle',
+    source: CAMPGROUNDS,
+    filter: ['get', 'listed'],
+    paint: {
+      'circle-radius': ['case', ['get', 'selected'], 22, 14],
+      'circle-color': bandColour,
+      'circle-opacity': 0.22,
+      'circle-blur': 1,
+    },
+  })
   map.addLayer({
     id: PINS,
     type: 'circle',
     source: CAMPGROUNDS,
     layout: { 'circle-sort-key': ['get', 'order'] },
     paint: {
-      'circle-radius': ['case', ['get', 'selected'], 9, ['get', 'listed'], 6, 3.5],
+      'circle-radius': ['case', ['get', 'selected'], 9, ['get', 'listed'], 6, 4],
       // Needs a check: a hollow ring in the band's colour. Otherwise a filled dot.
       'circle-color': ['case', is('check'), token('--night'), bandColour],
       'circle-stroke-color': [
@@ -274,12 +306,12 @@ function addLayers(map: maplibregl.Map) {
       'circle-opacity': [
         'case',
         ['!', ['get', 'listed']],
-        0.3,
+        0.45,
         is('park'),
         0.45,
         1,
       ],
-      'circle-stroke-opacity': ['case', ['get', 'listed'], 1, 0.3],
+      'circle-stroke-opacity': ['case', ['get', 'listed'], 1, 0.45],
     },
   })
 }
