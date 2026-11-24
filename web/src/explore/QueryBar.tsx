@@ -8,12 +8,27 @@ type Props = {
   onChange: (filters: Filters) => void
 }
 
-// What to look for: plain words, read by /ask, or the dates and place set by hand. Plain words
-// fill in the fields below them, so whatever /ask can't do, the fields still can.
-export function QueryBar({ filters, onChange }: Props) {
+// What to look for: plain words, read by /ask, or the dates and place set by hand under the
+// search's summary line. Plain words fill in those fields, so whatever /ask can't do, the
+// fields still can. They fold away, so the list has the room: on a phone the plain words too.
+export function QueryBar({ filters, onChange, summary }: Props & { summary: string }) {
+  const [editing, setEditing] = useState(false)
   return (
-    <div className="query-bar">
+    <div className={editing ? 'query-bar editing' : 'query-bar'}>
       <Ask filters={filters} onChange={onChange} />
+      <div className="query-summary">
+        <p>{summary}</p>
+        <button
+          type="button"
+          className="link-button"
+          aria-expanded={editing}
+          aria-controls="query-fields"
+          onClick={() => setEditing(!editing)}
+        >
+          {editing ? 'Done' : 'Change'}
+        </button>
+      </div>
+      <div id="query-fields" className="query-fields">
       <div className="query-dates">
         <label>
           Arrive
@@ -46,6 +61,7 @@ export function QueryBar({ filters, onChange }: Props) {
           </button>
         </p>
       )}
+      </div>
     </div>
   )
 }

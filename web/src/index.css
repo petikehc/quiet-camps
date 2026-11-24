@@ -1139,8 +1139,28 @@ body:has(.home) {
   min-height: 0;
 }
 
-/* The search in one line: only on a phone, where the fields fold away under it. */
+/* The search in one line, with the dates and place folded under it. */
 .query-summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+/* The body font: the display font's middle dot sits against the word after it. */
+.query-summary p {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  line-height: 1.35;
+}
+
+.query-fields {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.query-bar:not(.editing) .query-fields {
   display: none;
 }
 
@@ -1618,7 +1638,7 @@ body:has(.home) {
 
 /* A phone: the search in a line, the map, then the campgrounds, then the year, scrolling with
    the page; no line from card to pin. */
-@media (max-width: 56rem) {
+@media (max-width: 64rem) {
   .explore {
     display: flex;
     flex-direction: column;
@@ -1636,23 +1656,12 @@ body:has(.home) {
     border-bottom: 1px solid var(--night-land);
   }
 
+  /* On a phone the summary comes first, and the plain words fold away with the fields. */
   .query-summary {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 0.75rem 1rem;
+    order: -1;
   }
 
-  /* The body font: the display font's middle dot sits against the word after it. */
-  .query-summary p {
-    margin: 0;
-    font-weight: 600;
-    font-size: 0.9375rem;
-    line-height: 1.35;
-  }
-
-  .explore-query:not(.editing) #query-fields {
+  .query-bar:not(.editing) .ask {
     display: none;
   }
 

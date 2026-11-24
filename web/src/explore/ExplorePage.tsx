@@ -62,7 +62,6 @@ export function ExplorePage() {
   const [shown, setShown] = useState(SHOWN)
   const [hovered, setHovered] = useState<number>()
   const [map, setMap] = useState<maplibregl.Map>()
-  const [editing, setEditing] = useState(false) // on a phone, the fields fold under a summary
   const root = useRef<HTMLDivElement>(null)
   const list = useRef<HTMLOListElement>(null)
   const fitKey = JSON.stringify(apiQuery(filters))
@@ -111,22 +110,12 @@ export function ExplorePage() {
 
   return (
     <div className="explore" ref={root}>
-      <section className={editing ? 'explore-query editing' : 'explore-query'} aria-label="Where and when">
-        <div className="query-summary">
-          <p>{summary(filters, holiday && holidayName(holiday.name))}</p>
-          <button
-            type="button"
-            className="link-button"
-            aria-expanded={editing}
-            aria-controls="query-fields"
-            onClick={() => setEditing(!editing)}
-          >
-            {editing ? 'Done' : 'Change'}
-          </button>
-        </div>
-        <div id="query-fields">
-          <QueryBar filters={filters} onChange={setFilters} />
-        </div>
+      <section className="explore-query" aria-label="Where and when">
+        <QueryBar
+          filters={filters}
+          onChange={setFilters}
+          summary={summary(filters, holiday && holidayName(holiday.name))}
+        />
       </section>
       <aside className="explore-side" aria-label="Campgrounds">
         <BandToggle band={band} counts={counts} onChange={setBand} />
