@@ -28,7 +28,7 @@ Built on every QPWS camping permit since 2011, not on reviews or guesses. "Quiet
 
 ## Capabilities and Constraints
 
-- Pages: the homepage (a year of trips from home postcodes to campgrounds, and one plain-words question), the explorer (a full-screen map of the campgrounds that are usually quiet, not too busy or busy on your dates, near a place if you like; the coming year to pick dates from; when people book) and campground pages (calendar, years, lead time).
+- Pages: the homepage (the latest 12 months of trips from home postcodes to campgrounds, and one plain-words question), the explorer ("the map") (a full-screen map of the campgrounds that are usually quiet, not too busy or busy on your dates, near a place if you like; the coming year to pick dates from; when people book) and campground pages (calendar, years, lead time).
 - The data is **past bookings, not live availability**. Never imply a campground is free.
 - The permits have no campsite capacity and no coordinates: quiet is relative to each campground's own history; locations come from OpenStreetMap and park outlines.
 - A "trip" is a stay under one booking; counts are campsites (sites booked), not people or bookings.
@@ -41,6 +41,16 @@ Built on every QPWS camping permit since 2011, not on reviews or guesses. "Quiet
 - Attribution stays visible: camping permits © State of Queensland (CC BY 4.0); locations © OpenStreetMap contributors (ODbL); boundaries and postal areas © Commonwealth of Australia, ABS (CC BY 4.0).
 - Voice: plain Australian English, specific and honest about what the data can and can't say.
 
+## Brand Feeling
+
+**"I know something the crowd doesn't."** A visitor should feel let in on a local's secret, not handed a booking tool. In order: wonder (every trail piling onto the same coast), a quiet smirk (everyone does the same thing), being let in (these places are empty, and could be yours), then calm confidence (real data, said plainly). They leave feeling smart and unhurried, already picturing a campfire with no generator next door.
+
+- **A mate who's camped everywhere**, not a brand: short, dry, Australian, warm.
+- **Cheeky, never snarky.** Tease the crowd and never sneer at it: the reader is usually part of it.
+- **Calm is the reward.** Words like quiet, room, space, still. No "hidden gems", "secret spots" or "off the beaten track".
+- **Honest every time.** "Usually", "past bookings": the confidence comes from the data, not from hype.
+- The headline: "The map you need to beat the crowd." An empty result says what to try next ("Try a week later?"), never just "No results".
+
 ## Evidence on Hand
 
 - The permit data itself (2011 onwards) and everything derived from it: real campgrounds, real counts, real dates.
@@ -51,7 +61,7 @@ Built on every QPWS camping permit since 2011, not on reviews or guesses. "Quiet
 1. The data is the imagery: show real trips and real counts, not stock photos or decoration.
 2. Honest numbers: say what is counted (campsites, not people), and what is left out.
 3. Quiet is relative: always compared with a campground's own history.
-4. Insight first, tool second: the story earns the visit; Search turns it into a trip.
+4. Insight first, tool second: the story earns the visit; the map turns it into a trip.
 
 ## Accessibility & Inclusion
 
