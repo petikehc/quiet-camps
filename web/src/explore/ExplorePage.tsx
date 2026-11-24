@@ -78,7 +78,8 @@ export function ExplorePage() {
     void navigate({ search: (prev) => ({ ...prev, band: next, sel: undefined }) })
   }
 
-  // Picked on the map or the list: its band is listed, and picking it again closes it.
+  // Picked on the map or the list: its band is listed, and picking it again closes it. The router
+  // mustn't restore the list's scroll for this step: that undid the scroll to the card.
   function select(id: number) {
     const row = rows.find((r) => r.id === id)
     void navigate({
@@ -87,6 +88,7 @@ export function ExplorePage() {
         sel: prev.sel === id ? undefined : id,
         band: row ? bandOf(row.busyness) : prev.band,
       }),
+      resetScroll: false,
     })
   }
 

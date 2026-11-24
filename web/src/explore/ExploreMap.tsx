@@ -26,6 +26,7 @@ const QUEENSLAND: [[number, number], [number, number]] = [
 const CAMPGROUNDS = 'campgrounds'
 const PINS = 'campground-points'
 const GLOW = 'campground-glow'
+const TARGETS = [PINS, GLOW] // a pin takes the pointer on its glow too: the dot alone is small
 const NEAR = 'near'
 const DRAW_ORDER: Record<Certainty, number> = { none: 0, park: 1, check: 2, exact: 3 }
 const KM_PER_DEGREE = 111.32
@@ -99,16 +100,16 @@ export function ExploreMap({
     })
     const find = (e: maplibregl.MapLayerMouseEvent) =>
       latest.current.rows.find((r) => r.id === e.features?.[0]?.properties.id)
-    created.on('mousemove', PINS, (e) => {
+    created.on('mousemove', TARGETS, (e) => {
       const row = find(e)
       created.getCanvas().style.cursor = 'pointer'
       if (row) setHover({ row, at: { x: e.point.x, y: e.point.y } })
     })
-    created.on('mouseleave', PINS, () => {
+    created.on('mouseleave', TARGETS, () => {
       created.getCanvas().style.cursor = ''
       setHover(undefined)
     })
-    created.on('click', PINS, (e) => {
+    created.on('click', TARGETS, (e) => {
       const row = find(e)
       if (row) latest.current.onSelect(row.id)
     })
