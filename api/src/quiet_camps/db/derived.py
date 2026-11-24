@@ -22,10 +22,12 @@ def fill_calendar(conn: psycopg.Connection[TupleRow], last: date) -> int:
         conn.execute("DELETE FROM calendar_day")
         with (
             conn.cursor() as cur,
-            cur.copy("COPY calendar_day (night, kind, holiday, fallback_kind) FROM STDIN") as copy,
+            cur.copy(
+                "COPY calendar_day (night, kind, holiday, fallback_kind, school_holiday) FROM STDIN"
+            ) as copy,
         ):
             for day in day_kinds(FIRST_NIGHT, last):
-                copy.write_row((day.night, day.kind, day.holiday, day.fallback))
+                copy.write_row((day.night, day.kind, day.holiday, day.fallback, day.school_holiday))
                 nights += 1
     return nights
 

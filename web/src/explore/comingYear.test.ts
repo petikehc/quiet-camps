@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { comingYear, holidayFor, nightsBetween, quietestWeek, type AreaYear } from './comingYear'
+import {
+  comingYear,
+  holidayFor,
+  inSchoolHolidays,
+  nightsBetween,
+  quietestWeek,
+  type AreaYear,
+} from './comingYear'
 
 function year(y: number, nights: number, holidays: AreaYear['holidays']): AreaYear {
   return {
@@ -30,6 +37,11 @@ describe('comingYear', () => {
 
   it('keeps the school holidays from today', () => {
     expect(coming.schoolHolidays).toEqual([{ name: 'summer', night: 344 - 327, nights: 21 }])
+  })
+
+  it('says whether a night is in the school holidays', () => {
+    expect(inSchoolHolidays(coming, '2026-12-23')).toBe(true) // the summer holidays' 13th night
+    expect(inSchoolHolidays(coming, '2026-12-10')).toBe(false) // the night before they start
   })
 
   it('counts its holidays from today', () => {

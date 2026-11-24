@@ -178,16 +178,22 @@ def test_lead_time_shares_add_up_from_the_longest_lead() -> None:
     ]
 
 
-def test_lead_time_groups_holidays_by_name_then_weekend_then_weeknight() -> None:
+def test_lead_time_groups_holidays_by_name_then_school_holidays_weekend_weeknight() -> None:
     counts = [
         LeadCount(group=g, lead_days=0, nights=1)
-        for g in ("weeknight", "labour day", "weekend", "christmas")
+        for g in ("weeknight", "school holidays", "sovereign's birthday", "weekend", "christmas")
     ]
     source = FakeLeadTimes(campground(), history_end=date(2026, 9, 30), counts=counts)
 
     groups = asyncio.run(campground_lead_time(source, 7)).groups
 
-    assert [g.group for g in groups] == ["christmas", "labour day", "weekend", "weeknight"]
+    assert [g.group for g in groups] == [
+        "christmas",
+        "sovereign's birthday",  # after "school holidays" by name, but a holiday comes first
+        "school holidays",
+        "weekend",
+        "weeknight",
+    ]
 
 
 def test_lead_time_without_any_history_is_empty() -> None:

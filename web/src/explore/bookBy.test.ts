@@ -32,15 +32,20 @@ describe('halfBookedWeeks', () => {
 
 describe('groupFor', () => {
   it('is the holiday, else a weekend or weeknight', () => {
-    expect(groupFor('2027-03-25', EASTER_2027)).toBe('easter')
-    expect(groupFor('2027-02-12', undefined)).toBe('weekend') // a Friday
-    expect(groupFor('2027-02-10', undefined)).toBe('weeknight') // a Wednesday
+    expect(groupFor('2027-03-25', EASTER_2027, false)).toBe('easter')
+    expect(groupFor('2027-02-12', undefined, false)).toBe('weekend') // a Friday
+    expect(groupFor('2027-02-10', undefined, false)).toBe('weeknight') // a Wednesday
+  })
+
+  it('is the school holidays for a night in them that is not a public holiday', () => {
+    expect(groupFor('2026-12-23', undefined, true)).toBe('school holidays') // a Wednesday
+    expect(groupFor('2027-03-25', EASTER_2027, true)).toBe('easter') // the public holiday wins
   })
 })
 
 describe('bookBy', () => {
   it('counts back from the arrival', () => {
-    expect(bookBy(lead(109), '2027-03-25', EASTER_2027)).toEqual({
+    expect(bookBy(lead(109), '2027-03-25', EASTER_2027, true)).toEqual({
       group: 'easter',
       weeks: expect.closeTo(3.08, 2) as number,
       date: '2027-03-03',
@@ -48,7 +53,7 @@ describe('bookBy', () => {
   })
 
   it('says nothing from too few booked nights, or a kind of night it has none of', () => {
-    expect(bookBy(lead(6), '2027-03-25', EASTER_2027)).toBeUndefined()
-    expect(bookBy(lead(109), '2027-02-12', undefined)).toBeUndefined()
+    expect(bookBy(lead(6), '2027-03-25', EASTER_2027, true)).toBeUndefined()
+    expect(bookBy(lead(109), '2027-02-12', undefined, false)).toBeUndefined()
   })
 })

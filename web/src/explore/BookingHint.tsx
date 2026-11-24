@@ -7,7 +7,15 @@ type Props = {
   campgroundId: number
   arrive: string
   holiday: Holiday | undefined // the holiday the arrival falls in, if any
+  schoolHoliday: boolean // the arrival is in the school holidays
   today: string
+}
+
+// How a lead-time group reads in "Half its … bookings"; holidays by their names.
+const KINDS: Record<string, string> = {
+  weekend: 'weekend',
+  weeknight: 'weeknight',
+  'school holidays': 'school-holiday',
 }
 
 function ahead(weeks: number): string {
@@ -29,13 +37,13 @@ function day(date: string, today: string): string {
 
 // When people book this campground for nights like these, from its past bookings: how much
 // time there is. Past bookings, not live availability: it never says a site is free.
-export function BookingHint({ campgroundId, arrive, holiday, today }: Props) {
+export function BookingHint({ campgroundId, arrive, holiday, schoolHoliday, today }: Props) {
   const lead = useLeadTime(campgroundId, true)
   if (!lead.data) return lead.isPending ? <p className="muted">Looking at how far ahead it's booked…</p> : null
 
-  const hint = bookBy(lead.data, arrive, holiday)
+  const hint = bookBy(lead.data, arrive, holiday, schoolHoliday)
   if (!hint) return <p className="muted">Too few past bookings to say how far ahead people book.</p>
-  const kind = hint.group === 'weekend' || hint.group === 'weeknight' ? hint.group : holidayName(hint.group)
+  const kind = KINDS[hint.group] ?? holidayName(hint.group)
   return (
     <div className="book-by">
       {hint.weeks < 1 ? (

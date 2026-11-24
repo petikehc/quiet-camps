@@ -12,6 +12,7 @@ type Props = {
   of: number
   arrive: string
   holiday: Holiday | undefined // the holiday the arrival falls in, if any
+  schoolHoliday: boolean // the arrival is in the school holidays
   today: string
   review: boolean
   onSelect: () => void
@@ -25,6 +26,7 @@ export function Card({
   of,
   arrive,
   holiday,
+  schoolHoliday,
   today,
   review,
   onSelect,
@@ -53,7 +55,13 @@ export function Card({
       </button>
       {selected && (
         <div className="card-more">
-          <BookingHint campgroundId={c.id} arrive={arrive} holiday={holiday} today={today} />
+          <BookingHint
+            campgroundId={c.id}
+            arrive={arrive}
+            holiday={holiday}
+            schoolHoliday={schoolHoliday}
+            today={today}
+          />
           <p>{rankWords(rank, of)}</p>
           {notes.map((note) => (
             <p key={note} className="muted">

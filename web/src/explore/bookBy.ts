@@ -9,15 +9,16 @@ type BookedBy = components['schemas']['BookedByOut']
 const ENOUGH_NIGHTS = 10
 
 export type BookBy = {
-  group: string // the kind of night: a holiday, "weekend" or "weeknight"
+  group: string // the kind of night: a holiday, "school holidays", "weekend" or "weeknight"
   weeks: number // half its bookings for that kind of night are made this many weeks ahead
   date: string // so for these nights, by this day
 }
 
-// The kind of night the lead-time groups use: the holiday the arrival falls in, else a weekend
-// (Friday or Saturday night) or a weeknight.
-export function groupFor(arrive: string, holiday: Holiday | undefined): string {
+// The kind of night the lead-time groups use: the public holiday the arrival falls in, else the
+// school holidays, else a weekend (Friday or Saturday night) or a weeknight.
+export function groupFor(arrive: string, holiday: Holiday | undefined, schoolHoliday: boolean): string {
   if (holiday) return holiday.name
+  if (schoolHoliday) return 'school holidays'
   const weekday = new Date(`${arrive}T00:00:00Z`).getUTCDay()
   return weekday === 5 || weekday === 6 ? 'weekend' : 'weeknight'
 }
@@ -35,8 +36,13 @@ export function halfBookedWeeks(bookedBy: BookedBy[]): number {
   return points.at(-1)?.weeks ?? 0 // half or more booked a year ahead
 }
 
-export function bookBy(lead: LeadTime, arrive: string, holiday: Holiday | undefined): BookBy | undefined {
-  const group = groupFor(arrive, holiday)
+export function bookBy(
+  lead: LeadTime,
+  arrive: string,
+  holiday: Holiday | undefined,
+  schoolHoliday: boolean,
+): BookBy | undefined {
+  const group = groupFor(arrive, holiday, schoolHoliday)
   const found = lead.groups.find((g) => g.group === group)
   if (!found || found.nights < ENOUGH_NIGHTS) return undefined
   const weeks = halfBookedWeeks(found.booked_by)

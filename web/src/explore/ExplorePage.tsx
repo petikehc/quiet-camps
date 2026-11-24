@@ -7,7 +7,14 @@ import { holidayName } from '../charts/scales'
 import { BandToggle } from './BandToggle'
 import { BAND_NAMES, bandNote, bandOf } from './bands'
 import { Card } from './Card'
-import { comingYear, holidayFor, nightsBetween, quietestWeek, type ComingYear } from './comingYear'
+import {
+  comingYear,
+  holidayFor,
+  inSchoolHolidays,
+  nightsBetween,
+  quietestWeek,
+  type ComingYear,
+} from './comingYear'
 import { addDays, apiQuery, localDay, widerKm, type Band, type Filters } from './filters'
 import { LeaderLine } from './LeaderLine'
 import { QueryBar } from './QueryBar'
@@ -98,6 +105,7 @@ export function ExplorePage() {
       ? { lat: filters.lat, lon: filters.lon, km: filters.km ?? 50 }
       : undefined
   const holiday = coming && holidayFor(coming, filters.arrive)
+  const schoolHoliday = coming !== undefined && inSchoolHolidays(coming, filters.arrive)
 
   return (
     <div className="explore" ref={root}>
@@ -151,6 +159,7 @@ export function ExplorePage() {
               of={rows.length}
               arrive={filters.arrive}
               holiday={holiday}
+              schoolHoliday={schoolHoliday}
               today={today}
               review={review !== undefined}
               onSelect={() => select(c.id)}

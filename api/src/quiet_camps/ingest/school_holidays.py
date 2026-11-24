@@ -1,6 +1,6 @@
 """Queensland state school holidays, from a reviewed list of the department's published dates
-(qld_school_holidays.csv): for showing when families are camping, not (yet) for comparing
-nights, because the department publishes only the coming years."""
+(qld_school_holidays.csv): for showing when families are camping and for how far ahead they
+book, not (yet) for comparing nights, because only recent years are known."""
 
 import csv
 from dataclasses import dataclass

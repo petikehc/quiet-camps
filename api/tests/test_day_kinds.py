@@ -107,3 +107,21 @@ def test_every_coming_night_has_history_behind_its_kind_or_its_fallback() -> Non
         if nights_of.get(d.kind, 0) < 3 and len(years_of.get(d.fallback, set())) < 3
     ]
     assert short == []
+
+
+def test_school_holiday_nights_are_marked() -> None:
+    """Queensland's 2024 winter school holidays were Saturday 22 June to Sunday 7 July: their
+    nights are the evenings before each day off, Friday 21 June to Saturday 6 July."""
+    marked = {d.night: d.school_holiday for d in day_kinds(date(2024, 6, 20), date(2024, 7, 7))}
+
+    assert marked[date(2024, 6, 20)] is False  # a school night
+    assert marked[date(2024, 6, 21)] is True
+    assert marked[date(2024, 7, 6)] is True
+    assert marked[date(2024, 7, 7)] is False  # school on Monday
+
+
+def test_a_public_holiday_in_the_school_holidays_is_both() -> None:
+    """Good Friday 2025 (18 April) was in the autumn school holidays."""
+    [good_friday] = day_kinds(date(2025, 4, 18), date(2025, 4, 18))
+
+    assert (good_friday.holiday, good_friday.school_holiday) == ("easter", True)

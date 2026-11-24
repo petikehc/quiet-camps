@@ -47,7 +47,8 @@ ORDER BY d.night
 """)
 
 
-# Booked nights in [since, until] by group and days booked ahead. A booking-night counts once:
+# Booked nights in [since, until] by group (a public holiday, else the school holidays, else a
+# weekend or a weeknight) and days booked ahead. A booking-night counts once:
 # its several sites are identical rows in one file, and quarter files overlap (as in
 # area_night). Booked after the night (0.4% of rows) counts as booked on the day.
 LEAD_COUNTS = text("""
@@ -59,6 +60,7 @@ WITH booked AS (
     WHERE a.campground_id = :campground_id AND n.night BETWEEN :since AND :until
 )
 SELECT CASE WHEN d.holiday IS NOT NULL THEN d.holiday
+            WHEN d.school_holiday THEN 'school holidays'
             WHEN extract(isodow FROM b.night) IN (5, 6) THEN 'weekend'
             ELSE 'weeknight' END AS "group",
        greatest(b.night - b.booked_on, 0) AS lead_days,

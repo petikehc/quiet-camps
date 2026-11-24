@@ -62,3 +62,8 @@ export function quietestWeek(values: (number | null)[]): number | undefined {
 export function holidayFor(coming: ComingYear, day: string): Holiday | undefined {
   return holidayOn(coming.holidays, nightsBetween(coming.firstNight, day))
 }
+
+// Whether a night is in Queensland's state school holidays, where they're published.
+export function inSchoolHolidays(coming: ComingYear, day: string): boolean {
+  return holidayOn(coming.schoolHolidays, nightsBetween(coming.firstNight, day)) !== undefined
+}

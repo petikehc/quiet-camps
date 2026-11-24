@@ -93,14 +93,14 @@ async def campground_calendar(
 
 HISTORY_YEARS = 3  # lead times doubled after 2020: describe how people book now
 WEEKS = (0, 1, 2, 4, 8, 13, 26, 52)  # "booked by N weeks before"
-LAST_GROUPS = ("weekend", "weeknight")  # after the holidays, which sort by name
+LAST_GROUPS = ("school holidays", "weekend", "weeknight")  # after the holidays, by name
 
 
 @dataclass(frozen=True, kw_only=True)
 class LeadCount:
     """How many booked nights in a group were booked lead_days before the night."""
 
-    group: str  # a holiday, "weekend" (Friday and Saturday nights) or "weeknight"
+    group: str  # a holiday, "school holidays", "weekend" (Fri and Sat nights) or "weeknight"
     lead_days: int
     nights: int
 

@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Any
 
-from sqlalchemy import BigInteger, ForeignKey, Index, MetaData, String, UniqueConstraint
+from sqlalchemy import BigInteger, ForeignKey, Index, MetaData, String, UniqueConstraint, false
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -128,6 +128,8 @@ class CalendarDay(Base):
     # A broader kind for when `kind` comes too seldom: "fortnight 26 3", "easter", "christmas".
     # None only before the next refresh fills it.
     fallback_kind: Mapped[str | None]
+    # In Queensland's state school holidays, where known (ingest/qld_school_holidays.csv).
+    school_holiday: Mapped[bool] = mapped_column(server_default=false())
 
 
 class CampNight(Base):
