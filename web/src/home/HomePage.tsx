@@ -83,7 +83,7 @@ export function HomePage() {
             </p>
           )}
         </div>
-        <div className="home-map">
+        <div className={trips ? 'home-map ready' : 'home-map'}>
           <Outline />
           {trips && <NightFigure trips={trips} night={night} />}
           {trips && <Live trips={trips} night={night} seek={seek} playing={playing} onNight={setNight} />}

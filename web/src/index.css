@@ -144,12 +144,17 @@ a {
 }
 
 .site-nav {
-  align-items: baseline;
+  align-items: center;
 }
 
 .site-nav a {
   color: inherit;
   opacity: 0.85;
+  text-decoration: none;
+}
+
+.site-nav a:hover {
+  text-decoration: underline;
 }
 
 /* Night sounds, in the header on every page: text like the links beside it, with a speaker that
@@ -211,6 +216,13 @@ button {
   gap: 0.6rem;
   color: inherit;
   text-decoration: none;
+}
+
+/* The display face sits its letters a little low in the line box, so the icon is lifted to
+   match the cap height. */
+.site-header h1 a svg {
+  flex: none;
+  transform: translateY(-1px);
 }
 
 .muted {
@@ -539,6 +551,13 @@ body:has(.home) {
   transform: perspective(110vh) rotateX(34deg) scale(0.98) translateY(-3%);
   transform-origin: 50% 55%;
   pointer-events: none; /* decoration: the tilt widens its box, which mustn't take a tap */
+}
+
+/* Once the canvas has drawn its own land, the placeholder goes: two maps at two tilts would
+   show as a double coastline on a narrow screen. */
+.home-map.ready .home-outline {
+  opacity: 0;
+  transition: opacity 900ms 300ms;
 }
 
 .home-canvas {
