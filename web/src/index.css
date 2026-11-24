@@ -152,8 +152,8 @@ a {
   opacity: 0.85;
 }
 
-/* Night sounds, in the header on every page: text like the links beside it, with a small ring
-   that fills teal while they're on. */
+/* Night sounds, in the header on every page: text like the links beside it, with a speaker that
+   sounds, in teal, while they're on. */
 .sound-switch {
   display: inline-flex;
   align-items: center;
@@ -167,22 +167,11 @@ a {
   cursor: pointer;
 }
 
-.sound-switch::before {
-  content: '';
-  width: 0.55rem;
-  height: 0.55rem;
-  border: 2px solid currentColor;
-  border-radius: 50%;
-}
-
 .sound-switch[aria-pressed='true'] {
   opacity: 1;
   color: var(--quiet);
 }
 
-.sound-switch[aria-pressed='true']::before {
-  background: currentColor;
-}
 
 .site-nav a.active {
   opacity: 1;
