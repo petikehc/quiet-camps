@@ -3,7 +3,7 @@ import type * as maplibregl from 'maplibre-gl'
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { fieldErrors } from '../api/errors'
 import { BandToggle } from './BandToggle'
-import { BAND_NAMES, bandOf } from './bands'
+import { BAND_NAMES, bandNote, bandOf } from './bands'
 import { Card } from './Card'
 import { comingYear, holidayFor } from './comingYear'
 import { apiQuery, localDay, type Band, type Filters } from './filters'
@@ -99,6 +99,7 @@ export function ExplorePage() {
       <aside className="explore-side" aria-label="Campgrounds">
         <QueryBar filters={filters} onChange={setFilters} />
         <BandToggle band={band} counts={counts} onChange={setBand} />
+        <p className="band-note">{bandNote(band)}</p>
         {query.isError && <ExploreError error={query.error} />}
         {query.isPending && <p className="explore-status">Finding campgrounds…</p>}
         {query.isSuccess && listed.length === 0 && (

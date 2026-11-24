@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import type { Holiday } from '../charts/dates'
-import { usually } from './bands'
+import { rankWords, usually } from './bands'
 import { BookingHint } from './BookingHint'
 import { osmLink, shownLocation } from './location'
 import type { QuietCampground } from './queries'
@@ -54,9 +54,7 @@ export function Card({
       {selected && (
         <div className="card-more">
           <BookingHint campgroundId={c.id} arrive={arrive} holiday={holiday} today={today} />
-          <p>
-            Number {rank} of {of} for these nights, quietest first.
-          </p>
+          <p>{rankWords(rank, of)}</p>
           {notes.map((note) => (
             <p key={note} className="muted">
               {note}

@@ -23,12 +23,12 @@ export function WhenStrip({ coming, arrive, depart, near, onDates }: Props) {
   const labels = useMemo(() => {
     const named = peaks(values, 3, 60).map((n) => {
       const h = holidayOn(holidays, n)
-      return { night: n, text: h ? holidayName(h.name) : 'Busy' }
+      return { night: n, text: h ? holidayName(h.name) : shortDate(nightDate(firstNight, n)) }
     })
     const quiet = quietestWeek(values)
     const clear = quiet !== undefined && named.every((l) => Math.abs(l.night - quiet) > 40)
     return clear ? [...named, { night: quiet + 3, text: 'Quietest week' }] : named
-  }, [values, holidays])
+  }, [values, holidays, firstNight])
 
   const said = (n: number) => {
     const h = holidayOn(holidays, n)
@@ -73,4 +73,14 @@ export function WhenStrip({ coming, arrive, depart, near, onDates }: Props) {
       </ul>
     </section>
   )
+}
+
+// A busy night that isn't a holiday is named by its date: "Sat 15 May".
+function shortDate(night: string): string {
+  return new Date(`${night}T00:00:00Z`).toLocaleDateString('en-AU', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
+  })
 }

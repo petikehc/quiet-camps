@@ -1192,6 +1192,12 @@ section:has(> .lead-time) {
   font-variant-numeric: tabular-nums;
 }
 
+.band-note {
+  margin: 0.4rem 1.25rem 0;
+  font-size: 0.8125rem;
+  color: var(--night-muted);
+}
+
 .explore-status,
 .explore .error {
   margin: 0;
@@ -1228,7 +1234,7 @@ section:has(> .lead-time) {
 }
 
 .card.selected {
-  border-color: var(--night-line);
+  border-color: var(--band);
 }
 
 .card-main {
