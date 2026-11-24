@@ -237,7 +237,8 @@ function WhereFrom({ onPick }: { onPick: (start: Start) => void }) {
 
   return (
     <div className="where-from">
-      <p>Where from? Campgrounds within 150 km:</p>
+      <p>Where are you setting out from?</p>
+      <p className="where-hint">Pick a city, or your location, to see campgrounds within 150 km of it.</p>
       <div className="chips">
         {STARTS.map((start) => (
           <button key={start.near} type="button" className="chip-button" onClick={() => onPick(start)}>
@@ -246,7 +247,7 @@ function WhereFrom({ onPick }: { onPick: (start: Start) => void }) {
         ))}
         {'geolocation' in navigator && (
           <button type="button" className="chip-button" onClick={nearMe}>
-            Near me
+            Use my location
           </button>
         )}
       </div>
