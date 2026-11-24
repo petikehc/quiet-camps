@@ -1,3 +1,5 @@
+import { nightsBetween } from './comingYear'
+
 // The search's filters live in the URL, so a search can be shared, bookmarked and gone back to.
 // The router hands validateSearch whatever is in the query string; parseFilters makes it Filters.
 // Range rules (depart after arrive, 60 nights at most) stay in the API: its 422 is shown as is.
@@ -69,6 +71,18 @@ export function addDays(day: string, days: number): string {
   const [year, month, date] = day.split('-').map(Number)
   // UTC, so a daylight-saving change can't move the date.
   return new Date(Date.UTC(year, month - 1, date + days)).toISOString().slice(0, 10)
+}
+
+// The next radius out, for "nothing here: look wider". None past the widest.
+export function widerKm(km: number): number | undefined {
+  return KM_CHOICES.find((choice) => choice > km)
+}
+
+// A new arrival: an arrival on or after the leave date takes the leave date with it, the stay
+// the same length, so the dates are never the wrong way round.
+export function withArrive<F extends Pick<Filters, 'arrive' | 'depart'>>(filters: F, arrive: string): F {
+  if (arrive < filters.depart) return { ...filters, arrive }
+  return { ...filters, arrive, depart: addDays(arrive, nightsBetween(filters.arrive, filters.depart)) }
 }
 
 // Today's date where the browser is, YYYY-MM-DD.

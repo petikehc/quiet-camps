@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addDays, apiQuery, isOldSearchLink, parseFilters, parseView } from './filters'
+import { addDays, apiQuery, isOldSearchLink, parseFilters, parseView, widerKm, withArrive } from './filters'
 
 const wednesday = new Date(2026, 10, 18) // months count from 0: 18 Nov 2026
 
@@ -105,5 +105,27 @@ describe('isOldSearchLink', () => {
   it('leaves the homepage alone', () => {
     expect(isOldSearchLink({})).toBe(false)
     expect(isOldSearchLink({ utm_source: 'newsletter' })).toBe(false)
+  })
+})
+
+describe('widerKm', () => {
+  it('is the next radius on the list, or none past the widest', () => {
+    expect(widerKm(25)).toBe(50)
+    expect(widerKm(50)).toBe(100)
+    expect(widerKm(150)).toBe(200) // /ask's 150 isn't on the list
+    expect(widerKm(200)).toBeUndefined()
+  })
+})
+
+describe('withArrive', () => {
+  const easter = { arrive: '2027-03-25', depart: '2027-03-29' }
+
+  it('keeps the leave date while it is still after the arrival', () => {
+    expect(withArrive(easter, '2027-03-26')).toEqual({ arrive: '2027-03-26', depart: '2027-03-29' })
+  })
+
+  it('moves the leave date with an arrival on or after it, keeping the stay length', () => {
+    expect(withArrive(easter, '2027-03-29')).toEqual({ arrive: '2027-03-29', depart: '2027-04-02' })
+    expect(withArrive(easter, '2027-04-10')).toEqual({ arrive: '2027-04-10', depart: '2027-04-14' })
   })
 })

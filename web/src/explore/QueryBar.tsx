@@ -1,6 +1,6 @@
 import { useDeferredValue, useState, type FormEvent } from 'react'
 import { failedWords, filtersFrom, missedWords, useAsk } from './ask'
-import { KM_CHOICES, type Filters } from './filters'
+import { KM_CHOICES, withArrive, type Filters } from './filters'
 import { usePlaces, type Place } from './queries'
 
 type Props = {
@@ -20,7 +20,7 @@ export function QueryBar({ filters, onChange }: Props) {
           <input
             type="date"
             value={filters.arrive}
-            onChange={(e) => e.target.value && onChange({ ...filters, arrive: e.target.value })}
+            onChange={(e) => e.target.value && onChange(withArrive(filters, e.target.value))}
           />
         </label>
         <label>

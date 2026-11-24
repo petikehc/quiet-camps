@@ -45,6 +45,9 @@ export function WhenStrip({ coming, arrive, depart, near, onDates }: Props) {
         {near ? `Around ${near}` : 'Across Queensland'}: the coming year{' '}
         <span>Drag to move your dates</span>
       </h2>
+      {values.every((v) => v === null) && (
+        <p className="when-empty">None of these campgrounds is usually open in the coming year.</p>
+      )}
       <YearStrip
         firstNight={firstNight}
         values={values}

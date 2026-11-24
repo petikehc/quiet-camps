@@ -2,16 +2,18 @@ import { getRouteApi } from '@tanstack/react-router'
 import type * as maplibregl from 'maplibre-gl'
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { fieldErrors } from '../api/errors'
+import { nightDate } from '../charts/dates'
 import { holidayName } from '../charts/scales'
 import { BandToggle } from './BandToggle'
 import { BAND_NAMES, bandNote, bandOf } from './bands'
 import { Card } from './Card'
-import { comingYear, holidayFor } from './comingYear'
-import { apiQuery, localDay, type Band, type Filters } from './filters'
+import { comingYear, holidayFor, nightsBetween, quietestWeek, type ComingYear } from './comingYear'
+import { addDays, apiQuery, localDay, widerKm, type Band, type Filters } from './filters'
 import { LeaderLine } from './LeaderLine'
 import { QueryBar } from './QueryBar'
 import { useAreaYear, useQuietMap } from './queries'
-import { summary } from './summary'
+import { STARTS, startAt, type Start } from './starts'
+import { dateRange, summary } from './summary'
 import { WhenStrip } from './WhenStrip'
 
 // MapLibre is most of the page's weight: the list can show before it arrives.
@@ -58,14 +60,15 @@ export function ExplorePage() {
   const list = useRef<HTMLOListElement>(null)
   const fitKey = JSON.stringify(apiQuery(filters))
 
-  function setFilters(next: Filters) {
+  // Each change is a step Back can undo, except dragging the strip, which would be dozens.
+  function setFilters(next: Filters, replace = false) {
     setShown(SHOWN)
-    void navigate({ search: { ...next, ...(review ? { review } : {}), band } })
+    void navigate({ search: { ...next, ...(review ? { review } : {}), band }, replace })
   }
 
   function setBand(next: Band) {
     setShown(SHOWN)
-    void navigate({ search: (prev) => ({ ...prev, band: next, sel: undefined }), replace: true })
+    void navigate({ search: (prev) => ({ ...prev, band: next, sel: undefined }) })
   }
 
   // Picked on the map or the list: its band is listed, and picking it again closes it.
@@ -77,7 +80,6 @@ export function ExplorePage() {
         sel: prev.sel === id ? undefined : id,
         band: row ? bandOf(row.busyness) : prev.band,
       }),
-      replace: true,
     })
   }
 
@@ -119,10 +121,25 @@ export function ExplorePage() {
       <aside className="explore-side" aria-label="Campgrounds">
         <BandToggle band={band} counts={counts} onChange={setBand} />
         <p className="band-note">{bandNote(band)}</p>
-        {query.isError && <ExploreError error={query.error} />}
+        <p className="visually-hidden" aria-live="polite">
+          {query.isSuccess && `${counts[band]} ${BAND_NAMES[band].toLowerCase()} campgrounds`}
+        </p>
+        {filters.near === undefined && !filters.park && (
+          <WhereFrom onPick={(start) => setFilters({ ...filters, ...start })} />
+        )}
+        {query.isError && (
+          <ExploreError error={query.error} onRetry={() => void query.refetch()} />
+        )}
         {query.isPending && <p className="explore-status">Finding campgrounds…</p>}
         {query.isSuccess && listed.length === 0 && (
-          <p className="explore-status">{emptyWords(band, rows.length, filters)}</p>
+          <Empty
+            band={band}
+            counts={counts}
+            filters={filters}
+            coming={coming}
+            onBand={setBand}
+            onFilters={setFilters}
+          />
         )}
         <ol className={`explore-cards band-${band}`} ref={list} aria-busy={query.isFetching}>
           {listed.slice(0, visible).map((c) => (
@@ -173,7 +190,7 @@ export function ExplorePage() {
           arrive={filters.arrive}
           depart={filters.depart}
           near={filters.near}
-          onDates={(arrive, depart) => setFilters({ ...filters, arrive, depart })}
+          onDates={(arrive, depart) => setFilters({ ...filters, arrive, depart }, true)}
         />
       )}
       <LeaderLine
@@ -188,23 +205,123 @@ export function ExplorePage() {
   )
 }
 
-function emptyWords(band: Band, total: number, filters: Filters): string {
-  const where = filters.near ? ` within ${filters.km} km of ${filters.near}` : ''
-  if (total === 0) return `No campgrounds${where} are usually open on these nights.`
-  return `None${where} are usually ${BAND_NAMES[band].toLowerCase()} on these nights: try the other bands, or other dates.`
+// A search with no place yet: most campers set out from a city, or from where they are.
+function WhereFrom({ onPick }: { onPick: (start: Start) => void }) {
+  const [note, setNote] = useState<string>()
+
+  function nearMe() {
+    setNote('Finding where you are…')
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const start = startAt(coords.latitude, coords.longitude)
+        setNote(start ? undefined : "That's too far from Queensland to search from: pick a town.")
+        if (start) onPick(start)
+      },
+      () => setNote("Couldn't get your location: pick a town, or type one above."),
+      { maximumAge: 600_000, timeout: 10_000 },
+    )
+  }
+
+  return (
+    <div className="where-from">
+      <p>Where from? Campgrounds within 150 km:</p>
+      <div className="chips">
+        {STARTS.map((start) => (
+          <button key={start.near} type="button" className="chip-button" onClick={() => onPick(start)}>
+            {start.near}
+          </button>
+        ))}
+        {'geolocation' in navigator && (
+          <button type="button" className="chip-button" onClick={nearMe}>
+            Near me
+          </button>
+        )}
+      </div>
+      {note && (
+        <p className="where-note" role="status">
+          {note}
+        </p>
+      )}
+    </div>
+  )
 }
 
-function ExploreError({ error }: { error: Error }) {
+type EmptyProps = {
+  band: Band
+  counts: Record<Band, number>
+  filters: Filters
+  coming: ComingYear | undefined
+  onBand: (band: Band) => void
+  onFilters: (filters: Filters) => void
+}
+
+// Nothing in this band: what is there instead, one tap away.
+function Empty({ band, counts, filters, coming, onBand, onFilters }: EmptyProps) {
+  const total = counts.quiet + counts.ok + counts.busy
+  const where = filters.near ? ` within ${filters.km} km of ${filters.near}` : ''
+  const wider = filters.near && filters.km !== undefined ? widerKm(filters.km) : undefined
+  const others = (['quiet', 'ok', 'busy'] as const).filter((b) => b !== band && counts[b] > 0)
+  const week = coming && quietestWeek(coming.values)
+  const stay = nightsBetween(filters.arrive, filters.depart)
+  const quietArrive = week !== undefined && coming ? nightDate(coming.firstNight, week) : undefined
+
+  return (
+    <div className="explore-status">
+      <p>
+        {total === 0
+          ? `No campgrounds${where} are usually open on these nights.`
+          : `None${where} are usually ${BAND_NAMES[band].toLowerCase()} on these nights.`}
+      </p>
+      <div className="chips">
+        {others.map((b) => (
+          <button key={b} type="button" className="chip-button" onClick={() => onBand(b)}>
+            Show the {counts[b]} {BAND_NAMES[b].toLowerCase()}
+          </button>
+        ))}
+        {wider && (
+          <button type="button" className="chip-button" onClick={() => onFilters({ ...filters, km: wider })}>
+            Widen to {wider} km
+          </button>
+        )}
+        {filters.near && (
+          <button
+            type="button"
+            className="chip-button"
+            onClick={() => onFilters({ ...filters, near: undefined, lat: undefined, lon: undefined, km: undefined })}
+          >
+            Anywhere
+          </button>
+        )}
+        {quietArrive && quietArrive !== filters.arrive && (
+          <button
+            type="button"
+            className="chip-button"
+            onClick={() => onFilters({ ...filters, arrive: quietArrive, depart: addDays(quietArrive, stay) })}
+          >
+            Try its quietest week: {dateRange(quietArrive, addDays(quietArrive, stay))}
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Trying again goes back to "Finding campgrounds…" (a query with no data is pending again).
+function ExploreError({ error, onRetry }: { error: Error; onRetry: () => void }) {
   const errors = fieldErrors(error)
   return (
     <div role="alert" className="error">
-      <p>{errors.length > 0 ? 'Check the dates:' : "The campgrounds didn't load. Try again soon."}</p>
-      {errors.length > 0 && (
+      <p>{errors.length > 0 ? 'Check the dates:' : "The campgrounds didn't load."}</p>
+      {errors.length > 0 ? (
         <ul>
           {errors.map((e) => (
             <li key={`${e.field}: ${e.message}`}>{e.message}</li>
           ))}
         </ul>
+      ) : (
+        <button type="button" className="chip-button" onClick={onRetry}>
+          Try again
+        </button>
       )}
     </div>
   )
