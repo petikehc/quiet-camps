@@ -25,9 +25,9 @@ const QUEENSLAND: [[number, number], [number, number]] = [
   [153.6, -9.1],
 ]
 // As far as the map pans or zooms out: Queensland and a little sea, north to the Torres Strait,
-// so the map stays on Queensland rather than drifting to Papua New Guinea or Indonesia.
+// and south far enough that its southern edge can be dragged up clear of the year strip.
 const MAX_BOUNDS: [[number, number], [number, number]] = [
-  [137.0, -30.2],
+  [137.0, -33],
   [155.6, -9.05],
 ]
 const CAMPGROUNDS = 'campgrounds'
