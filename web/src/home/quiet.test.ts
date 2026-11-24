@@ -12,6 +12,7 @@ const MONTHLY: [name: string, jan: number, feb: number, mar: number][] = [
   ['Lull', 130, 130, 10], // open, at a tenth of its usual March
   ['Shut', 135, 135, 0], // nothing in March: closed, not quiet
   ['Tiny', 10, 10, 1], // a usual March of 7: too small to judge
+  ['Closing', 135, 135, 5], // a few arrivals, then closed: under a tenth of its usual
 ]
 const entries = FIRSTS.flatMap((night, m) =>
   MONTHLY.flatMap(([, ...sites], c) => (sites[m] > 0 ? [[night, c, sites[m]] as const] : [])),
@@ -62,18 +63,19 @@ describe('monthBoard', () => {
 
   it('never calls a closed campground (none arriving) or a tiny one quiet', () => {
     expect(named(board.quiet)).not.toContain('Shut')
+    expect(named(board.quiet)).not.toContain('Closing') // closed for most of the month
     expect(named([...board.quiet, ...board.busier])).not.toContain('Tiny')
   })
 
   it('puts the usually busier of two as quiet first', () => {
     // Steady and Surge both at a quarter of these usual months: 90 of 360, 210 of 840.
-    const tie = monthBoard(trips, offsets, new Float64Array([360 / 31, 840 / 31, 3, 3, 0]), march)
+    const tie = monthBoard(trips, offsets, new Float64Array([360 / 31, 840 / 31, 3, 3, 0, 3]), march)
     expect(named(tie.quiet)).toEqual(['Lull', 'Surge', 'Steady']) // Lull at a tenth first
   })
 })
 
 describe('quietMask', () => {
   it('marks the quiet ones for the map', () => {
-    expect([...quietMask(trips, offsets, nightly, months(trips)[2])]).toEqual([0, 0, 1, 0, 0])
+    expect([...quietMask(trips, offsets, nightly, months(trips)[2])]).toEqual([0, 0, 1, 0, 0, 0])
   })
 })

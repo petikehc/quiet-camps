@@ -4,6 +4,7 @@ import { formatNight, holidayName } from '../charts/scales'
 import { peaks } from '../charts/strip'
 import { YearStrip } from '../charts/YearStrip'
 import { nightlySites, nightOffsets, type Trips } from './trips'
+import { useEased } from './useEased'
 
 const NAMED = 3 // peaks named on the strip
 const APART = 60 // nights between them, so their names don't collide
@@ -68,13 +69,14 @@ export function TimeControls({ trips, night, playing, onPlaying, onSeek }: Props
 export function NightFigure({ trips, night }: { trips: Trips; night: number }) {
   const totals = useMemo(() => nightlySites(trips, nightOffsets(trips.per_night)), [trips])
   const holiday = holidayOn(trips.holidays, night)
+  const count = useEased(totals[night])
   return (
     <p className="home-now" aria-hidden="true">
       <span>
         {formatNight(nightDate(trips.first_night, night))}
         {holiday && <b> · {holidayName(holiday.name)}</b>}
       </span>
-      <strong>{totals[night].toLocaleString()}</strong> campsites arriving
+      <strong>{Math.round(count).toLocaleString()}</strong> campsites arriving
     </p>
   )
 }

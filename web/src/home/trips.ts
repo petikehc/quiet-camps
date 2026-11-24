@@ -8,6 +8,15 @@ export const TRAIL = 0.35 // a trail's tail, as a share of its flight
 // Australia's middle, so the continent keeps its shape.
 export const project = projection({ lon: 134, lat: -28 })
 
+// Where the year starts playing: today's date a year ago, "this time last year", kept inside the
+// trips' nights. 29 February becomes the 28th.
+export function startNight(trips: Pick<Trips, 'first_night' | 'nights'>, today: string): number {
+  const [year, month, day] = today.split('-').map(Number)
+  const lastYear = Date.UTC(year - 1, month - 1, month === 2 && day === 29 ? 28 : day)
+  const night = Math.round((lastYear - Date.parse(`${trips.first_night}T00:00:00Z`)) / 86_400_000)
+  return Math.min(Math.max(night, 0), trips.nights - 1)
+}
+
 // When the trips are, in words: "in 2025", or for the latest 12 months, "in the 12 months to
 // September 2026".
 export function periodWords(trips: Pick<Trips, 'year' | 'first_night' | 'nights'>): string {

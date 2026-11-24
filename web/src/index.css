@@ -803,12 +803,13 @@ body:has(.home) {
 }
 
 .home-board > div {
-  animation: board-in 280ms cubic-bezier(0.16, 1, 0.3, 1);
+  animation: board-in 600ms ease-out;
 }
 
+/* Each month's lists fade in from nothing, so the board changes softly. */
 @keyframes board-in {
   from {
-    opacity: 0.35;
+    opacity: 0;
   }
 }
 
@@ -1039,7 +1040,7 @@ body:has(.home) {
     position: relative;
     overflow: hidden; /* the tilted outline stays inside the map */
     margin: -1.5rem 0 -24vw;
-    padding-top: 80%;
+    padding-top: min(80%, 50svh); /* at 900px wide, the question stays in the first screen */
   }
 
   /* Just above the headline, where the map fades out: clear of the campgrounds up the coast. */
@@ -1069,7 +1070,7 @@ body:has(.home) {
   }
 
   .home-board > div {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr); /* a long name shortens instead of pushing out */
     grid-auto-flow: row;
     grid-template-rows: none;
   }
@@ -1090,6 +1091,11 @@ body:has(.home) {
 
   .home-intro > p:first-of-type {
     margin: 1rem 0 1.25rem;
+  }
+
+  .home-browse {
+    display: inline-block;
+    margin-bottom: 1.75rem; /* clear of the key and Pause under it */
   }
 
   .home-outline,

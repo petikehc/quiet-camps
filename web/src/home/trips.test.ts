@@ -9,6 +9,7 @@ import {
   mostInFlight,
   nightOffsets,
   periodWords,
+  startNight,
   sitesOn,
   size,
   trailAlpha,
@@ -133,5 +134,22 @@ describe('periodWords', () => {
     expect(periodWords({ year: null, first_night: '2025-10-01', nights: 365 })).toBe(
       'in the 12 months to September 2026',
     )
+  })
+})
+
+describe('startNight', () => {
+  const window = { first_night: '2025-10-01', nights: 365 }
+
+  it("is today's date a year ago: this time last year", () => {
+    expect(startNight(window, '2026-11-24')).toBe(54) // 24 Nov 2025
+  })
+
+  it('stays in the window when that date is outside it', () => {
+    expect(startNight(window, '2026-09-30')).toBe(0) // 30 Sep 2025 is before the first night
+    expect(startNight(window, '2028-01-10')).toBe(364)
+  })
+
+  it('takes 28 February for a 29 February', () => {
+    expect(startNight({ first_night: '2026-04-01', nights: 365 }, '2028-02-29')).toBe(333) // 28 Feb 2027
   })
 })

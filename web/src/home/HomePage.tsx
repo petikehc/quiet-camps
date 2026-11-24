@@ -6,10 +6,11 @@ import { nightDate } from '../charts/dates'
 import { unwrap } from '../api/errors'
 import australia from './australia.json'
 import { failedWords, filtersFrom, useAsk } from '../explore/ask'
+import { localDay } from '../explore/filters'
 import { monthBoard, monthOf, months, quietMask, usualNightly, type Count } from './quiet'
 import { NightFigure, TimeControls } from './TimeControls'
 import type { Seek } from './TripsScene'
-import { busiestNight, nightOffsets, periodWords, project, type Trips } from './trips'
+import { busiestNight, nightOffsets, periodWords, project, startNight, type Trips } from './trips'
 
 // three.js is most of a megabyte: the page shows the outline below until it arrives.
 const TripsScene = lazy(() => import('./TripsScene'))
@@ -19,6 +20,7 @@ const latestTrips = queryOptions({
   queryKey: ['trips', 'latest'],
   queryFn: ({ signal }) => unwrap(api.GET('/trips/latest', { signal })),
   staleTime: Infinity, // the API caches it for a day; within a visit it can't change
+  retry: 1, // the error and its Try again show in a couple of seconds, not seven
 })
 
 // Read once: the page doesn't restart its animation if the setting changes mid-visit.
@@ -175,8 +177,11 @@ type LiveProps = {
 // The map, once a year of trips has loaded.
 function Live({ trips, night, seek, playing, onNight }: LiveProps) {
   const offsets = useMemo(() => nightOffsets(trips.per_night), [trips])
-  // Motion reduced: no autoplay, and the busiest night as a still until Play.
-  const [start] = useState(() => (REDUCED_MOTION ? busiestNight(trips, offsets) : 0))
+  // This time last year, playing on from there. Motion reduced: no autoplay, and the busiest
+  // night as a still until Play.
+  const [start] = useState(() =>
+    REDUCED_MOTION ? busiestNight(trips, offsets) : startNight(trips, localDay()),
+  )
   // The teal rings change once a month, not every night.
   const monthList = useMemo(() => months(trips), [trips])
   const nightly = useMemo(() => usualNightly(trips), [trips])

@@ -4,6 +4,9 @@ import type { Trips } from './trips'
 // Quiet and busy are relative to a campground's own history: a month well under, or over, its
 // usual month. Months, so the board changes about every 7 seconds: slow enough to read.
 export const QUIET = 0.5 // half its usual month or less
+// Under a tenth of its usual month: closed for most of it (Inskip's M.V. Natone, October 2025),
+// not quiet.
+export const OPEN_FLOOR = 0.1
 export const BUSIER = 1.25 // a quarter over its usual month or more
 export const USUAL_MIN_A_WEEK = 10 // sites: smaller campgrounds are too lumpy to judge
 const SHOWN = 3
@@ -56,9 +59,9 @@ function monthCounts(
     .filter((count) => count.usual >= usualMin)
 }
 
-// Open (someone arrived) and well under its usual month.
+// Open most of the month and well under its usual month.
 function isQuiet({ sites, usual }: Count): boolean {
-  return sites > 0 && sites <= QUIET * usual
+  return sites >= OPEN_FLOOR * usual && sites <= QUIET * usual
 }
 
 export type MonthBoard = {
