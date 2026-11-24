@@ -3,13 +3,14 @@ import {
   busiestNight,
   DAY,
   flightSeconds,
-  homeYear,
   inFlight,
   jitter,
   nightlySites,
-  peaks,
   mostInFlight,
   nightOffsets,
+  paceByNight,
+  periodWords,
+  startNight,
   sitesOn,
   size,
   trailAlpha,
@@ -59,7 +60,7 @@ describe('jitter', () => {
 })
 
 describe('trailAlpha', () => {
-  const flight = flightSeconds(4) // 1.3 s
+  const flight = flightSeconds(4) // 5.2 nights
 
   it('has no trail before it leaves', () => {
     expect(trailAlpha(-0.1, flight, 0)).toBe(0)
@@ -119,30 +120,54 @@ describe('nightlySites', () => {
   })
 })
 
-describe('peaks', () => {
-  const totals = [1, 9, 8, 2, 1, 7, 3, 6, 1, 1]
-
-  it('takes the busiest nights at least `gap` apart, in night order', () => {
-    expect(peaks(totals, 3, 3)).toEqual([1, 5, 8])
-  })
-
-  it('skips a night too close to a busier one', () => {
-    expect(peaks(totals, 2, 3)).not.toContain(2) // 8, but beside the 9
-  })
-
-  it('stops short when no more nights are far enough apart', () => {
-    expect(peaks(totals, 5, 6)).toEqual([1, 7])
-  })
-})
-
 describe('busiestNight', () => {
   it('finds the night with the most sites arriving', () => {
     expect(busiestNight(trips, offsets)).toBe(3)
   })
 })
 
-describe('homeYear', () => {
-  it('is last year', () => {
-    expect(homeYear(new Date('2026-11-22T10:00:00'))).toBe(2025)
+describe('periodWords', () => {
+  it('names a calendar year', () => {
+    expect(periodWords({ year: 2025, first_night: '2025-01-01', nights: 365 })).toBe('in 2025')
+  })
+
+  it('names the month the latest 12 months end in', () => {
+    expect(periodWords({ year: null, first_night: '2025-10-01', nights: 365 })).toBe(
+      'in the 12 months to September 2026',
+    )
+  })
+})
+
+describe('startNight', () => {
+  const window = { first_night: '2025-10-01', nights: 365 }
+
+  it("is today's date a year ago: this time last year", () => {
+    expect(startNight(window, '2026-11-24')).toBe(54) // 24 Nov 2025
+  })
+
+  it('stays in the window when that date is outside it', () => {
+    expect(startNight(window, '2026-09-30')).toBe(0) // 30 Sep 2025 is before the first night
+    expect(startNight(window, '2028-01-10')).toBe(364)
+  })
+
+  it('takes 28 February for a 29 February', () => {
+    expect(startNight({ first_night: '2026-04-01', nights: 365 }, '2028-02-29')).toBe(333) // 28 Feb 2027
+  })
+})
+
+describe('paceByNight', () => {
+  // Ten nights, a two-night holiday on nights 4 and 5.
+  const pace = paceByNight(10, [{ name: 'easter', night: 4, nights: 2 }])
+
+  it('plays holidays at half speed, easing in and out over a night either side', () => {
+    expect([...pace]).toEqual([1, 1, 1, 0.75, 0.5, 0.5, 0.75, 1, 1, 1])
+  })
+
+  it('eases into a holiday that starts the year, without reaching outside it', () => {
+    expect([...paceByNight(3, [{ name: 'christmas', night: 0, nights: 1 }])]).toEqual([0.5, 0.75, 1])
+  })
+
+  it('plays an ordinary year at full speed', () => {
+    expect([...paceByNight(3, [])]).toEqual([1, 1, 1])
   })
 })

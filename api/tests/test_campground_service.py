@@ -23,8 +23,10 @@ from quiet_camps.api.campground_service import (
     get_campground,
     year_campers,
 )
-from quiet_camps.db.locations import ACTIVE_SINCE
 from quiet_camps.db.models import Campground
+
+HISTORY_END = date(2025, 9, 30)
+A_YEAR_BEFORE = HISTORY_END - timedelta(days=365)
 
 
 class FakeSource:
@@ -35,6 +37,9 @@ class FakeSource:
 
     async def get(self, campground_id: int) -> Campground | None:
         return self.campgrounds.get(campground_id)
+
+    async def history_end(self) -> date | None:
+        return HISTORY_END
 
 
 def campground(campground_id: int = 7, last_night: date | None = date(2025, 3, 11)) -> Campground:
@@ -69,12 +74,12 @@ def test_returns_the_campgrounds_fields() -> None:
     )
 
 
-def test_booked_on_the_first_active_night_is_active() -> None:
-    assert detail(campground(last_night=ACTIVE_SINCE)).active
+def test_booked_in_the_year_before_the_history_ends_is_active() -> None:
+    assert detail(campground(last_night=A_YEAR_BEFORE + timedelta(days=1))).active
 
 
-def test_booked_only_before_then_is_retired() -> None:
-    assert not detail(campground(last_night=ACTIVE_SINCE - timedelta(days=1))).active
+def test_not_booked_for_a_year_before_the_history_ends_is_retired() -> None:
+    assert not detail(campground(last_night=A_YEAR_BEFORE)).active
 
 
 def test_never_booked_is_retired() -> None:
@@ -173,16 +178,22 @@ def test_lead_time_shares_add_up_from_the_longest_lead() -> None:
     ]
 
 
-def test_lead_time_groups_holidays_by_name_then_weekend_then_weeknight() -> None:
+def test_lead_time_groups_holidays_by_name_then_school_holidays_weekend_weeknight() -> None:
     counts = [
         LeadCount(group=g, lead_days=0, nights=1)
-        for g in ("weeknight", "labour day", "weekend", "christmas")
+        for g in ("weeknight", "school holidays", "sovereign's birthday", "weekend", "christmas")
     ]
     source = FakeLeadTimes(campground(), history_end=date(2026, 9, 30), counts=counts)
 
     groups = asyncio.run(campground_lead_time(source, 7)).groups
 
-    assert [g.group for g in groups] == ["christmas", "labour day", "weekend", "weeknight"]
+    assert [g.group for g in groups] == [
+        "christmas",
+        "sovereign's birthday",  # after "school holidays" by name, but a holiday comes first
+        "school holidays",
+        "weekend",
+        "weeknight",
+    ]
 
 
 def test_lead_time_without_any_history_is_empty() -> None:

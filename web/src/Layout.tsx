@@ -1,9 +1,12 @@
 import { Link, Outlet, useMatchRoute } from '@tanstack/react-router'
 
 export function Layout() {
-  // The homepage runs its night map edge to edge, under a thin header; every other page keeps
-  // the maroon band and the column.
-  const home = Boolean(useMatchRoute()({ to: '/' }))
+  // The homepage runs its night map edge to edge, with the header floating over it; the
+  // explorer fills the screen under the header, with the data credits in its sidebar. Every
+  // other page has its content in the column.
+  const matchRoute = useMatchRoute()
+  const home = Boolean(matchRoute({ to: '/' }))
+  const explore = Boolean(matchRoute({ to: '/explore' }))
 
   return (
     <>
@@ -24,19 +27,18 @@ export function Layout() {
               Quiet Camps
             </Link>
           </h1>
-          {!home && <p>Queensland camping since 2011, read from the permits.</p>}
           <nav className="site-nav" aria-label="Pages">
-            <Link to="/search" activeOptions={{ includeSearch: false }}>
-              Find quiet dates
+            <Link to="/explore" activeOptions={{ includeSearch: false }}>
+              Map
             </Link>
-            <Link to="/timelapse">A year in 3D</Link>
           </nav>
         </div>
       </header>
-      <main className={home ? undefined : 'wrap'}>
+      <main className={home ? undefined : explore ? 'explore-main' : 'wrap'}>
         <Outlet />
       </main>
       {/* wrap sets the column; the border sits on the inner box, so it's as wide as the text. */}
+      {!explore && (
       <footer className="wrap">
         <div className="site-footer">
           <p>
@@ -55,6 +57,7 @@ export function Layout() {
           </p>
         </div>
       </footer>
+      )}
     </>
   )
 }

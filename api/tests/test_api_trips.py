@@ -47,7 +47,7 @@ def trips_client(conn: Conn, client: TestClient) -> TestClient:
     return client
 
 
-def trips(client: TestClient, year: int) -> dict[str, Any]:
+def trips(client: TestClient, year: int | str) -> dict[str, Any]:
     response = client.get(f"/trips/{year}")
     assert response.status_code == 200
     return response.json()
@@ -113,3 +113,31 @@ def test_a_year_before_the_data_is_a_422(trips_client: TestClient, number: str) 
 
     assert response.status_code == 422
     assert [e["field"] for e in response.json()["errors"]] == ["year"]
+
+
+def test_the_latest_trips_are_the_12_months_the_history_ends_with(
+    trips_client: TestClient,
+) -> None:
+    """The fixture's history ends with 2025: its 15 January 2026 trip is in a quarter that isn't
+    history yet, so it's left out."""
+    latest = trips(trips_client, "latest")
+
+    assert (latest["year"], latest["first_night"], latest["nights"]) == (None, "2025-01-01", 365)
+    assert sum(latest["per_night"]) == 2
+    assert latest["sites"] == trips(trips_client, 2025)["sites"]
+
+
+def test_a_stay_from_before_the_window_does_not_arrive_in_it(
+    conn: Conn, trips_client: TestClient
+) -> None:
+    book(conn, TEEWAH, date(2024, 12, 31), "4810")  # one stay across 1 January
+    book(conn, TEEWAH, date(2025, 1, 1), "4810")
+    conn.commit()
+
+    latest = trips(trips_client, "latest")
+
+    assert latest["per_night"][0] == 0
+
+
+def test_no_latest_trips_without_history(client: TestClient) -> None:
+    assert client.get("/trips/latest").status_code == 404

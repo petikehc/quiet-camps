@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Any
 
-from sqlalchemy import BigInteger, ForeignKey, Index, MetaData, String, UniqueConstraint
+from sqlalchemy import BigInteger, ForeignKey, Index, MetaData, String, UniqueConstraint, false
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -104,6 +104,19 @@ class PostcodeCentroid(Base):
     lon: Mapped[float]
 
 
+class Place(Base):
+    """A Queensland suburb, town or council area at its centre (ABS, CC BY 4.0): where a camper
+    starts from or wants to be near. Parks and campgrounds join these when matching."""
+
+    __tablename__ = "place"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str]
+    kind: Mapped[str]  # locality or council
+    lat: Mapped[float]
+    lon: Mapped[float]
+
+
 class CalendarDay(Base):
     """Every night with its kind, from quiet_camps.ingest.day_kinds: "week 14 6", "easter +1"."""
 
@@ -112,6 +125,11 @@ class CalendarDay(Base):
     night: Mapped[date] = mapped_column(primary_key=True)
     kind: Mapped[str] = mapped_column(index=True)
     holiday: Mapped[str | None]
+    # A broader kind for when `kind` comes too seldom: "fortnight 26 3", "easter", "christmas".
+    # None only before the next refresh fills it.
+    fallback_kind: Mapped[str | None]
+    # In Queensland's state school holidays, where known (ingest/qld_school_holidays.csv).
+    school_holiday: Mapped[bool] = mapped_column(server_default=false())
 
 
 class CampNight(Base):

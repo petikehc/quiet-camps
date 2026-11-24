@@ -80,3 +80,48 @@ def test_each_holiday_night_happens_once_a_year() -> None:
     nights = list(day_kinds(date(2011, 1, 1), date(2026, 12, 31)))
     per_year = [(d.night.year, d.kind) for d in nights if d.holiday]
     assert len(per_year) == len(set(per_year))
+
+
+def test_each_night_falls_back_to_something_broader() -> None:
+    nights = {d.night: d for d in day_kinds(date(2026, 12, 20), date(2027, 1, 4))}
+
+    assert nights[date(2026, 12, 23)].fallback == "fortnight 26 3"  # week 52, a Wednesday
+    assert nights[date(2026, 12, 25)].fallback == "christmas"
+    assert nights[date(2027, 1, 4)].fallback == "fortnight 01 1"  # week 1, a Monday
+    assert next(d for d in day_kinds(date(2027, 3, 26), date(2027, 3, 26))).fallback == "easter"
+
+
+def test_every_coming_night_has_history_behind_its_kind_or_its_fallback() -> None:
+    """Nights from now to 2029 against 2011 to 2025: three past nights of its own kind, or
+    three past years of its fallback. Without the fallbacks, 23 December 2026 had two."""
+    past = list(day_kinds(date(2011, 1, 1), date(2025, 12, 31)))
+    nights_of: dict[str, int] = {}
+    years_of: dict[str, set[int]] = {}
+    for d in past:
+        nights_of[d.kind] = nights_of.get(d.kind, 0) + 1
+        years_of.setdefault(d.fallback, set()).add(d.night.year)
+
+    short = [
+        (d.night, d.kind)
+        for d in day_kinds(date(2026, 1, 1), date(2029, 12, 31))
+        if nights_of.get(d.kind, 0) < 3 and len(years_of.get(d.fallback, set())) < 3
+    ]
+    assert short == []
+
+
+def test_school_holiday_nights_are_marked() -> None:
+    """Queensland's 2024 winter school holidays were Saturday 22 June to Sunday 7 July: their
+    nights are the evenings before each day off, Friday 21 June to Saturday 6 July."""
+    marked = {d.night: d.school_holiday for d in day_kinds(date(2024, 6, 20), date(2024, 7, 7))}
+
+    assert marked[date(2024, 6, 20)] is False  # a school night
+    assert marked[date(2024, 6, 21)] is True
+    assert marked[date(2024, 7, 6)] is True
+    assert marked[date(2024, 7, 7)] is False  # school on Monday
+
+
+def test_a_public_holiday_in_the_school_holidays_is_both() -> None:
+    """Good Friday 2025 (18 April) was in the autumn school holidays."""
+    [good_friday] = day_kinds(date(2025, 4, 18), date(2025, 4, 18))
+
+    assert (good_friday.holiday, good_friday.school_holiday) == ("easter", True)

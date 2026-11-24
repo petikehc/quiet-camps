@@ -14,6 +14,7 @@ from quiet_camps.db.config import psycopg_conninfo
 from quiet_camps.db.derived import refresh_derived, refresh_locations
 from quiet_camps.db.load import load_all
 from quiet_camps.db.locations import OSM_FILE, PARKS_FILE, has_sources, location_report
+from quiet_camps.db.places import PLACES_FILE, load_places
 from quiet_camps.db.postcodes import POSTCODES_FILE, load_postcodes
 from quiet_camps.ingest.ckan import PackageShowResponse, camping_csv_urls
 from quiet_camps.ingest.download import download_csv
@@ -40,9 +41,13 @@ PARKS_URL = (
     "ParksTerrestrialProtectedAreas/MapServer/10/query"
 )
 PARKS_PAGE = 1000
-# Postal area centres, ABS ASGS 2021 (CC BY 4.0): where campers come from, for the homepage.
-POSTCODES_URL = "https://geo.abs.gov.au/arcgis/rest/services/ASGS2021/POA/MapServer/2/query"
-POSTCODES_PAGE = 2000  # the service's most per request
+# Centres of ABS ASGS 2021 areas (CC BY 4.0): postal areas, for where campers come from;
+# suburbs and localities, and council areas, for "near Noosa" and "from Toowoomba".
+ABS_POINTS = "https://geo.abs.gov.au/arcgis/rest/services/ASGS2021/{}/MapServer/2/query"
+POSTCODES_URL = ABS_POINTS.format("POA")
+LOCALITIES_URL = ABS_POINTS.format("SAL")
+COUNCILS_URL = ABS_POINTS.format("LGA")
+ABS_PAGE = 2000  # the service's most per request
 
 
 def is_transient(exc: Exception) -> bool:
@@ -102,30 +107,47 @@ def fetch_park_outlines(client: httpx.Client) -> dict[str, Any]:
 
 
 @retry(attempts=4, delay=2.0, retry_if=is_transient)
-def fetch_postcodes_page(client: httpx.Client, offset: int) -> dict[str, Any]:
+def fetch_abs_points_page(
+    client: httpx.Client, url: str, field: str, where: str, offset: int
+) -> dict[str, Any]:
     params: dict[str, str | float] = {
-        "where": "1=1",
-        "outFields": "poa_code_2021",
+        "where": where,
+        "outFields": f"{field},state_code_2021",
         "outSR": 4326,
-        "geometryPrecision": 4,  # about 10 m: a postcode's centre is a rough place anyway
+        "geometryPrecision": 4,  # about 10 m: an area's centre is a rough place anyway
         "orderByFields": "objectid",
         "resultOffset": offset,
-        "resultRecordCount": POSTCODES_PAGE,
+        "resultRecordCount": ABS_PAGE,
         "f": "geojson",
     }
-    response = client.get(POSTCODES_URL, params=params)
+    response = client.get(url, params=params)
     response.raise_for_status()
     return response.json()
 
 
-def fetch_postcodes(client: httpx.Client) -> dict[str, Any]:
-    """Every postal area's centre, one page at a time."""
+def fetch_abs_points(
+    client: httpx.Client, url: str, field: str, where: str = "1=1"
+) -> dict[str, Any]:
+    """Every area's centre from an ABS point service, one page at a time."""
     features: list[Any] = []
     while True:
-        page = fetch_postcodes_page(client, len(features))
+        page = fetch_abs_points_page(client, url, field, where, len(features))
         features += page["features"]
-        if len(page["features"]) < POSTCODES_PAGE:
+        if len(page["features"]) < ABS_PAGE:
             return {"type": "FeatureCollection", "features": features}
+
+
+def fetch_postcodes(client: httpx.Client) -> dict[str, Any]:
+    return fetch_abs_points(client, POSTCODES_URL, "poa_code_2021")
+
+
+def fetch_places(client: httpx.Client) -> dict[str, Any]:
+    """Queensland's suburbs and localities, and its council areas."""
+    queensland = "state_code_2021 = '3'"
+    return {
+        "localities": fetch_abs_points(client, LOCALITIES_URL, "sal_name_2021", queensland),
+        "councils": fetch_abs_points(client, COUNCILS_URL, "lga_name_2021", queensland),
+    }
 
 
 def postcodes_command(locations_dir: Path, fetch: bool) -> int:
@@ -142,6 +164,23 @@ def postcodes_command(locations_dir: Path, fetch: bool) -> int:
     with psycopg.connect(psycopg_conninfo()) as conn:
         n = load_postcodes(conn, path)
     print(f"{n:,} postcode centres (ABS postal areas 2021, © Commonwealth of Australia, CC BY 4.0)")
+    return 0
+
+
+def places_command(locations_dir: Path, fetch: bool) -> int:
+    path = locations_dir / PLACES_FILE
+    if fetch:
+        locations_dir.mkdir(parents=True, exist_ok=True)
+        with httpx.Client(
+            headers={"User-Agent": USER_AGENT}, follow_redirects=True, timeout=60
+        ) as client:
+            path.write_text(json.dumps(fetch_places(client)), encoding="utf-8")
+    if not path.exists():
+        print(f"No {PLACES_FILE} in {locations_dir}: run `qc places --fetch` first.")
+        return 1
+    with psycopg.connect(psycopg_conninfo()) as conn:
+        n = load_places(conn, path)
+    print(f"{n:,} Queensland places (ABS ASGS 2021, © Commonwealth of Australia, CC BY 4.0)")
     return 0
 
 
@@ -288,6 +327,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     postcodes.add_argument("--locations-dir", type=Path, default=DEFAULT_LOCATIONS_DIR)
 
+    places = commands.add_parser(
+        "places",
+        help="Load Queensland's suburbs, towns and council areas, for searching near a place.",
+        description=(
+            "Load the centre of every Queensland suburb or locality and council area (ABS "
+            "ASGS 2021, CC BY 4.0) into place: what 'near Noosa' and 'from Toowoomba' mean."
+        ),
+    )
+    places.add_argument("--fetch", action="store_true", help="Download the places first.")
+    places.add_argument("--locations-dir", type=Path, default=DEFAULT_LOCATIONS_DIR)
+
     openapi = commands.add_parser(
         "openapi",
         help="Write the API's OpenAPI document, for the web client's generated types.",
@@ -328,6 +378,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return locations_command(args.locations_dir, args.fetch, args.sample)
         case "postcodes":
             return postcodes_command(args.locations_dir, args.fetch)
+        case "places":
+            return places_command(args.locations_dir, args.fetch)
         case "openapi":
             args.output.write_text(openapi_document())
             print(f"wrote {args.output}")

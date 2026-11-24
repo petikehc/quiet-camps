@@ -40,7 +40,16 @@ export function formatNight(night: string): string {
   })
 }
 
-// The API names holidays in lower case ("sovereign's birthday"); show them as sentences.
+// The API names holidays by key, in lower case ("sovereign's birthday"); show them the way
+// Queenslanders say them. A holiday not listed is shown as a sentence.
+const HOLIDAY_NAMES: Record<string, string> = {
+  'australia day': 'Australia Day',
+  'anzac day': 'Anzac Day',
+  'labour day': 'Labour Day',
+  "sovereign's birthday": "King's Birthday",
+  ekka: 'Ekka',
+}
+
 export function holidayName(name: string): string {
-  return name.charAt(0).toUpperCase() + name.slice(1)
+  return HOLIDAY_NAMES[name] ?? name.charAt(0).toUpperCase() + name.slice(1)
 }

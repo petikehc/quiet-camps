@@ -1,0 +1,120 @@
+"""Reading plain words, on its own: a fake reader stands in for the model."""
+
+import asyncio
+from datetime import date
+
+from quiet_camps.api.ask_service import (
+    Answer,
+    Holiday,
+    Reading,
+    ask,
+    coming_school_holidays,
+    first_week,
+)
+from quiet_camps.api.place_service import Place
+from quiet_camps.ingest.school_holidays import SchoolHoliday
+
+TODAY = date(2026, 11, 23)  # a Monday
+SUNSHINE_COAST = Place(name="Sunshine Coast", kind="council", lat=-26.65, lon=152.96)
+
+
+class FakeReader:
+    def __init__(self, reading: Reading) -> None:
+        self.reading = reading
+
+    async def read(self, text: str, today: date, holidays: list[Holiday]) -> Reading:
+        return self.reading
+
+
+class FakePlaces:
+    async def places(self) -> list[Place]:
+        return [SUNSHINE_COAST]
+
+
+def read(**said: object) -> Answer:
+    fields: dict[str, object] = {
+        "arrive": None,
+        "depart": None,
+        "place": None,
+        "place_role": None,
+        "within_km": None,
+    }
+    reading = Reading.model_validate(fields | said)
+    return asyncio.run(ask(FakeReader(reading), FakePlaces(), "words", TODAY, []))
+
+
+def test_next_weekend_around_the_sunny_coast() -> None:
+    answer = read(arrive="2026-11-27", depart="2026-11-29", place="Sunny Coast", place_role="near")
+
+    assert (answer.arrive, answer.depart) == (date(2026, 11, 27), date(2026, 11, 29))
+    assert answer.place == SUNSHINE_COAST
+    assert (answer.place_role, answer.within_km) == ("near", 50)
+
+
+def test_arriving_with_no_end_is_a_weekend() -> None:
+    assert read(arrive="2026-12-04").depart == date(2026, 12, 6)
+
+
+def test_a_stay_is_60_nights_at_most() -> None:
+    assert read(arrive="2027-01-01", depart="2027-06-01").depart == date(2027, 3, 2)
+
+
+def test_a_night_in_the_past_is_not_understood() -> None:
+    answer = read(arrive="2026-11-20", depart="2026-11-22")
+
+    assert (answer.arrive, answer.depart) == (None, None)
+
+
+def test_from_home_looks_further_than_near_a_place() -> None:
+    assert read(place="Sunshine Coast", place_role="from").within_km == 150
+
+
+def test_a_distance_said_is_kept_within_10_to_400_km() -> None:
+    assert read(place="Sunshine Coast", within_km=1000).within_km == 400
+    assert read(place="Sunshine Coast", within_km=2).within_km == 10
+
+
+def test_a_place_that_matches_nothing_is_said_back() -> None:
+    answer = read(place="Tweed Heads", place_role="near")
+
+    assert answer.place is None
+    assert answer.place_asked == "Tweed Heads"
+    assert answer.within_km is None  # no place to be near
+
+
+def test_school_holidays_offer_their_first_week_from_the_first_saturday() -> None:
+    """2026's summer holidays: the first day off is Saturday 12 December."""
+    summer = SchoolHoliday(
+        name="summer", first_night=date(2026, 12, 11), last_night=date(2027, 1, 25)
+    )
+
+    assert first_week(summer) == Holiday(
+        name="summer school holidays, first week",
+        arrive=date(2026, 12, 12),
+        depart=date(2026, 12, 19),
+    )
+
+
+def test_a_school_holiday_starting_on_good_friday_starts_its_week_on_the_saturday() -> None:
+    autumn = SchoolHoliday(
+        name="autumn", first_night=date(2026, 4, 2), last_night=date(2026, 4, 18)
+    )
+
+    assert (first_week(autumn).arrive, first_week(autumn).depart) == (
+        date(2026, 4, 4),
+        date(2026, 4, 11),
+    )
+
+
+def test_only_coming_school_holidays_are_offered() -> None:
+    spring = SchoolHoliday(
+        name="spring", first_night=date(2026, 9, 18), last_night=date(2026, 10, 4)
+    )
+    summer = SchoolHoliday(
+        name="summer", first_night=date(2026, 12, 11), last_night=date(2027, 1, 25)
+    )
+    far = SchoolHoliday(name="winter", first_night=date(2028, 6, 23), last_night=date(2028, 7, 8))
+
+    coming = coming_school_holidays(date(2026, 11, 24), [spring, summer, far])
+
+    assert [h.name for h in coming] == ["summer school holidays, first week"]

@@ -1,0 +1,131 @@
+import { describe, expect, it } from 'vitest'
+import { addDays, apiQuery, isOldSearchLink, parseFilters, parseView, widerKm, withArrive } from './filters'
+
+const wednesday = new Date(2026, 10, 18) // months count from 0: 18 Nov 2026
+
+describe('parseFilters', () => {
+  it('defaults to the coming weekend, Friday and Saturday nights', () => {
+    expect(parseFilters({}, wednesday)).toEqual({ arrive: '2026-11-20', depart: '2026-11-22' })
+  })
+
+  it('starts the default weekend today on a Friday', () => {
+    expect(parseFilters({}, new Date(2026, 10, 20)).arrive).toBe('2026-11-20')
+  })
+
+  it('keeps the dates in the URL', () => {
+    const filters = parseFilters({ arrive: '2027-04-02', depart: '2027-04-06' }, wednesday)
+    expect(filters).toMatchObject({ arrive: '2027-04-02', depart: '2027-04-06' })
+  })
+
+  it('leaves two nights after a given arrival, across a month end', () => {
+    expect(parseFilters({ arrive: '2027-01-31' }, wednesday).depart).toBe('2027-02-02')
+  })
+
+  it('replaces dates that are not real dates', () => {
+    for (const arrive of ['2027-02-30', 'tomorrow', 20270402, '2027-4-2']) {
+      expect(parseFilters({ arrive }, wednesday).arrive).toBe('2026-11-20')
+    }
+  })
+
+  it('keeps an inverted range for the API to reject', () => {
+    const filters = parseFilters({ arrive: '2027-04-06', depart: '2027-04-02' }, wednesday)
+    expect(filters).toMatchObject({ arrive: '2027-04-06', depart: '2027-04-02' })
+  })
+
+  it('reads text filters, including numbers the router parsed', () => {
+    expect(parseFilters({ q: ' fraser ', park: 1770 }, wednesday)).toMatchObject({
+      q: 'fraser',
+      park: '1770',
+    })
+  })
+
+  it('drops blank and non-text filters', () => {
+    const filters = parseFilters({ q: '   ', park: { name: 'x' } }, wednesday)
+    expect(filters.q).toBeUndefined()
+    expect(filters.park).toBeUndefined()
+  })
+})
+
+describe('parseFilters near a place', () => {
+  const noosa = { near: 'Noosa', lat: -26.32, lon: 152.93, km: 50 }
+
+  it('keeps a place with its km', () => {
+    expect(parseFilters({ ...noosa }, wednesday)).toMatchObject(noosa)
+  })
+
+  it('reads numbers from strings, and keeps km within 10 to 400', () => {
+    const found = parseFilters({ lat: '-26.32', lon: '152.93', km: 1000 }, wednesday)
+    expect(found).toMatchObject({ lat: -26.32, lon: 152.93, km: 400 })
+  })
+
+  it('drops a half-given or far-off place', () => {
+    expect(parseFilters({ lat: -26.32 }, wednesday).lat).toBeUndefined()
+    expect(parseFilters({ lat: 51.5, lon: -0.1 }, wednesday).lat).toBeUndefined() // London
+  })
+
+  it('asks the API in its own names', () => {
+    expect(apiQuery(parseFilters({ ...noosa }, wednesday))).toMatchObject({
+      near_lat: -26.32,
+      near_lon: 152.93,
+      within_km: 50,
+    })
+  })
+})
+
+describe('parseView', () => {
+  it('turns on the location review', () => {
+    expect(parseView({ review: 'locations' })).toEqual({ review: 'locations' })
+  })
+
+  it('keeps a band and a picked campground', () => {
+    expect(parseView({ band: 'busy', sel: 12 })).toEqual({ band: 'busy', sel: 12 })
+    expect(parseView({ band: 'packed', sel: 1.5 })).toEqual({})
+  })
+
+  it('ignores anything else', () => {
+    expect(parseView({ review: 'everything' })).toEqual({})
+    expect(parseView({})).toEqual({})
+  })
+})
+
+describe('addDays', () => {
+  it('crosses a leap day', () => {
+    expect(addDays('2028-02-28', 1)).toBe('2028-02-29')
+    expect(addDays('2028-02-28', 2)).toBe('2028-03-01')
+  })
+})
+
+describe('isOldSearchLink', () => {
+  it('spots a search link from when the search was the homepage', () => {
+    expect(isOldSearchLink({ arrive: '2027-04-02', depart: '2027-04-06' })).toBe(true)
+    expect(isOldSearchLink({ park: 'Main Range National Park' })).toBe(true)
+    expect(isOldSearchLink({ review: 'locations' })).toBe(true)
+  })
+
+  it('leaves the homepage alone', () => {
+    expect(isOldSearchLink({})).toBe(false)
+    expect(isOldSearchLink({ utm_source: 'newsletter' })).toBe(false)
+  })
+})
+
+describe('widerKm', () => {
+  it('is the next radius on the list, or none past the widest', () => {
+    expect(widerKm(25)).toBe(50)
+    expect(widerKm(50)).toBe(100)
+    expect(widerKm(150)).toBe(200) // /ask's 150 isn't on the list
+    expect(widerKm(200)).toBeUndefined()
+  })
+})
+
+describe('withArrive', () => {
+  const easter = { arrive: '2027-03-25', depart: '2027-03-29' }
+
+  it('keeps the leave date while it is still after the arrival', () => {
+    expect(withArrive(easter, '2027-03-26')).toEqual({ arrive: '2027-03-26', depart: '2027-03-29' })
+  })
+
+  it('moves the leave date with an arrival on or after it, keeping the stay length', () => {
+    expect(withArrive(easter, '2027-03-29')).toEqual({ arrive: '2027-03-29', depart: '2027-04-02' })
+    expect(withArrive(easter, '2027-04-10')).toEqual({ arrive: '2027-04-10', depart: '2027-04-14' })
+  })
+})

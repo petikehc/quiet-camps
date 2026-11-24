@@ -1,73 +1,106 @@
+import { nightDate } from '../charts/dates'
 import type { Trips } from './trips'
 
-// Quiet is relative to a campground's own history: a week well under its usual. Arrivals are
-// counted in calendar weeks of 7 nights, so the board changes once a week, not every frame.
-export const WEEK = 7
-export const QUIET = 0.5 // half its usual week or less
-export const USUAL_MIN = 10 // sites a week: smaller campgrounds are too lumpy to call quiet
+// Quiet and busy are relative to a campground's own history: a month well under, or over, its
+// usual month. Months, so the board changes about every 7 seconds: slow enough to read.
+export const QUIET = 0.5 // half its usual month or less
+// Under a tenth of its usual month: closed for most of it (Inskip's M.V. Natone, October 2025),
+// not quiet.
+export const OPEN_FLOOR = 0.1
+export const BUSIER = 1.25 // a quarter over its usual month or more
+export const USUAL_MIN_A_WEEK = 10 // sites: smaller campgrounds are too lumpy to judge
 const SHOWN = 3
 
-// Whole weeks in the year; the last night or two belong to the last week.
-export function weeks(nights: number): number {
-  return Math.max(1, Math.floor(nights / WEEK))
+export type Month = { first: number; last: number } // nights [first, last)
+
+// The calendar months of the trips' year, as ranges of nights.
+export function months(trips: Trips): Month[] {
+  const found: Month[] = []
+  for (let night = 0; night < trips.nights; night++) {
+    if (night > 0 && !nightDate(trips.first_night, night).endsWith('-01')) continue
+    const previous = found.at(-1)
+    if (previous) previous.last = night
+    found.push({ first: night, last: trips.nights })
+  }
+  return found
 }
 
-export function weekOf(night: number, nights: number): number {
-  return Math.min(Math.floor(night / WEEK), weeks(nights) - 1)
+export function monthOf(monthList: Month[], night: number): number {
+  return Math.max(0, monthList.findIndex((m) => night >= m.first && night < m.last))
 }
 
-// Each campground's sites arriving in an average week of the year.
-export function usualWeekly(trips: Trips): Float64Array {
+// Each campground's sites arriving on an average night of the year.
+export function usualNightly(trips: Trips): Float64Array {
   const usual = new Float64Array(trips.campgrounds.length)
   trips.sites.forEach((sites, e) => {
     usual[trips.campground[e]] += sites
   })
-  const perWeek = WEEK / trips.nights
-  return usual.map((total) => total * perWeek)
+  return usual.map((total) => total / trips.nights)
 }
 
-// Sites arriving at each campground in week `w`, scaled to 7 nights for the longer last week.
-function weekSites(trips: Trips, offsets: Uint32Array, w: number): Float64Array {
-  const first = w * WEEK
-  const last = w === weeks(trips.nights) - 1 ? trips.nights : first + WEEK
+export type Count = { campground: number; sites: number; usual: number } // sites in a month
+
+// Each campground's sites arriving in the month, against its usual month: only those that
+// usually get enough to judge.
+function monthCounts(
+  trips: Trips,
+  offsets: Uint32Array,
+  nightly: Float64Array,
+  month: Month,
+): Count[] {
   const sites = new Float64Array(trips.campgrounds.length)
-  for (let e = offsets[first]; e < offsets[last]; e++) sites[trips.campground[e]] += trips.sites[e]
-  const scale = WEEK / (last - first)
-  return scale === 1 ? sites : sites.map((s) => s * scale)
+  for (let e = offsets[month.first]; e < offsets[month.last]; e++) {
+    sites[trips.campground[e]] += trips.sites[e]
+  }
+  const nights = month.last - month.first
+  const usualMin = (USUAL_MIN_A_WEEK / 7) * nights
+  return [...sites.keys()]
+    .map((c) => ({ campground: c, sites: sites[c], usual: nightly[c] * nights }))
+    .filter((count) => count.usual >= usualMin)
 }
 
-// Open (someone arrived), usually busy enough to judge, and well under its usual.
-function isQuiet(sites: number, usual: number): boolean {
-  return sites > 0 && usual >= USUAL_MIN && sites <= QUIET * usual
+// Open most of the month and well under its usual month.
+function isQuiet({ sites, usual }: Count): boolean {
+  return sites >= OPEN_FLOOR * usual && sites <= QUIET * usual
 }
 
-export type WeekBoard = {
-  busy: { campground: number; sites: number }[] // busiest first
-  quiet: { campground: number; sites: number; usual: number }[] // quietest first
+export type MonthBoard = {
+  busier: Count[] // most over its usual first
+  quiet: Count[] // quietest against its usual first
 }
 
-export function weekBoard(trips: Trips, offsets: Uint32Array, usual: Float64Array, w: number): WeekBoard {
-  const sites = weekSites(trips, offsets, w)
-  const all = [...sites.keys()]
-  const busy = all
-    .filter((c) => sites[c] > 0)
-    .sort((a, b) => sites[b] - sites[a] || a - b)
-    .slice(0, SHOWN)
-    .map((campground) => ({ campground, sites: Math.round(sites[campground]) }))
-  const quiet = all
-    .filter((c) => isQuiet(sites[c], usual[c]))
-    .sort((a, b) => sites[a] / usual[a] - sites[b] / usual[b] || usual[b] - usual[a])
-    .slice(0, SHOWN)
-    .map((campground) => ({
-      campground,
-      sites: Math.round(sites[campground]),
-      usual: Math.round(usual[campground]),
-    }))
-  return { busy, quiet }
+export function monthBoard(
+  trips: Trips,
+  offsets: Uint32Array,
+  nightly: Float64Array,
+  month: Month,
+): MonthBoard {
+  const counts = monthCounts(trips, offsets, nightly, month)
+  const rounded = (c: Count): Count => ({
+    ...c,
+    sites: Math.round(c.sites),
+    usual: Math.round(c.usual),
+  })
+  // Of two as far from their usual, the one usually busier first: it's the bigger story.
+  const busier = counts
+    .filter((c) => c.sites >= BUSIER * c.usual)
+    .sort((a, b) => b.sites / b.usual - a.sites / a.usual || b.usual - a.usual)
+  const quiet = counts
+    .filter(isQuiet)
+    .sort((a, b) => a.sites / a.usual - b.sites / b.usual || b.usual - a.usual)
+  return { busier: busier.slice(0, SHOWN).map(rounded), quiet: quiet.slice(0, SHOWN).map(rounded) }
 }
 
-// 1 for each campground that's quiet in week `w`: the map lights these teal.
-export function quietMask(trips: Trips, offsets: Uint32Array, usual: Float64Array, w: number): Float32Array {
-  const sites = weekSites(trips, offsets, w)
-  return Float32Array.from(sites, (s, c) => (isQuiet(s, usual[c]) ? 1 : 0))
+// 1 for each campground that's quiet in the month: the map rings these teal.
+export function quietMask(
+  trips: Trips,
+  offsets: Uint32Array,
+  nightly: Float64Array,
+  month: Month,
+): Float32Array {
+  const mask = new Float32Array(trips.campgrounds.length)
+  for (const c of monthCounts(trips, offsets, nightly, month)) {
+    if (isQuiet(c)) mask[c.campground] = 1
+  }
+  return mask
 }

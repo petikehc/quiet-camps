@@ -88,6 +88,9 @@ class OneCampground:
             location_flags=[],
         )
 
+    async def history_end(self) -> date | None:
+        return date(2025, 12, 31)
+
 
 @pytest.fixture
 def faked_client() -> Iterator[TestClient]:

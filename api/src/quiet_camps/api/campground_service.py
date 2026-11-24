@@ -3,12 +3,15 @@ from datetime import date, timedelta
 from typing import Protocol
 
 from quiet_camps.api.errors import NotFound
-from quiet_camps.db.locations import ACTIVE_SINCE
+from quiet_camps.api.queries import ACTIVE_DAYS
 from quiet_camps.db.models import Campground
+from quiet_camps.ingest.school_holidays import SchoolHoliday
 
 
 class CampgroundSource(Protocol):
     async def get(self, campground_id: int) -> Campground | None: ...
+
+    async def history_end(self) -> date | None: ...
 
 
 class CampgroundNotFound(NotFound):
@@ -35,7 +38,7 @@ async def get_campground(source: CampgroundSource, campground_id: int) -> Campgr
     if campground is None:
         raise CampgroundNotFound(campground_id=campground_id)
 
-    active = False if campground.last_night is None else campground.last_night >= ACTIVE_SINCE
+    active = is_active(campground.last_night, await source.history_end())
 
     return CampgroundDetail(
         id=campground.id,
@@ -48,6 +51,13 @@ async def get_campground(source: CampgroundSource, campground_id: int) -> Campgr
         location_source=campground.location_source,
         location_flags=campground.location_flags,
     )
+
+
+def is_active(last_night: date | None, history_end: date | None) -> bool:
+    """Booked in the year before the history ends: the search's rule too (queries.SEARCH)."""
+    if last_night is None or history_end is None:
+        return False
+    return last_night > history_end - timedelta(days=ACTIVE_DAYS)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -83,14 +93,14 @@ async def campground_calendar(
 
 HISTORY_YEARS = 3  # lead times doubled after 2020: describe how people book now
 WEEKS = (0, 1, 2, 4, 8, 13, 26, 52)  # "booked by N weeks before"
-LAST_GROUPS = ("weekend", "weeknight")  # after the holidays, which sort by name
+LAST_GROUPS = ("school holidays", "weekend", "weeknight")  # after the holidays, by name
 
 
 @dataclass(frozen=True, kw_only=True)
 class LeadCount:
     """How many booked nights in a group were booked lead_days before the night."""
 
-    group: str  # a holiday, "weekend" (Friday and Saturday nights) or "weeknight"
+    group: str  # a holiday, "school holidays", "weekend" (Fri and Sat nights) or "weeknight"
     lead_days: int
     nights: int
 
@@ -276,6 +286,21 @@ def holiday_spans(nights: list[HolidayNight], first: date) -> list[HolidaySpan]:
             spans[-1] = replace(spans[-1], nights=spans[-1].nights + 1)
         else:
             spans.append(HolidaySpan(name=h.holiday, night=index, nights=1))
+    return spans
+
+
+def school_holiday_spans(
+    holidays: list[SchoolHoliday], first: date, last: date
+) -> list[HolidaySpan]:
+    """The school holidays' nights from first to last, as spans counted from first; summer,
+    which runs from December into January, is cut at the year's ends."""
+    spans: list[HolidaySpan] = []
+    for h in holidays:
+        start, end = max(h.first_night, first), min(h.last_night, last)
+        if start <= end:
+            spans.append(
+                HolidaySpan(name=h.name, night=(start - first).days, nights=(end - start).days + 1)
+            )
     return spans
 
 

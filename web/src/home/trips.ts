@@ -3,14 +3,45 @@ import { projection } from '../projection'
 
 export type Trips = components['schemas']['TripsOut']
 
-export const DAY = 0.25 // seconds of animation per night: a year in about 90 seconds
+export const DAY = 0.5 // seconds of animation per night: a year in about 3 minutes, a month in 15 s
 export const TRAIL = 0.35 // a trail's tail, as a share of its flight
 // Australia's middle, so the continent keeps its shape.
 export const project = projection({ lon: 134, lat: -28 })
 
-// The homepage plays last year, the latest with every night.
-export function homeYear(today = new Date()): number {
-  return today.getFullYear() - 1
+export const HOLIDAY_PACE = 0.5 // the year slows to half speed for its holidays
+
+// How fast each night plays, as a share of DAY: full speed, half on holidays and their long
+// weekends, and three quarters on the night either side, so it eases in and out.
+export function paceByNight(nights: number, holidays: Trips['holidays']): Float32Array {
+  const pace = new Float32Array(nights).fill(1)
+  const ease = (HOLIDAY_PACE + 1) / 2
+  for (const h of holidays) {
+    for (const n of [h.night - 1, h.night + h.nights]) {
+      if (n >= 0 && n < nights) pace[n] = Math.min(pace[n], ease)
+    }
+    for (let n = Math.max(0, h.night); n < Math.min(nights, h.night + h.nights); n++) {
+      pace[n] = HOLIDAY_PACE
+    }
+  }
+  return pace
+}
+
+// Where the year starts playing: today's date a year ago, "this time last year", kept inside the
+// trips' nights. 29 February becomes the 28th.
+export function startNight(trips: Pick<Trips, 'first_night' | 'nights'>, today: string): number {
+  const [year, month, day] = today.split('-').map(Number)
+  const lastYear = Date.UTC(year - 1, month - 1, month === 2 && day === 29 ? 28 : day)
+  const night = Math.round((lastYear - Date.parse(`${trips.first_night}T00:00:00Z`)) / 86_400_000)
+  return Math.min(Math.max(night, 0), trips.nights - 1)
+}
+
+// When the trips are, in words: "in 2025", or for the latest 12 months, "in the 12 months to
+// September 2026".
+export function periodWords(trips: Pick<Trips, 'year' | 'first_night' | 'nights'>): string {
+  if (trips.year !== null) return `in ${trips.year}`
+  const [year, month, day] = trips.first_night.split('-').map(Number)
+  const last = new Date(Date.UTC(year, month - 1, day + trips.nights - 1))
+  return `in the 12 months to ${last.toLocaleDateString('en-AU', { month: 'long', year: 'numeric', timeZone: 'UTC' })}`
 }
 
 // A night's entries run from offsets[night] to offsets[night + 1]: the API sends how many
@@ -35,8 +66,9 @@ export function jitter(entry: number): number {
 
 // Seconds in the air for a trip this long (in degrees of latitude): a short hop to the coast
 // still reads as a trip, and a trip across the country doesn't take all week.
+// In nights, so trails slow down with the days and the map stays as full.
 export function flightSeconds(distance: number): number {
-  return 0.6 + 0.35 * Math.sqrt(distance)
+  return (2.4 + 1.4 * Math.sqrt(distance)) * DAY
 }
 const LONGEST_FLIGHT = flightSeconds(45) // corner to corner
 
@@ -96,18 +128,6 @@ export function sitesOn(trips: Trips, offsets: Uint32Array, night: number): numb
 // Sites arriving each night, every campground together: the year strip's shape.
 export function nightlySites(trips: Trips, offsets: Uint32Array): number[] {
   return Array.from({ length: trips.nights }, (_, night) => sitesOn(trips, offsets, night))
-}
-
-// The year's busiest nights, at least `gap` nights apart so each is its own moment, in night
-// order: the peaks the year strip names.
-export function peaks(totals: number[], count: number, gap: number): number[] {
-  const picked: number[] = []
-  const byBusiest = [...totals.keys()].sort((a, b) => totals[b] - totals[a] || a - b)
-  for (const night of byBusiest) {
-    if (picked.length === count) break
-    if (picked.every((p) => Math.abs(p - night) >= gap)) picked.push(night)
-  }
-  return picked.sort((a, b) => a - b)
 }
 
 // The night with the most arrivals: the still shown when motion is reduced.

@@ -11,13 +11,8 @@ from quiet_camps.api.campground_service import (
     NightCampers,
     YearCampground,
 )
-from quiet_camps.api.queries import MIN_HISTORY
+from quiet_camps.api.queries import HISTORY_END, MIN_HISTORY
 from quiet_camps.db.models import Campground
-
-# The last night of history: the latest quarter isn't complete yet (ADR 0002).
-HISTORY_END = """
-SELECT (date_trunc('quarter', max(last_night)) - interval '1 day')::date AS last FROM campground
-"""
 
 # Every night of the year for one campground (none if it doesn't exist): its typical night
 # from campground_typical, as the search reads it, and the sites actually booked. Booked
@@ -37,15 +32,23 @@ SELECT d.night, d.kind, d.holiday,
 FROM campground c
 JOIN calendar_day d ON d.night >= :first AND d.night < :next
 CROSS JOIN history h
-LEFT JOIN campground_typical t
-    ON t.campground_id = c.id AND t.kind = d.kind AND t.nights >= :min_history
+-- The night's own kind with enough history, else its fallback (as the search, USUAL).
+LEFT JOIN LATERAL (
+    SELECT t.sites, t.busyness FROM campground_typical t
+    WHERE t.campground_id = c.id
+      AND ((t.kind = d.kind AND t.nights >= :min_history)
+           OR (t.kind = d.fallback_kind AND t.years >= :min_history))
+    ORDER BY t.kind = d.kind DESC
+    LIMIT 1
+) t ON true
 LEFT JOIN booked b ON b.night = d.night
 WHERE c.id = :campground_id
 ORDER BY d.night
 """)
 
 
-# Booked nights in [since, until] by group and days booked ahead. A booking-night counts once:
+# Booked nights in [since, until] by group (a public holiday, else the school holidays, else a
+# weekend or a weeknight) and days booked ahead. A booking-night counts once:
 # its several sites are identical rows in one file, and quarter files overlap (as in
 # area_night). Booked after the night (0.4% of rows) counts as booked on the day.
 LEAD_COUNTS = text("""
@@ -57,6 +60,7 @@ WITH booked AS (
     WHERE a.campground_id = :campground_id AND n.night BETWEEN :since AND :until
 )
 SELECT CASE WHEN d.holiday IS NOT NULL THEN d.holiday
+            WHEN d.school_holiday THEN 'school holidays'
             WHEN extract(isodow FROM b.night) IN (5, 6) THEN 'weekend'
             ELSE 'weeknight' END AS "group",
        greatest(b.night - b.booked_on, 0) AS lead_days,

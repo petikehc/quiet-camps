@@ -68,7 +68,7 @@ class BookedByOut(BaseModel):
 class LeadTimeGroupOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    group: str  # a holiday, "weekend" (Friday and Saturday nights) or "weeknight"
+    group: str  # a holiday, "school holidays", "weekend" (Fri and Sat nights) or "weeknight"
     nights: int  # booked nights behind the shares: few means a rough answer
     booked_by: list[BookedByOut]  # 0, 1, 2, 4, 8, 13, 26 and 52 weeks
 
@@ -81,7 +81,7 @@ class LeadTimeOut(BaseModel):
     campground_id: int
     since: date | None  # None: no history at all
     until: date | None
-    groups: list[LeadTimeGroupOut]  # holidays by name, then weekend, then weeknight
+    groups: list[LeadTimeGroupOut]  # holidays by name, then school holidays, weekend, weeknight
 
 
 class YearMonthOut(BaseModel):

@@ -10,6 +10,7 @@ TABLES = {
     "calendar_day",
     "park_outline",
     "postcode_centroid",
+    "place",
 }
 
 

@@ -1,18 +1,22 @@
 import { describe, expect, it } from 'vitest'
-import { quietMask, usualWeekly, weekBoard, weekOf, weeks } from './quiet'
+import { monthBoard, monthOf, months, quietMask, usualNightly } from './quiet'
 import { nightOffsets, type Trips } from './trips'
 
-// Five campgrounds over 3 weeks (21 nights). Their usual weeks: Busy 40, Steady 20, Lull 20,
-// Shut 20 and Tiny 4 sites. Week 2 is the one that's looked at.
-const NIGHTS = 21
-const entries: [night: number, campground: number, sites: number][] = [
-  [0, 0, 40], [8, 0, 40], [14, 0, 40], // Busy: as usual every week
-  [0, 1, 20], [8, 1, 20], [14, 1, 20], // Steady: as usual
-  [0, 2, 30], [8, 2, 28], [15, 2, 2], // Lull: open, but a tenth of its usual
-  [0, 3, 30], [8, 3, 30], // Shut: nothing in week 2, so closed, not quiet
-  [0, 4, 6], [8, 4, 5], [15, 4, 1], // Tiny: a quarter of its usual, but too small to call quiet
+// January to March 2025 (90 nights), each month's arrivals on its first night. A usual March
+// (31 nights) for 270 sites in the 90: 93.
+const NIGHTS = 90
+const FIRSTS = [0, 31, 59] // 1 Jan, 1 Feb, 1 Mar
+const MONTHLY: [name: string, jan: number, feb: number, mar: number][] = [
+  ['Steady', 90, 90, 90], // as usual
+  ['Surge', 30, 30, 210], // over twice its usual March
+  ['Lull', 130, 130, 10], // open, at a tenth of its usual March
+  ['Shut', 135, 135, 0], // nothing in March: closed, not quiet
+  ['Tiny', 10, 10, 1], // a usual March of 7: too small to judge
+  ['Closing', 135, 135, 5], // a few arrivals, then closed: under a tenth of its usual
 ]
-entries.sort((a, b) => a[0] - b[0])
+const entries = FIRSTS.flatMap((night, m) =>
+  MONTHLY.flatMap(([, ...sites], c) => (sites[m] > 0 ? [[night, c, sites[m]] as const] : [])),
+)
 const perNight = new Array<number>(NIGHTS).fill(0)
 for (const [night] of entries) perNight[night]++
 
@@ -21,7 +25,7 @@ const trips: Trips = {
   first_night: '2025-01-01',
   nights: NIGHTS,
   origins: [{ postcode: '4000', lat: -27.47, lon: 153.02 }],
-  campgrounds: ['Busy', 'Steady', 'Lull', 'Shut', 'Tiny'].map((name, id) => ({ id, name, lat: -27, lon: 153 })),
+  campgrounds: MONTHLY.map(([name], id) => ({ id, name, lat: -27, lon: 153 })),
   per_night: perNight,
   origin: entries.map(() => 0),
   campground: entries.map(([, c]) => c),
@@ -30,57 +34,48 @@ const trips: Trips = {
   holidays: [],
 }
 const offsets = nightOffsets(trips.per_night)
-const usual = usualWeekly(trips)
+const nightly = usualNightly(trips)
+const named = (list: { campground: number }[]) => list.map((c) => MONTHLY[c.campground][0])
 
-describe('weekOf', () => {
-  it('counts weeks of 7 nights from the first night', () => {
-    expect([0, 6, 7, 20].map((n) => weekOf(n, 21))).toEqual([0, 0, 1, 2])
-  })
-
-  it("folds the year's last night or two into its last week", () => {
-    expect(weeks(365)).toBe(52)
-    expect(weekOf(364, 365)).toBe(51)
+describe('months', () => {
+  it('splits the year at each first of the month', () => {
+    const found = months(trips)
+    expect(found).toEqual([
+      { first: 0, last: 31 },
+      { first: 31, last: 59 },
+      { first: 59, last: 90 },
+    ])
+    expect(monthOf(found, 60)).toBe(2)
   })
 })
 
-describe('usualWeekly', () => {
-  it("is each campground's sites a week, on average over the year", () => {
-    expect([...usual]).toEqual([40, 20, 20, 20, 4])
-  })
-})
+describe('monthBoard', () => {
+  const march = months(trips)[2]
+  const board = monthBoard(trips, offsets, nightly, march)
 
-describe('weekBoard', () => {
-  const board = weekBoard(trips, offsets, usual, 2)
-
-  it('ranks the busiest campgrounds by sites arriving that week', () => {
-    expect(board.busy.map((b) => [trips.campgrounds[b.campground].name, b.sites])).toEqual([
-      ['Busy', 40],
-      ['Steady', 20],
-      ['Lull', 2],
-    ])
+  it('finds who is busier than their usual month', () => {
+    expect(board.busier).toEqual([{ campground: 1, sites: 210, usual: 93 }])
   })
 
-  it('finds campgrounds at half their own usual week or less', () => {
-    expect(board.quiet.map((q) => [trips.campgrounds[q.campground].name, q.sites, q.usual])).toEqual([
-      ['Lull', 2, 20],
-    ])
+  it('finds who is at half their usual month or less', () => {
+    expect(board.quiet).toEqual([{ campground: 2, sites: 10, usual: 93 }])
   })
 
   it('never calls a closed campground (none arriving) or a tiny one quiet', () => {
-    const names = board.quiet.map((q) => trips.campgrounds[q.campground].name)
-    expect(names).not.toContain('Shut')
-    expect(names).not.toContain('Tiny')
+    expect(named(board.quiet)).not.toContain('Shut')
+    expect(named(board.quiet)).not.toContain('Closing') // closed for most of the month
+    expect(named([...board.quiet, ...board.busier])).not.toContain('Tiny')
   })
 
-  it('puts the quietest first, and of two as quiet, the one usually busier', () => {
-    // Busy and Steady both at a quarter of these usual weeks; Lull at a tenth.
-    const tie = weekBoard(trips, offsets, new Float64Array([160, 80, 20, 20, 4]), 2)
-    expect(tie.quiet.map((q) => q.campground)).toEqual([2, 0, 1])
+  it('puts the usually busier of two as quiet first', () => {
+    // Steady and Surge both at a quarter of these usual months: 90 of 360, 210 of 840.
+    const tie = monthBoard(trips, offsets, new Float64Array([360 / 31, 840 / 31, 3, 3, 0, 3]), march)
+    expect(named(tie.quiet)).toEqual(['Lull', 'Surge', 'Steady']) // Lull at a tenth first
   })
 })
 
 describe('quietMask', () => {
-  it('marks open campgrounds at half their usual week or less', () => {
-    expect([...quietMask(trips, offsets, usual, 2)]).toEqual([0, 0, 1, 0, 0])
+  it('marks the quiet ones for the map', () => {
+    expect([...quietMask(trips, offsets, nightly, months(trips)[2])]).toEqual([0, 0, 1, 0, 0, 0])
   })
 })

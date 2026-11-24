@@ -1,7 +1,8 @@
-"""A year of camping trips, from each camper's home postcode to the campground."""
+"""A year of camping trips, from each camper's home postcode to the campground: a calendar
+year, or the latest 12 months of history."""
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from typing import Protocol
 
 from quiet_camps.api.campground_service import (
@@ -10,6 +11,7 @@ from quiet_camps.api.campground_service import (
     holiday_spans,
     year_span,
 )
+from quiet_camps.api.errors import NotFound
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -50,7 +52,7 @@ class LeftOut:
 
 @dataclass(frozen=True, kw_only=True)
 class YearTrips:
-    year: int
+    year: int | None  # None for the latest 12 months, which cross a year's end
     first_night: date
     nights: int  # 365 or 366, fewer in the year the history ends
     origins: list[Origin]  # in the order they first appear
@@ -79,6 +81,21 @@ class TripSource(Protocol):
 
 async def year_trips(source: TripSource, year: int) -> YearTrips:
     first, last = year_span(year, await source.history_end())
+    return await trips_between(source, first, last, year)
+
+
+async def latest_trips(source: TripSource) -> YearTrips:
+    """The 12 months the history ends with, so the homepage shows the latest year of trips
+    whenever it's opened, not last calendar year's."""
+    last = await source.history_end()
+    if last is None:
+        raise NotFound("No history yet")
+    # The history ends on a quarter's last day, which every year has: no 29 February.
+    first = last.replace(year=last.year - 1) + timedelta(days=1)
+    return await trips_between(source, first, last, None)
+
+
+async def trips_between(source: TripSource, first: date, last: date, year: int | None) -> YearTrips:
     nights = (last - first).days + 1
     centres = {o.postcode: o for o in await source.origins()}
     places = {c.id: c for c in await source.located_campgrounds()}

@@ -5,18 +5,30 @@ from psycopg.rows import TupleRow
 
 from quiet_camps.ingest.campgrounds import Key, campground_key, load_merges, suggest_merges
 
-# Each campground shows the names from its most recently booked area, and that area's last
-# night is the campground's.
-SET_DISPLAY_NAMES = """
+# QPWS marks a retired area name rather than deleting it: "Point Pure remote bush camp -
+# OBSELETE", "Repulse Creek camp (obsolete)", "z_Thorsborne Trail - ... - OBSOLETE".
+RETIRED_NAME = r"obsolete|obselete|\mobsel\M"
+RETIRED_MARK = r"\s*(-\s*|\()?(obsolete|obselete|obsel)\)?\s*$|^z_"
+# What's left of "Thorsborne Trail - prior to 24 July 2025 Obsolete" once the mark is off.
+RETIRED_SINCE = r"\s*-\s*prior( to)? \d{1,2} [a-z]+ \d{4}\s*$"
+
+# A campground shows the names from its most recently booked area, preferring one not marked
+# retired (the same place's earlier name), with any leftover mark taken off. Its last night is
+# the latest of all its areas', whichever name it shows.
+SET_DISPLAY_NAMES = f"""
 UPDATE campground c SET name = latest.area, park_name = latest.park, last_night = latest.last
 FROM (
     SELECT DISTINCT ON (a.campground_id)
-        a.campground_id, a.name AS area, p.name AS park, n.last
+        a.campground_id,
+        regexp_replace(
+            regexp_replace(a.name, '{RETIRED_MARK}', '', 'gi'), '{RETIRED_SINCE}', '', 'i'
+        ) AS area,
+        p.name AS park, max(n.last) OVER (PARTITION BY a.campground_id) AS last
     FROM camping_area a
     JOIN park p ON p.id = a.park_id
     LEFT JOIN (SELECT area_id, max(night) AS last FROM camp_night GROUP BY area_id) n
         ON n.area_id = a.id
-    ORDER BY a.campground_id, n.last DESC NULLS LAST, a.id DESC
+    ORDER BY a.campground_id, a.name ~* '{RETIRED_NAME}', n.last DESC NULLS LAST, a.id DESC
 ) latest
 WHERE latest.campground_id = c.id
 """
