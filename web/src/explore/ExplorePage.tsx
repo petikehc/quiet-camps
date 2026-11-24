@@ -63,6 +63,7 @@ export function ExplorePage() {
   const [shown, setShown] = useState(SHOWN)
   const [hovered, setHovered] = useState<number>()
   const [map, setMap] = useState<maplibregl.Map>()
+  const [anywhere, setAnywhere] = useState(false) // the Where-from card closed, for this visit
   const root = useRef<HTMLDivElement>(null)
   const list = useRef<HTMLOListElement>(null)
   const fitKey = JSON.stringify(apiQuery(filters))
@@ -134,8 +135,11 @@ export function ExplorePage() {
         <p className="visually-hidden" aria-live="polite">
           {query.isSuccess && `${counts[band]} ${BAND_NAMES[band].toLowerCase()} campgrounds`}
         </p>
-        {filters.near === undefined && !filters.park && (
-          <WhereFrom onPick={(start) => setFilters({ ...filters, ...start })} />
+        {filters.near === undefined && !filters.park && !anywhere && (
+          <WhereFrom
+            onPick={(start) => setFilters({ ...filters, ...start })}
+            onClose={() => setAnywhere(true)}
+          />
         )}
         {query.isError && (
           <ExploreError error={query.error} onRetry={() => void query.refetch()} />
@@ -219,7 +223,9 @@ export function ExplorePage() {
 }
 
 // A search with no place yet: most campers set out from a city, or from where they are.
-function WhereFrom({ onPick }: { onPick: (start: Start) => void }) {
+type WhereFromProps = { onPick: (start: Start) => void; onClose: () => void }
+
+function WhereFrom({ onPick, onClose }: WhereFromProps) {
   const [note, setNote] = useState<string>()
 
   function nearMe() {
@@ -237,6 +243,9 @@ function WhereFrom({ onPick }: { onPick: (start: Start) => void }) {
 
   return (
     <div className="where-from">
+      <button type="button" className="where-close" aria-label="Close: search anywhere in Queensland" onClick={onClose}>
+        ×
+      </button>
       <p>Where are you setting out from?</p>
       <p className="where-hint">Pick a city, or your location, to see campgrounds within 150 km of it.</p>
       <div className="chips">
