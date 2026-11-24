@@ -2,6 +2,7 @@ import { getRouteApi } from '@tanstack/react-router'
 import type * as maplibregl from 'maplibre-gl'
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { fieldErrors } from '../api/errors'
+import { holidayName } from '../charts/scales'
 import { BandToggle } from './BandToggle'
 import { BAND_NAMES, bandNote, bandOf } from './bands'
 import { Card } from './Card'
@@ -10,6 +11,7 @@ import { apiQuery, localDay, type Band, type Filters } from './filters'
 import { LeaderLine } from './LeaderLine'
 import { QueryBar } from './QueryBar'
 import { useAreaYear, useQuietMap } from './queries'
+import { summary } from './summary'
 import { WhenStrip } from './WhenStrip'
 
 // MapLibre is most of the page's weight: the list can show before it arrives.
@@ -51,6 +53,7 @@ export function ExplorePage() {
   const [shown, setShown] = useState(SHOWN)
   const [hovered, setHovered] = useState<number>()
   const [map, setMap] = useState<maplibregl.Map>()
+  const [editing, setEditing] = useState(false) // on a phone, the fields fold under a summary
   const root = useRef<HTMLDivElement>(null)
   const list = useRef<HTMLOListElement>(null)
   const fitKey = JSON.stringify(apiQuery(filters))
@@ -96,8 +99,24 @@ export function ExplorePage() {
 
   return (
     <div className="explore" ref={root}>
+      <section className={editing ? 'explore-query editing' : 'explore-query'} aria-label="Where and when">
+        <div className="query-summary">
+          <p>{summary(filters, holiday && holidayName(holiday.name))}</p>
+          <button
+            type="button"
+            className="link-button"
+            aria-expanded={editing}
+            aria-controls="query-fields"
+            onClick={() => setEditing(!editing)}
+          >
+            {editing ? 'Done' : 'Change'}
+          </button>
+        </div>
+        <div id="query-fields">
+          <QueryBar filters={filters} onChange={setFilters} />
+        </div>
+      </section>
       <aside className="explore-side" aria-label="Campgrounds">
-        <QueryBar filters={filters} onChange={setFilters} />
         <BandToggle band={band} counts={counts} onChange={setBand} />
         <p className="band-note">{bandNote(band)}</p>
         {query.isError && <ExploreError error={query.error} />}
@@ -129,12 +148,12 @@ export function ExplorePage() {
             </li>
           )}
         </ol>
-        <footer className="explore-credits">
-          Past bookings, not live availability. Camping permits © State of Queensland; places and
-          boundaries © Commonwealth of Australia (ABS), CC BY 4.0. Map © OpenStreetMap
-          contributors. Not affiliated with Queensland Parks and Wildlife Service.
-        </footer>
       </aside>
+      <footer className="explore-credits">
+        Past bookings, not live availability. Camping permits © State of Queensland; places and
+        boundaries © Commonwealth of Australia (ABS), CC BY 4.0. Map © OpenStreetMap
+        contributors. Not affiliated with Queensland Parks and Wildlife Service.
+      </footer>
       <Suspense fallback={<div className="explore-map" />}>
         <ExploreMap
           rows={rows}

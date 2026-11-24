@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { monthStarts, peaks } from './strip'
+import { monthStarts, peaks, placeLabels } from './strip'
 
 describe('peaks', () => {
   const totals = [1, 9, 8, 2, 1, 7, 3, 6, 1, 1]
@@ -30,5 +30,38 @@ describe('monthStarts', () => {
       { night: 38, month: 'Jan' },
       { night: 69, month: 'Feb' },
     ])
+  })
+})
+
+describe('placeLabels', () => {
+  // A year of 365 nights; Easter and "Quietest week" 43 nights apart, as near Noosa in 2027.
+  const easter = { night: 121, text: 'Easter' }
+  const quietest = { night: 164, text: 'Quietest week' }
+
+  it('keeps labels on one row when there is room', () => {
+    expect(placeLabels([easter, quietest], 364, 1000, 7)).toEqual([
+      { ...easter, row: 0 },
+      { ...quietest, row: 0 },
+    ])
+  })
+
+  it('moves a label that would overlap to a second row on a narrow strip', () => {
+    expect(placeLabels([easter, quietest], 364, 330, 7)).toEqual([
+      { ...easter, row: 0 },
+      { ...quietest, row: 1 },
+    ])
+  })
+
+  it('drops a label that would overlap on both rows, keeping the earlier ones', () => {
+    const anzac = { night: 140, text: 'Anzac Day' }
+
+    expect(placeLabels([easter, quietest, anzac], 364, 330, 7)).toEqual([
+      { ...easter, row: 0 },
+      { ...quietest, row: 1 },
+    ])
+  })
+
+  it('places everything on one row before the strip has a width', () => {
+    expect(placeLabels([easter, quietest], 364, 0, 7).map((l) => l.row)).toEqual([0, 0])
   })
 })

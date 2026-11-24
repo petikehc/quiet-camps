@@ -1,9 +1,11 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Holiday } from './dates'
-import { monthStarts } from './strip'
+import { monthStarts, placeLabels, type Label } from './strip'
 
 const W = 1000 // the strip's drawing units; it stretches to its box
 const H = 100
+const NO_LABELS: Label[] = []
+const LABEL_CHAR_PX = 7 // about the width of a character of a peak's label (0.75rem, semibold)
 
 type Props = {
   firstNight: string // YYYY-MM-DD of night 0
@@ -12,7 +14,7 @@ type Props = {
   schoolHolidays?: Holiday[] // a broader shade, behind the public holidays
   night: number // where the playhead is
   onSeek: (night: number) => void
-  labels?: { night: number; text: string }[] // named moments above the strip
+  labels?: Label[] // named moments above the strip, the most important first
   stay?: { from: number; to: number } // nights to mark: [from, to)
   ariaLabel: string
   valueText: (night: number) => string // what the slider says at a night
@@ -27,7 +29,7 @@ export function YearStrip({
   schoolHolidays = [],
   night,
   onSeek,
-  labels = [],
+  labels = NO_LABELS,
   stay,
   ariaLabel,
   valueText,
@@ -47,14 +49,27 @@ export function YearStrip({
     return { line, area: `${floor.join('')}L${W},${H}L0,${H}Z`, x }
   }, [values, last])
   const months = useMemo(() => monthStarts(firstNight, values.length), [firstNight, values.length])
+  // Labels are spaced in pixels: on a phone, two that are weeks apart can touch.
+  const box = useRef<HTMLDivElement>(null)
+  const [width, setWidth] = useState(0)
+  useEffect(() => {
+    if (!box.current) return
+    const observer = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width))
+    observer.observe(box.current)
+    return () => observer.disconnect()
+  }, [])
+  const placed = useMemo(
+    () => placeLabels(labels, last, width, LABEL_CHAR_PX),
+    [labels, last, width],
+  )
   // Positions in the strip's box, matching the slider's thumb centre: see .year-strip in CSS.
   const at = (n: number) => `calc(var(--thumb) / 2 + ${n / last} * (100% - var(--thumb)))`
 
   return (
-    <div className="year-strip">
+    <div className={placed.some((l) => l.row === 1) ? 'year-strip two-rows' : 'year-strip'} ref={box}>
       <ol className="year-peaks" aria-hidden="true">
-        {labels.map((l) => (
-          <li key={l.night} style={{ left: at(l.night) }}>
+        {placed.map((l) => (
+          <li key={l.night} className={l.row === 1 ? 'row-1' : undefined} style={{ left: at(l.night) }}>
             {l.text}
           </li>
         ))}
