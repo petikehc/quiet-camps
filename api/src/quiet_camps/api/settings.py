@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     ask_endpoint: Literal["runtime", "mantle"] = "runtime"
     ask_model: str = "au.anthropic.claude-haiku-4-5-20251001-v1:0"
     ask_effort: Literal["low", "medium", "high"] | None = None  # mantle only
+    # Calls to the model, counted in Postgres: per viewer an hour, and for the whole site a day
+    # (about US$0.30 at Haiku 4.5's price), so a bot can't run up the bill.
+    ask_per_hour: int = 20
+    ask_per_day: int = 300
     aws_region: str = "ap-southeast-2"
     aws_profile: str | None = None
     # Behind CloudFront (ADR 0006): turn away requests without CloudFront's secret header, and

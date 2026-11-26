@@ -30,6 +30,7 @@ def test_the_tables() -> None:
         "park_outline",
         "postcode_centroid",
         "place",
+        "ask_count",
     }
 
 

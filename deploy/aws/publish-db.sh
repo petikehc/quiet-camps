@@ -11,7 +11,8 @@
 # search, calendars and typical nights keep their history since 2011; only /trips/{year}
 # before 2024 comes back thin.
 #
-# The public database is a read-only snapshot: never migrate it or run `qc` against it.
+# The public database is a snapshot: never migrate it or run `qc` against it. The API writes
+# only ask_count (/ask's limits), which starts empty and empties again on every load.
 # Change and refresh the local database, then build and load again.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
@@ -28,7 +29,8 @@ psql_local() { in_db psql -U quiet_camps -v ON_ERROR_STOP=1 -q "$@"; }
 build() {
   echo "Building $PUBLIC from $SOURCE, keeping camp_night from $KEEP_FROM"
   psql_local -d postgres -c "DROP DATABASE IF EXISTS $PUBLIC WITH (FORCE)" -c "CREATE DATABASE $PUBLIC"
-  in_db pg_dump -U quiet_camps -Fc --exclude-table-data=camp_night -f /tmp/public.dump "$SOURCE"
+  in_db pg_dump -U quiet_camps -Fc --exclude-table-data=camp_night \
+    --exclude-table-data=ask_count -f /tmp/public.dump "$SOURCE"
   # Tables first, then the data, then camp_night's rows, then indexes and keys: building an
   # index once over the copied rows is faster than keeping it up to date row by row.
   in_db pg_restore -U quiet_camps -d "$PUBLIC" --section=pre-data /tmp/public.dump

@@ -35,7 +35,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     if settings.experiments:
         app.include_router(experiment_router)
     app.state.settings = settings
-    app.state.ask = AskState()  # /ask's rate limit, its day's answers, its reader
+    app.state.ask = AskState()  # /ask's day's answers and its reader
     # pre_ping: a pooled connection can die unseen, when Lambda freezes the function between
     # requests or Neon suspends; it's tested and replaced before a request gets it.
     app.state.engine = create_async_engine(settings.database_url, pool_pre_ping=True)

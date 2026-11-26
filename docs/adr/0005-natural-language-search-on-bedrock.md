@@ -40,9 +40,9 @@ prompt, so "Easter" is never the model's arithmetic.
   it needs Anthropic's first-time-use form and its terms accepted in the console, then
   `ASK_MODEL=au.anthropic.claude-haiku-5-5`.
 - **Cost:** a short extraction (~600 tokens in, ~100 out): about a tenth of a cent an ask on
-  Haiku 4.5, a hundredth on Haiku 5.5. Guards: off unless `ASK_ENABLED`, 200 characters, 20 an hour per
-  client (in memory, per process: API Gateway throttling replaces it once deployed), the same
-  words answered from a cache for the rest of the day, and an AWS Budgets alert.
+  Haiku 4.5, a hundredth on Haiku 5.5. Guards: off unless `ASK_ENABLED`, 200 characters, the
+  same words answered from a cache for the rest of the day, and limits counted in Postgres:
+  20 an hour per viewer and 300 a day for the whole site (ADR 0006).
 - **Privacy:** the words go to Bedrock in our AWS account; we don't store or log them, only
   whether dates and a place were understood.
 - **Failure:** throttling, no model access, a refusal or a bad reading is a 503, and the page

@@ -1,7 +1,16 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import BigInteger, ForeignKey, Index, MetaData, String, UniqueConstraint, false
+from sqlalchemy import (
+    BigInteger,
+    DateTime,
+    ForeignKey,
+    Index,
+    MetaData,
+    String,
+    UniqueConstraint,
+    false,
+)
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -152,3 +161,15 @@ class CampNight(Base):
     state: Mapped[State]
     reservation_id: Mapped[str | None]
     source_file: Mapped[str]
+
+
+class AskCount(Base):
+    """How many asks went to the model in a window: each viewer's per hour, and the whole
+    site's per day (ADR 0006). In the database, not in memory, so the limits hold however many
+    copies of the API run at once."""
+
+    __tablename__ = "ask_count"
+
+    bucket: Mapped[str] = mapped_column(primary_key=True)  # "site", or a viewer's address
+    starts: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True)
+    n: Mapped[int]

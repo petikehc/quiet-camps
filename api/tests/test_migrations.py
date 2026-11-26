@@ -11,6 +11,7 @@ TABLES = {
     "park_outline",
     "postcode_centroid",
     "place",
+    "ask_count",
 }
 
 
