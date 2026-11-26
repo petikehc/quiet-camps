@@ -58,6 +58,7 @@ flowchart LR
 - Park outlines: [Protected areas of Queensland](https://www.data.qld.gov.au/dataset/protected-areas-of-queensland-series), © State of Queensland, licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 - Postcode centres, suburbs and localities, and council areas: [ABS Australian Statistical Geography Standard 2021](https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3), © Commonwealth of Australia, licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 - Queensland state school holidays, late 2022 to 2029: [Department of Education](https://education.qld.gov.au/about-us/calendar/term-dates), © State of Queensland; the past years from its term-dates page as archived by the [Internet Archive](https://web.archive.org/web/2025/https://education.qld.gov.au/about-us/calendar/term-dates). Kept as a short reviewed list in `api/src/quiet_camps/ingest/qld_school_holidays.csv`, with each source in its header.
+- Page views on the live site are counted with [GoatCounter](https://www.goatcounter.com): no cookies and no personal data, and only the page's path, never its search (the dates and place someone looked for).
 - The data shows **past bookings**, not live availability. "Quiet" means quiet compared with that campground's own history.
 
 This project is not affiliated with or endorsed by Queensland Parks and Wildlife Service or the Queensland Government.
