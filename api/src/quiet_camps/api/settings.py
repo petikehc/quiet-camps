@@ -21,3 +21,7 @@ class Settings(BaseSettings):
     ask_effort: Literal["low", "medium", "high"] | None = None  # mantle only
     aws_region: str = "ap-southeast-2"
     aws_profile: str | None = None
+    # Behind CloudFront (ADR 0006): turn away requests without CloudFront's secret header, and
+    # count /ask per viewer by the address in this header, not the connection's.
+    origin_secret: str | None = None
+    client_ip_header: str | None = None
