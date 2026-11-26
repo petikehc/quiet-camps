@@ -3,7 +3,7 @@ import { RouterProvider } from '@tanstack/react-router'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import '@fontsource-variable/overpass' // self-hosted: no flash of a fallback, no call to Google
-import { countPages } from './analytics'
+import { startCounting } from './analytics'
 import { shouldRetry } from './api/errors'
 import './index.css'
 import { router } from './router'
@@ -13,7 +13,7 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 5 * 60_000, retry: shouldRetry } },
 })
 
-countPages(router)
+startCounting(router)
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
