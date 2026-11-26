@@ -1,0 +1,20 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Quiet Camps, the certificate for the site's own domain. In us-east-1, the only region
+  CloudFront takes certificates from; validated by a CNAME at the domain's DNS host.
+
+Parameters:
+  DomainName:
+    Type: String
+    Description: The site's domain, e.g. quiet-camps.example.com
+
+Resources:
+  Certificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref DomainName
+      ValidationMethod: DNS
+
+Outputs:
+  CertificateArn:
+    Value: !Ref Certificate

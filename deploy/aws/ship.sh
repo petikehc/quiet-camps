@@ -2,6 +2,7 @@
 # Quiet Camps on AWS (ADR 0006): CloudFront in front of the web on S3 and the API on Lambda.
 #
 #   deploy/aws/ship.sh bootstrap   # once: the ECR repository for the API image
+#   deploy/aws/ship.sh cert        # once, with DOMAIN set: its certificate (us-east-1)
 #   deploy/aws/ship.sh deploy      # build and push the image, update the stack, upload the web
 #   deploy/aws/ship.sh status      # the stacks, the site's /api/health, this month's cost
 #   deploy/aws/ship.sh teardown    # delete everything this script made
@@ -20,6 +21,8 @@ export AWS_PROFILE AWS_REGION=ap-southeast-2
 
 STACK=quiet-camps
 ECR_STACK=quiet-camps-ecr
+CERT_STACK=quiet-camps-cert # in us-east-1: CloudFront only takes certificates from there
+DOMAIN=${DOMAIN:-}
 TAGS=(Project=quiet-camps)
 
 output() { # output STACK KEY
@@ -27,10 +30,47 @@ output() { # output STACK KEY
     --query "Stacks[0].Outputs[?OutputKey=='$2'].OutputValue" --output text
 }
 
+# The certificate's ARN when DOMAIN is set, else empty (CloudFront's own domain).
+certificate() {
+  [[ -n "$DOMAIN" ]] || return 0
+  aws cloudformation describe-stacks --region us-east-1 --stack-name "$CERT_STACK" \
+    --query "Stacks[0].Outputs[?OutputKey=='CertificateArn'].OutputValue" --output text
+}
+
 bootstrap() {
   aws cloudformation deploy --stack-name "$ECR_STACK" --template-file deploy/aws/ecr.yaml \
     --tags "${TAGS[@]}"
   output "$ECR_STACK" RepositoryUri
+}
+
+# The certificate for DOMAIN. ACM checks a CNAME at the domain's DNS host, which may not be
+# AWS: this prints the record to add, then waits (up to an hour) until ACM has seen it.
+cert() {
+  : "${DOMAIN:?set it in deploy/aws/.env, e.g. quiet-camps.example.com}"
+  if ! aws cloudformation describe-stacks --region us-east-1 --stack-name "$CERT_STACK" \
+    >/dev/null 2>&1; then
+    aws cloudformation create-stack --region us-east-1 --stack-name "$CERT_STACK" \
+      --template-body file://deploy/aws/cert.yaml \
+      --parameters "ParameterKey=DomainName,ParameterValue=$DOMAIN" \
+      --tags Key=Project,Value=quiet-camps --query StackId --output text
+  fi
+  local arn="" record=""
+  for _ in $(seq 1 30); do
+    arn=$(aws cloudformation describe-stack-resources --region us-east-1 \
+      --stack-name "$CERT_STACK" --output text \
+      --query "StackResources[?LogicalResourceId=='Certificate'].PhysicalResourceId")
+    if [[ "$arn" == arn:* ]]; then
+      record=$(aws acm describe-certificate --region us-east-1 --certificate-arn "$arn" --query \
+        "Certificate.DomainValidationOptions[0].ResourceRecord.[Name, Value]" --output text)
+      [[ -n "$record" && "$record" != None* ]] && break
+    fi
+    sleep 5
+  done
+  echo "Add this CNAME at the DNS host for $DOMAIN (name, then value):"
+  echo "  $record"
+  echo "Waiting for ACM to see it..."
+  aws cloudformation wait stack-create-complete --region us-east-1 --stack-name "$CERT_STACK"
+  echo "Validated. Now: ship.sh deploy"
 }
 
 deploy() {
@@ -58,7 +98,7 @@ deploy() {
     --capabilities CAPABILITY_IAM --tags "${TAGS[@]}" --no-fail-on-empty-changeset \
     --parameter-overrides "ImageUri=$image" \
     "DatabaseUrl=${NEON_DATABASE_URL/#postgresql:/postgresql+psycopg:}" \
-    "OriginSecret=$ORIGIN_SECRET"
+    "OriginSecret=$ORIGIN_SECRET" "DomainName=$DOMAIN" "CertificateArn=$(certificate)"
 
   echo "== The web"
   (cd web && pnpm install --frozen-lockfile && pnpm build)
@@ -101,13 +141,16 @@ teardown() {
   aws cloudformation wait stack-delete-complete --stack-name "$STACK"
   aws cloudformation delete-stack --stack-name "$ECR_STACK"
   aws cloudformation wait stack-delete-complete --stack-name "$ECR_STACK"
+  # After the distribution: a certificate in use can't be deleted.
+  aws cloudformation delete-stack --region us-east-1 --stack-name "$CERT_STACK"
+  aws cloudformation wait stack-delete-complete --region us-east-1 --stack-name "$CERT_STACK"
   echo "Deleted. The Neon database is separate: delete it in Neon's console."
 }
 
 case "${1:-}" in
-  bootstrap | deploy | status | teardown) "$1" ;;
+  bootstrap | cert | deploy | status | teardown) "$1" ;;
   *)
-    echo "usage: $0 bootstrap|deploy|status|teardown" >&2
+    echo "usage: $0 bootstrap|cert|deploy|status|teardown" >&2
     exit 2
     ;;
 esac

@@ -16,6 +16,17 @@ Parameters:
     NoEcho: true
     MinLength: 32
     Description: CloudFront sends it in X-Origin-Verify; the API turns away requests without it
+  # The site's own domain, with its certificate from cert.yaml; both empty: CloudFront's own.
+  DomainName:
+    Type: String
+    Default: ""
+  CertificateArn:
+    Type: String
+    Default: ""
+    AllowedPattern: ^$|^arn:aws:acm:us-east-1:\d{12}:certificate/.+$
+
+Conditions:
+  HasDomain: !Not [!Equals [!Ref DomainName, ""]]
 
 Resources:
   # ---- The API: the step-16 image on Lambda, through a function URL ----
@@ -186,6 +197,10 @@ Resources:
 
   Distribution:
     Type: AWS::CloudFront::Distribution
+    Metadata:
+      cfn-lint:
+        config:
+          ignore_checks: [W1030] # CertificateArn is empty only without a domain (HasDomain)
     Properties:
       DistributionConfig:
         Comment: Quiet Camps
@@ -194,6 +209,13 @@ Resources:
         IPV6Enabled: true
         PriceClass: PriceClass_All # the cheaper classes leave out Australia's edges
         DefaultRootObject: index.html
+        Aliases: !If [HasDomain, [!Ref DomainName], !Ref AWS::NoValue]
+        ViewerCertificate: !If
+          - HasDomain
+          - AcmCertificateArn: !Ref CertificateArn
+            SslSupportMethod: sni-only
+            MinimumProtocolVersion: TLSv1.2_2021
+          - CloudFrontDefaultCertificate: true
         Origins:
           - Id: site
             DomainName: !GetAtt SiteBucket.RegionalDomainName
@@ -228,7 +250,9 @@ Resources:
 
 Outputs:
   SiteUrl:
-    Value: !Sub https://${Distribution.DomainName}
+    Value: !If [HasDomain, !Sub "https://${DomainName}", !Sub "https://${Distribution.DomainName}"]
+  CloudFrontDomain:
+    Value: !GetAtt Distribution.DomainName # the domain's CNAME points here
   DistributionId:
     Value: !Ref Distribution
   BucketName:
