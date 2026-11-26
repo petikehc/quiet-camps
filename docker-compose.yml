@@ -16,5 +16,18 @@ services:
       timeout: 3s
       retries: 15
 
+  # The API from its image, on port 8000: docker compose --profile full up -d --wait
+  # Without the profile, only Postgres starts (the tests and `uv run uvicorn` need only that).
+  api:
+    profiles: [full]
+    build: api
+    environment:
+      DATABASE_URL: postgresql+psycopg://quiet_camps:quiet_camps@db:5432/quiet_camps
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   pgdata:

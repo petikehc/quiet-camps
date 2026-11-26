@@ -4,17 +4,20 @@ bedrock-mantle, which AWS opens account by account and region by region."""
 
 import asyncio
 from datetime import date
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import anthropic
 import boto3
 from anthropic.lib.bedrock import AsyncAnthropicBedrockMantle
 from botocore.exceptions import BotoCoreError, ClientError
-from mypy_boto3_bedrock_runtime import BedrockRuntimeClient
 from pydantic import ValidationError
 
 from quiet_camps.api.ask_service import Holiday, Reader, ReaderUnavailable, Reading
 from quiet_camps.api.settings import Settings
+
+if TYPE_CHECKING:
+    # Type stubs, a dev dependency: never imported at run time.
+    from mypy_boto3_bedrock_runtime import BedrockRuntimeClient
 
 SYSTEM = """\
 You read what a camper typed when looking for a quiet campground in a Queensland national \
