@@ -27,6 +27,8 @@ RESULT_FIELDS = {
     "location_flags",
     "osm_type",
     "osm_id",
+    "qpws_url",
+    "qpws_url_kind",
     "distance_km",
 }
 

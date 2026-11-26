@@ -82,6 +82,16 @@ def test_a_result_names_the_openstreetmap_object_it_matched(seeded_client: TestC
     assert (by_name[BUSY]["osm_type"], by_name[BUSY]["osm_id"]) == (None, None)  # no match
 
 
+def test_a_result_links_to_its_qpws_page(seeded_client: TestClient) -> None:
+    by_name = {c["name"]: c for c in results(seeded_client)}
+
+    assert (by_name[QUIET]["qpws_url"], by_name[QUIET]["qpws_url_kind"]) == (
+        "https://parks.qld.gov.au/parks/main-range/camping/quiet-creek",  # as seeded
+        "camping",
+    )
+    assert (by_name[BUSY]["qpws_url"], by_name[BUSY]["qpws_url_kind"]) == (None, None)
+
+
 def test_park_narrows_the_search(seeded_client: TestClient) -> None:
     assert names(seeded_client, park="Busy Coast National Park") == [BUSY]
 

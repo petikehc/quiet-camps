@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { locationNote, osmLink, shownLocation } from './location'
+import { locationNote, osmLink, qpwsLink, shownLocation } from './location'
 import type { QuietCampground } from './queries'
 
 const camp = (overrides: Partial<QuietCampground>): QuietCampground => ({
@@ -16,6 +16,8 @@ const camp = (overrides: Partial<QuietCampground>): QuietCampground => ({
   location_flags: [],
   osm_type: null,
   osm_id: null,
+  qpws_url: null,
+  qpws_url_kind: null,
   distance_km: null,
   ...overrides,
 })
@@ -42,6 +44,33 @@ describe('osmLink', () => {
 
   it('has no link without a match', () => {
     expect(osmLink(camp({}), true)).toBeUndefined()
+  })
+})
+
+describe('qpwsLink', () => {
+  it('links to the camping area’s own page', () => {
+    const url = 'https://parks.qld.gov.au/parks/bowling-green-bay/camping/alligator-creek'
+    expect(qpwsLink(camp({ qpws_url: url, qpws_url_kind: 'camping' }))).toEqual({
+      href: url,
+      label: 'Camping area on QPWS',
+    })
+  })
+
+  it('links to the park’s page when the camping area has none', () => {
+    const url = 'https://parks.qld.gov.au/parks/girringun'
+    expect(qpwsLink(camp({ qpws_url: url, qpws_url_kind: 'park' }))).toEqual({
+      href: url,
+      label: 'Park on QPWS',
+    })
+  })
+
+  it('searches QPWS for the park when nothing matched, with the name encoded', () => {
+    const link = qpwsLink(camp({ park_name: "K'gari (Fraser Island) Recreation Area" }))
+    expect(link.label).toBe('Find the park on QPWS')
+    expect(link.href).toBe(
+      'https://parks.qld.gov.au/parks?type=park&names=K%27gari+%28Fraser+Island%29+Recreation+Area',
+    )
+    expect(new URL(link.href).searchParams.get('names')).toBe("K'gari (Fraser Island) Recreation Area")
   })
 })
 

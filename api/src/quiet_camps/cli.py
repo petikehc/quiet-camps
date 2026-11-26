@@ -2,6 +2,7 @@ import argparse
 import json
 import time
 from collections.abc import Sequence
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
@@ -16,9 +17,17 @@ from quiet_camps.db.load import load_all
 from quiet_camps.db.locations import OSM_FILE, PARKS_FILE, has_sources, location_report
 from quiet_camps.db.places import PLACES_FILE, load_places
 from quiet_camps.db.postcodes import POSTCODES_FILE, load_postcodes
+from quiet_camps.db.qpws import has_qpws_pages, link_campgrounds, qpws_report
 from quiet_camps.ingest.ckan import PackageShowResponse, camping_csv_urls
 from quiet_camps.ingest.download import download_csv
 from quiet_camps.ingest.profile_report import profile
+from quiet_camps.ingest.qpws import (
+    CAMPGROUNDS_A_Z,
+    PARKS_A_Z,
+    QPWS_FILE,
+    camping_pages,
+    park_pages,
+)
 from quiet_camps.ingest.quality_report import quality
 from quiet_camps.ingest.retry import retry
 
@@ -48,6 +57,9 @@ POSTCODES_URL = ABS_POINTS.format("POA")
 LOCALITIES_URL = ABS_POINTS.format("SAL")
 COUNCILS_URL = ABS_POINTS.format("LGA")
 ABS_PAGE = 2000  # the service's most per request
+# parks.qld.gov.au turns scripts away (Cloudflare), so its listings come from the Internet Archive.
+WAYBACK_CDX = "https://web.archive.org/cdx/search/cdx"
+WAYBACK_RAW = "https://web.archive.org/web/{timestamp}id_/{url}"  # id_: the page as captured
 
 
 def is_transient(exc: Exception) -> bool:
@@ -148,6 +160,66 @@ def fetch_places(client: httpx.Client) -> dict[str, Any]:
         "localities": fetch_abs_points(client, LOCALITIES_URL, "sal_name_2021", queensland),
         "councils": fetch_abs_points(client, COUNCILS_URL, "lga_name_2021", queensland),
     }
+
+
+@retry(attempts=4, delay=10.0, retry_if=is_transient)
+def fetch_latest_capture(client: httpx.Client, url: str) -> tuple[str, str]:
+    """The Internet Archive's latest good capture of a page: (its timestamp, its HTML)."""
+    params = {"url": url, "filter": "statuscode:200", "fl": "timestamp", "output": "json"}
+    response = client.get(WAYBACK_CDX, params={**params, "limit": "-1"})  # -1: the last one
+    response.raise_for_status()
+    rows: list[list[str]] = response.json()  # a header row, then one row per capture
+    if len(rows) < 2:
+        raise RuntimeError(f"The Internet Archive has no capture of {url}")
+    timestamp = rows[-1][0]
+    page = client.get(WAYBACK_RAW.format(timestamp=timestamp, url=url))
+    page.raise_for_status()
+    return timestamp, page.text
+
+
+def fetch_qpws_pages(client: httpx.Client) -> dict[str, Any]:
+    """Every QPWS camping area's page and park's page, from the two A to Z listings."""
+    camping_at, camping_html = fetch_latest_capture(client, CAMPGROUNDS_A_Z)
+    parks_at, parks_html = fetch_latest_capture(client, PARKS_A_Z)
+    return {
+        "camping": {
+            "captured": camping_at,
+            "pages": [asdict(p) for p in camping_pages(camping_html)],
+        },
+        "parks": {"captured": parks_at, "pages": [asdict(p) for p in park_pages(parks_html)]},
+    }
+
+
+def save_qpws_pages(locations_dir: Path) -> bool:
+    with httpx.Client(
+        headers={"User-Agent": USER_AGENT}, follow_redirects=True, timeout=120
+    ) as client:
+        pages = fetch_qpws_pages(client)
+    camping, parks = pages["camping"], pages["parks"]
+    if not camping["pages"] or not parks["pages"]:
+        print("Found no pages: has the layout of the A to Z listings changed?")
+        return False
+    locations_dir.mkdir(parents=True, exist_ok=True)
+    (locations_dir / QPWS_FILE).write_text(json.dumps(pages, indent=1), encoding="utf-8")
+    print(
+        f"{len(camping['pages'])} camping area pages (captured {camping['captured'][:8]}) and "
+        f"{len(parks['pages'])} park pages (captured {parks['captured'][:8]}) from "
+        "parks.qld.gov.au, via the Internet Archive"
+    )
+    return True
+
+
+def qpws_pages_command(locations_dir: Path, fetch: bool) -> int:
+    if fetch and not save_qpws_pages(locations_dir):
+        return 1
+    if not has_qpws_pages(locations_dir):
+        print(f"No {QPWS_FILE} in {locations_dir}: run `qc qpws-pages --fetch` first.")
+        return 1
+    with psycopg.connect(psycopg_conninfo()) as conn:
+        link_campgrounds(conn, locations_dir)
+        for line in qpws_report(conn):
+            print(line)
+    return 0
 
 
 def postcodes_command(locations_dir: Path, fetch: bool) -> int:
@@ -338,6 +410,25 @@ def main(argv: Sequence[str] | None = None) -> int:
     places.add_argument("--fetch", action="store_true", help="Download the places first.")
     places.add_argument("--locations-dir", type=Path, default=DEFAULT_LOCATIONS_DIR)
 
+    qpws = commands.add_parser(
+        "qpws-pages",
+        help="Link every campground to its QPWS camping area or park page, and list the rest.",
+        description=(
+            "Match every campground to its camping area's page on parks.qld.gov.au, or its "
+            "park's page, from QPWS's two A to Z listings. qc load and qc refresh re-run the "
+            "matching from the downloaded file."
+        ),
+    )
+    qpws.add_argument(
+        "--fetch",
+        action="store_true",
+        help=(
+            "Download the listings first, from their latest captures on the Internet Archive "
+            "(parks.qld.gov.au turns scripts away)."
+        ),
+    )
+    qpws.add_argument("--locations-dir", type=Path, default=DEFAULT_LOCATIONS_DIR)
+
     openapi = commands.add_parser(
         "openapi",
         help="Write the API's OpenAPI document, for the web client's generated types.",
@@ -380,6 +471,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return postcodes_command(args.locations_dir, args.fetch)
         case "places":
             return places_command(args.locations_dir, args.fetch)
+        case "qpws-pages":
+            return qpws_pages_command(args.locations_dir, args.fetch)
         case "openapi":
             args.output.write_text(openapi_document())
             print(f"wrote {args.output}")

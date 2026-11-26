@@ -1,7 +1,7 @@
 import base64
 import json
 from datetime import date
-from typing import Annotated, Self
+from typing import Annotated, Literal, Self
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -110,6 +110,10 @@ class QuietCampgroundOut(BaseModel):
     # rejected when location_flags has rejected_osm. None when nothing on the map matched.
     osm_type: str | None
     osm_id: int | None
+    # Its page on parks.qld.gov.au: its camping area's, or failing that its park's. None when
+    # neither matched.
+    qpws_url: str | None
+    qpws_url_kind: Literal["camping", "park"] | None
     distance_km: float | None  # straight-line, from the place searched near; None without one
 
 

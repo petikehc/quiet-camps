@@ -57,3 +57,14 @@ export function osmLink(
   if (!c.location_flags.includes('rejected_osm')) return { href, label: 'On OpenStreetMap' }
   return review ? { href, label: 'The rejected match on OpenStreetMap' } : undefined
 }
+
+// The campground's page on parks.qld.gov.au, as the API matched it: its camping area's page, or
+// its park's. Without either, QPWS's park finder with the park's name.
+export function qpwsLink(c: QuietCampground): { href: string; label: string } {
+  if (c.qpws_url !== null && c.qpws_url_kind === 'camping') {
+    return { href: c.qpws_url, label: 'Camping area on QPWS' }
+  }
+  if (c.qpws_url !== null) return { href: c.qpws_url, label: 'Park on QPWS' }
+  const finder = new URLSearchParams({ type: 'park', names: c.park_name })
+  return { href: `https://parks.qld.gov.au/parks?${finder}`, label: 'Find the park on QPWS' }
+}

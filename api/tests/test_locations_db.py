@@ -106,8 +106,9 @@ def test_locating_again_changes_nothing(conn: Conn, tmp_path: Path) -> None:
 
 def test_refresh_skips_locations_until_the_files_are_downloaded(conn: Conn, tmp_path: Path) -> None:
     lines = list(refresh_locations(conn, tmp_path))
-    assert len(lines) == 1
+    assert len(lines) == 2
     assert "qc locations --fetch" in lines[0]
+    assert "qc qpws-pages --fetch" in lines[1]
 
 
 def test_the_report_lists_what_needs_a_look(conn: Conn, tmp_path: Path) -> None:

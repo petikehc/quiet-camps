@@ -126,6 +126,8 @@ def seed_lead_times(conn: Conn) -> None:
     book(conn, RANGE, EARLY, date(2026, 1, 10))  # in the latest quarter, not history yet
 
 
+QPWS_QUIET_CREEK = "https://parks.qld.gov.au/parks/main-range/camping/quiet-creek"
+
 SEEDED_LOCATIONS = [
     ("Twin Hollow camping area", -28.0, 152.6),
     ("Big Hollow camping area", -28.3, 152.5),
@@ -163,6 +165,11 @@ def seed_search_history(conn: Conn) -> None:
     conn.execute(
         "UPDATE campground SET osm_type = 'way', osm_id = 4242 WHERE name = %s",
         ("Quiet Creek camping area",),
+    )
+    # And to its QPWS page, as `qc qpws-pages` would.
+    conn.execute(
+        "UPDATE campground SET qpws_url = %s, qpws_url_kind = 'camping' WHERE name = %s",
+        (QPWS_QUIET_CREEK, "Quiet Creek camping area"),
     )
     # Located, for searches near a place; Quiet Creek stays unlocated.
     for name, lat, lon in SEEDED_LOCATIONS:

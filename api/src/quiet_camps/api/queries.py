@@ -67,6 +67,7 @@ ranked AS (
            CAST(round(CAST(avg(u.busyness) AS numeric), 6) AS float8) AS busyness,
            avg(u.sites) AS typical_sites, min(u.nights) AS history, max(u.peak) AS peak,
            c.lat, c.lon, c.location_source, c.location_flags, c.osm_type, c.osm_id,
+           c.qpws_url, c.qpws_url_kind,
            CASE WHEN CAST(:near_lat AS float8) IS NULL THEN NULL ELSE {DISTANCE} END
                AS distance_km
     FROM usual u
@@ -99,6 +100,8 @@ class QuietCampground:
     location_flags: list[str]
     osm_type: str | None  # node, way or relation
     osm_id: int | None
+    qpws_url: str | None
+    qpws_url_kind: str | None  # camping or park
     distance_km: float | None  # from the place searched near; None without one
 
 

@@ -455,6 +455,10 @@ export interface components {
             osm_type: string | null;
             /** Park Name */
             park_name: string;
+            /** Qpws Url */
+            qpws_url: string | null;
+            /** Qpws Url Kind */
+            qpws_url_kind: ("camping" | "park") | null;
             /** Typical Sites */
             typical_sites: number;
         };
