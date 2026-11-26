@@ -4,7 +4,7 @@ Queensland camping since 2011, read from the permits: where people travel from, 
 
 A learning project with Python (FastAPI, SQLAlchemy, Postgres) and React, built on every public camping permit since 2011 from Queensland Parks and Wildlife Service.
 
-**Live: https://d3cb7eajw1xjho.cloudfront.net**
+**Live: https://quiet-camps.idoescode.com**
 
 ![The homepage: the latest 12 months of camping trips, each a line from the camper's home postcode to the campground, with the night's campsites booked counting up](docs/homepage.gif)
 
