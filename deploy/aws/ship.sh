@@ -4,6 +4,7 @@
 #   deploy/aws/ship.sh bootstrap   # once: the ECR repository for the API image
 #   deploy/aws/ship.sh cert        # once, with DOMAIN set: its certificate (us-east-1)
 #   deploy/aws/ship.sh deploy      # build and push the image, update the stack, upload the web
+#   deploy/aws/ship.sh invalidate  # after loading new data: CloudFront forgets cached answers
 #   deploy/aws/ship.sh status      # the stacks, the site's /api/health, this month's cost
 #   deploy/aws/ship.sh teardown    # delete everything this script made
 #
@@ -117,6 +118,13 @@ deploy() {
   echo "== Live at $(output "$STACK" SiteUrl)"
 }
 
+# CloudFront keeps /trips/latest and /year for a day (their Cache-Control). After a new
+# snapshot (publish-db.sh load), this makes the next request ask the API again.
+invalidate() {
+  aws cloudfront create-invalidation --distribution-id "$(output "$STACK" DistributionId)" \
+    --paths "/api/*" --query Invalidation.Id --output text
+}
+
 status() {
   aws cloudformation describe-stacks --query \
     "Stacks[?starts_with(StackName, 'quiet-camps')].[StackName, StackStatus, LastUpdatedTime]" \
@@ -148,9 +156,9 @@ teardown() {
 }
 
 case "${1:-}" in
-  bootstrap | cert | deploy | status | teardown) "$1" ;;
+  bootstrap | cert | deploy | invalidate | status | teardown) "$1" ;;
   *)
-    echo "usage: $0 bootstrap|cert|deploy|status|teardown" >&2
+    echo "usage: $0 bootstrap|cert|deploy|invalidate|status|teardown" >&2
     exit 2
     ;;
 esac
