@@ -16,9 +16,6 @@ Parameters:
     NoEcho: true
     MinLength: 32
     Description: CloudFront sends it in X-Origin-Verify; the API turns away requests without it
-  BudgetEmail:
-    Type: String
-    Description: Where the monthly budget's alerts go
 
 Resources:
   # ---- The API: the step-16 image on Lambda, through a function URL ----
@@ -228,28 +225,6 @@ Resources:
             Compress: true
             CachePolicyId: !Ref ApiCachePolicy
             OriginRequestPolicyId: !Ref ApiOriginRequestPolicy
-
-  # ---- Cost: an email before a surprise ----
-
-  MonthlyBudget:
-    Type: AWS::Budgets::Budget
-    Properties:
-      Budget:
-        BudgetName: quiet-camps-monthly
-        BudgetType: COST
-        TimeUnit: MONTHLY
-        BudgetLimit: { Amount: 5, Unit: USD }
-      NotificationsWithSubscribers:
-        - Notification:
-            NotificationType: ACTUAL
-            ComparisonOperator: GREATER_THAN
-            Threshold: 80
-          Subscribers: [{ SubscriptionType: EMAIL, Address: !Ref BudgetEmail }]
-        - Notification:
-            NotificationType: FORECASTED
-            ComparisonOperator: GREATER_THAN
-            Threshold: 100
-          Subscribers: [{ SubscriptionType: EMAIL, Address: !Ref BudgetEmail }]
 
 Outputs:
   SiteUrl:

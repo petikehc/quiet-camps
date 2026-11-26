@@ -48,7 +48,7 @@ flowchart LR
 - **Web** (`web/`): Vite, React, TanStack Router and Query, MapLibre, three.js for the
   homepage; its API types are generated from the committed OpenAPI document, and CI fails if
   they drift.
-- **Deploy** (`deploy/aws/`): CloudFormation for CloudFront, S3, Lambda and a budget; Postgres
+- **Deploy** (`deploy/aws/`): CloudFormation for CloudFront, S3 and Lambda; Postgres
   on Neon ([ADR 0006](docs/adr/0006-deploy-on-lambda-cloudfront-and-neon.md)).
 
 ## Data and attribution
@@ -120,7 +120,7 @@ from a cache. The API allows 20 asks an hour per client, and never stores or log
 ([ADR 0006](docs/adr/0006-deploy-on-lambda-cloudfront-and-neon.md)):
 
 ```sh
-cp deploy/aws/.env.example deploy/aws/.env   # AWS profile, Neon URL, budget email, a secret
+cp deploy/aws/.env.example deploy/aws/.env   # AWS profile, Neon URL, a secret
 deploy/aws/publish-db.sh build && deploy/aws/publish-db.sh load   # the snapshot into Neon
 deploy/aws/ship.sh bootstrap                 # once: the image repository
 deploy/aws/ship.sh deploy                    # image, stack and web; prints the URL
@@ -130,7 +130,8 @@ deploy/aws/ship.sh teardown                  # delete it all
 
 **Cost:** close to nothing while traffic is low. Lambda, CloudFront and Neon's free tiers
 cover it; the image repository is a few cents a month; each new `/ask` phrasing is about a
-tenth of a US cent. A US$5 monthly AWS budget emails before anything surprising.
+tenth of a US cent. The deploy doesn't create a budget: set one for the account (step 3
+above), so a surprise is an email, not a bill.
 
 **Real vs. trimmed:** the public database holds every derived number since 2011, but only the
 permit rows from October 2023 on, which is all the site reads (350 MB instead of 1.8 GB). It's

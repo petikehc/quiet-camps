@@ -33,8 +33,9 @@ a Neon project in Sydney, holding a trimmed, read-only snapshot. Everything is i
   local database, then build and load it again.
 - **`/ask` on, with guardrails:** the function's role may invoke only the `au.` Haiku 4.5
   profile, with no access keys anywhere. The hourly limit counts viewers by
-  `CloudFront-Viewer-Address`, which viewers can't set. A US$5 monthly budget emails at 80%
-  spent and at a forecast over 100%.
+  `CloudFront-Viewer-Address`, which viewers can't set. Spending is watched by the account's
+  own budget alert, not one in this stack: a budget can only be scoped to the stack through a
+  cost-allocation tag, and Bedrock's on-demand calls, the cost that can grow, don't carry it.
 
 ## Alternatives considered
 
@@ -61,8 +62,8 @@ a Neon project in Sydney, holding a trimmed, read-only snapshot. Everything is i
   `/trips/latest` and `/year` are cached by CloudFront for a day, as their `Cache-Control`
   says.
 - The `/ask` limit is per function instance, in memory: several warm instances each allow
-  20 an hour per viewer. The budget alert is the backstop; a shared store (DynamoDB) would
-  make it exact.
+  20 an hour per viewer. The account's budget alert is the backstop; a shared store
+  (DynamoDB) would make it exact.
 - Updating the data means rebuilding and reloading the snapshot (`publish-db.sh`), not
   running `qc` against Neon.
 - `ship.sh teardown` deletes all of it; Neon is deleted in its own console.

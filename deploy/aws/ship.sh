@@ -15,7 +15,6 @@ cd "$(dirname "$0")/../.."
 source deploy/aws/.env
 : "${AWS_PROFILE:?set it in deploy/aws/.env}"
 : "${NEON_DATABASE_URL:?set it in deploy/aws/.env}"
-: "${BUDGET_EMAIL:?set it in deploy/aws/.env}"
 : "${ORIGIN_SECRET:?set it in deploy/aws/.env: openssl rand -hex 32}"
 export AWS_PROFILE AWS_REGION=ap-southeast-2
 
@@ -59,7 +58,7 @@ deploy() {
     --capabilities CAPABILITY_IAM --tags "${TAGS[@]}" --no-fail-on-empty-changeset \
     --parameter-overrides "ImageUri=$image" \
     "DatabaseUrl=${NEON_DATABASE_URL/#postgresql:/postgresql+psycopg:}" \
-    "OriginSecret=$ORIGIN_SECRET" "BudgetEmail=$BUDGET_EMAIL"
+    "OriginSecret=$ORIGIN_SECRET"
 
   echo "== The web"
   (cd web && pnpm install --frozen-lockfile && pnpm build)
@@ -93,7 +92,7 @@ status() {
 }
 
 teardown() {
-  read -r -p "Delete the site, the API, the budget and the image repository? Type yes: " answer
+  read -r -p "Delete the site, the API and the image repository? Type yes: " answer
   [[ "$answer" == yes ]] || exit 1
   local bucket
   bucket=$(output "$STACK" BucketName)
