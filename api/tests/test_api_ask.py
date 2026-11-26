@@ -92,9 +92,13 @@ def test_the_same_words_again_today_are_answered_without_asking(
     assert reader.reads == 1
 
 
+def with_settings(client: TestClient, **update: object) -> None:
+    app = cast(FastAPI, client.app)
+    app.state.settings = app.state.settings.model_copy(update=update)
+
+
 def test_asking_too_often_is_429(asking: TestClient) -> None:
-    ask_state: AskState = cast(FastAPI, asking.app).state.ask
-    ask_state.limiter.limit = 2
+    with_settings(asking, ask_per_hour=2)
     ask(asking, "this weekend near noosa")
     ask(asking, "easter near noosa")
 
@@ -111,17 +115,54 @@ def viewer_asks(client: TestClient, text: str, address: str) -> int:
 
 def test_behind_cloudfront_each_viewer_has_their_own_limit(asking: TestClient) -> None:
     # Behind CloudFront and the Lambda adapter, every request comes from one local address.
-    app = cast(FastAPI, asking.app)
-    app.state.settings = app.state.settings.model_copy(
-        update={"client_ip_header": "cloudfront-viewer-address"}
-    )
-    ask_state: AskState = app.state.ask
-    ask_state.limiter.limit = 2
+    with_settings(asking, ask_per_hour=2, client_ip_header="cloudfront-viewer-address")
     assert viewer_asks(asking, "this weekend near noosa", "203.0.113.9:1000") == 200
     assert viewer_asks(asking, "easter near noosa", "203.0.113.9:1001") == 200
 
     assert viewer_asks(asking, "christmas near noosa", "203.0.113.9:1002") == 429
     assert viewer_asks(asking, "christmas near noosa", "198.51.100.7:1000") == 200
+
+
+def test_ipv6_addresses_on_one_network_share_a_limit(asking: TestClient) -> None:
+    with_settings(asking, ask_per_hour=1, client_ip_header="cloudfront-viewer-address")
+    assert viewer_asks(asking, "this weekend near noosa", "2001:db8:1:2::1:443") == 200
+
+    assert viewer_asks(asking, "easter near noosa", "2001:db8:1:2:ffff::9:443") == 429
+
+
+def test_the_site_stops_asking_the_model_after_its_daily_cap(
+    asking: TestClient, reader: FakeReader
+) -> None:
+    with_settings(asking, ask_per_day=2, client_ip_header="cloudfront-viewer-address")
+    assert viewer_asks(asking, "this weekend near noosa", "203.0.113.1:1") == 200
+    assert viewer_asks(asking, "easter near noosa", "203.0.113.2:1") == 200
+
+    response = asking.post(
+        "/ask",
+        json={"text": "christmas near noosa"},
+        headers={"CloudFront-Viewer-Address": "203.0.113.3:1"},  # a new viewer, same day
+    )
+
+    assert response.status_code == 503
+    assert "tomorrow" in response.json()["detail"]
+    assert reader.reads == 2  # the third never reached the model
+
+
+def test_the_limits_hold_across_copies_of_the_api(
+    asking: TestClient, api_settings: Settings, reader: FakeReader
+) -> None:
+    # On Lambda, each request can land on a different instance with its own memory.
+    with_settings(asking, ask_per_hour=1)
+    ask(asking, "this weekend near noosa")
+    another = create_app(api_settings.model_copy(update={"ask_enabled": True, "ask_per_hour": 1}))
+    another_state: AskState = another.state.ask
+    another_state.reader = reader
+    another.dependency_overrides[get_today] = lambda: TODAY
+
+    with TestClient(another) as second_copy:
+        response = second_copy.post("/ask", json={"text": "easter near noosa"})
+
+    assert response.status_code == 429
 
 
 @pytest.mark.parametrize("reader", [FakeReader(None)])

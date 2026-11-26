@@ -112,7 +112,9 @@ hand.
    Management → Budgets → Create budget → Monthly cost budget, e.g. US$5, with your email.
 
 Each new phrasing is one call, about a tenth of a US cent; the same words again that day come
-from a cache. The API allows 20 asks an hour per client, and never stores or logs the words.
+from a cache. The API allows 20 asks an hour per visitor and 300 a day for the whole site
+(counted in Postgres, so the limits hold however many copies of the API run), and never stores
+or logs the words.
 
 ## Deploy (AWS)
 

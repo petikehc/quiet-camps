@@ -32,8 +32,12 @@ a Neon project in Sydney, holding a trimmed, read-only snapshot. Everything is i
   nearly empty, and the web doesn't ask for it. The snapshot is never migrated: change the
   local database, then build and load it again.
 - **`/ask` on, with guardrails:** the function's role may invoke only the `au.` Haiku 4.5
-  profile, with no access keys anywhere. The hourly limit counts viewers by
-  `CloudFront-Viewer-Address`, which viewers can't set. Spending is watched by the account's
+  profile, with no access keys anywhere. Limits are counted in Postgres (`ask_count`), so
+  every copy of the function shares them: 20 asks an hour per viewer, counted by
+  `CloudFront-Viewer-Address` (which viewers can't set; IPv6 by its /64, one network), and
+  300 calls to the model a day for the whole site, about US$0.30, however many viewers or
+  bots there are. One atomic upsert counts each ask, so two at once can't both be the 300th.
+  Spending is watched by the account's
   own budget alert, not one in this stack: a budget can only be scoped to the stack through a
   cost-allocation tag, and Bedrock's on-demand calls, the cost that can grow, don't carry it.
 
@@ -61,9 +65,10 @@ a Neon project in Sydney, holding a trimmed, read-only snapshot. Everything is i
   Neon also wakes from suspend. `pool_pre_ping` replaces connections that died meanwhile.
   `/trips/latest` and `/year` are cached by CloudFront for a day, as their `Cache-Control`
   says.
-- The `/ask` limit is per function instance, in memory: several warm instances each allow
-  20 an hour per viewer. The account's budget alert is the backstop; a shared store
-  (DynamoDB) would make it exact.
+- `/ask` writes to the database: `ask_count` is the one table the API changes. It's left out
+  of the snapshot's data, so every load starts it empty. Neon rather than DynamoDB: the same
+  database the API already uses, so no new service or permissions. Past the daily cap,
+  `/ask` answers 503 and the site works without it until Queensland's midnight.
 - Updating the data means rebuilding and reloading the snapshot (`publish-db.sh`), not
   running `qc` against Neon.
 - `ship.sh teardown` deletes all of it; Neon is deleted in its own console.

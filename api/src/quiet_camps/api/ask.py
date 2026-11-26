@@ -1,13 +1,12 @@
 """POST /ask: plain words to dates and a place, read by Claude on Amazon Bedrock (ADR 0005).
 
 Guarded because every call costs money: off unless switched on, 200 characters at most,
-20 an hour per client, and the same words answered from a cache for the rest of the day.
-The words themselves are never stored or logged.
+the same words answered from a cache for the rest of the day, and limits counted in Postgres
+(ask_limits.py): 20 an hour per viewer and 300 a day for the whole site. The words themselves
+are never stored or logged.
 """
 
 import logging
-import time
-from collections import deque
 from datetime import date, datetime, timedelta
 from typing import Annotated, Literal
 from zoneinfo import ZoneInfo
@@ -16,6 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from quiet_camps.api.ask_limits import SITE, count_ask, day_start, hour_start, viewer_bucket
 from quiet_camps.api.ask_service import (
     Answer,
     Holiday,
@@ -37,7 +37,6 @@ from quiet_camps.ingest.school_holidays import school_holidays
 
 log = logging.getLogger(__name__)
 
-PER_HOUR = 20  # asks per client
 CACHED = 500  # answers kept; the cache empties when the day changes
 QUEENSLAND = ZoneInfo("Australia/Brisbane")  # no daylight saving: "today" is Queensland's
 
@@ -67,28 +66,10 @@ class AskOut(BaseModel):
     within_km: int | None
 
 
-class Limiter:
-    """At most `limit` asks per client in any hour. In memory: one process's count."""
-
-    def __init__(self, limit: int) -> None:
-        self.limit = limit
-        self._asked: dict[str, deque[float]] = {}
-
-    def allow(self, client: str, now: float) -> bool:
-        asked = self._asked.setdefault(client, deque())
-        while asked and asked[0] <= now - 3600:
-            asked.popleft()
-        if len(asked) >= self.limit:
-            return False
-        asked.append(now)
-        return True
-
-
 class AskState:
-    """Per app: the limiter, the day's answers, and the reader once it's first needed."""
+    """Per app: the day's answers, and the reader once it's first needed."""
 
     def __init__(self) -> None:
-        self.limiter = Limiter(PER_HOUR)
         self.day: date | None = None
         self.answers: dict[str, AskOut] = {}
         self.reader: Reader | None = None
@@ -158,10 +139,18 @@ async def ask_in_plain_words(
     key = normalised(body.text)
     if key in state.answers:  # answered today already: free, and not counted
         return state.answers[key]
-    client = client_ip(request, settings.client_ip_header)
-    if not state.limiter.allow(client, time.monotonic()):
+    viewer = viewer_bucket(client_ip(request, settings.client_ip_header))
+    if (
+        await count_ask(session, viewer, hour_start(datetime.now(QUEENSLAND)))
+        > settings.ask_per_hour
+    ):
         raise HTTPException(
             429, "That's a lot of asking: try again in an hour.", {"Retry-After": "3600"}
+        )
+    # The site's cap: however many viewers, at most this many calls to the model a day.
+    if await count_ask(session, SITE, day_start(today)) > settings.ask_per_day:
+        raise HTTPException(
+            503, "Plain words are resting until tomorrow: choose dates and a place."
         )
 
     reader = reader_for(state, settings)
