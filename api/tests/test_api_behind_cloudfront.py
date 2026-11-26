@@ -1,7 +1,9 @@
 """Running behind CloudFront on Lambda: only CloudFront may call the API, /ask counts each
-viewer by the address CloudFront saw, and a pooled connection that died while the function
-was frozen is replaced, not handed to a request."""
+viewer by the address CloudFront saw, a pooled connection that died while the function was
+frozen is replaced, not handed to a request, and a cold start imports only what it needs."""
 
+import subprocess
+import sys
 from collections.abc import Iterator
 
 import psycopg
@@ -85,3 +87,21 @@ def test_a_connection_that_died_in_the_pool_is_replaced(client: TestClient) -> N
         )
 
     assert client.get("/health").status_code == 200
+
+
+def test_starting_the_app_leaves_the_aws_sdks_for_the_first_ask() -> None:
+    # A fresh interpreter: this one may have imported them already. They take about half of a
+    # cold start's imports, and most cold starts never see an /ask.
+    loaded = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import sys, quiet_camps.api.app;"
+            " print(sorted(m for m in ('boto3', 'botocore', 'anthropic') if m in sys.modules))",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    assert loaded.stdout.strip() == "[]"
