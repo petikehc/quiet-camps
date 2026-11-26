@@ -3,7 +3,7 @@ import type { Holiday } from '../charts/dates'
 import { rankWords, usually } from './bands'
 import type { Band } from './filters'
 import { BookingHint } from './BookingHint'
-import { osmLink, shownLocation } from './location'
+import { osmLink, qpwsLink, shownLocation } from './location'
 import type { QuietCampground } from './queries'
 
 type Props = {
@@ -37,6 +37,7 @@ export function Card({
 }: Props) {
   const { notes } = shownLocation(c, review)
   const osm = osmLink(c, review)
+  const qpws = qpwsLink(c)
   return (
     <li className={selected ? 'card selected' : 'card'} data-id={c.id}>
       <button
@@ -79,6 +80,9 @@ export function Card({
             >
               Its year, night by night
             </Link>
+            <a href={qpws.href} target="_blank" rel="noreferrer">
+              {qpws.label}
+            </a>
             {osm && (
               <a href={osm.href} target="_blank" rel="noreferrer">
                 {osm.label}
