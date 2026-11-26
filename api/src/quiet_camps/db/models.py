@@ -75,6 +75,10 @@ class Campground(Base):
     # GeoJSON, for the campgrounds OSM draws as an area.
     osm_outline: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     park_outline_id: Mapped[int | None] = mapped_column(ForeignKey("park_outline.id"))
+    # Its page on parks.qld.gov.au, from quiet_camps.ingest.qpws_match: its camping area's
+    # page ("camping") or, failing that, its park's ("park"). None until `qc qpws-pages`.
+    qpws_url: Mapped[str | None]
+    qpws_url_kind: Mapped[str | None]
 
     areas: Mapped[list[CampingArea]] = relationship(back_populates="campground")
     park_outline: Mapped[ParkOutline | None] = relationship()

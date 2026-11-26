@@ -17,6 +17,7 @@ from quiet_camps.db.load import load_all
 from quiet_camps.db.locations import OSM_FILE, PARKS_FILE, has_sources, location_report
 from quiet_camps.db.places import PLACES_FILE, load_places
 from quiet_camps.db.postcodes import POSTCODES_FILE, load_postcodes
+from quiet_camps.db.qpws import has_qpws_pages, link_campgrounds, qpws_report
 from quiet_camps.ingest.ckan import PackageShowResponse, camping_csv_urls
 from quiet_camps.ingest.download import download_csv
 from quiet_camps.ingest.profile_report import profile
@@ -189,7 +190,7 @@ def fetch_qpws_pages(client: httpx.Client) -> dict[str, Any]:
     }
 
 
-def qpws_pages_command(locations_dir: Path) -> int:
+def save_qpws_pages(locations_dir: Path) -> bool:
     with httpx.Client(
         headers={"User-Agent": USER_AGENT}, follow_redirects=True, timeout=120
     ) as client:
@@ -197,7 +198,7 @@ def qpws_pages_command(locations_dir: Path) -> int:
     camping, parks = pages["camping"], pages["parks"]
     if not camping["pages"] or not parks["pages"]:
         print("Found no pages: has the layout of the A to Z listings changed?")
-        return 1
+        return False
     locations_dir.mkdir(parents=True, exist_ok=True)
     (locations_dir / QPWS_FILE).write_text(json.dumps(pages, indent=1), encoding="utf-8")
     print(
@@ -205,6 +206,19 @@ def qpws_pages_command(locations_dir: Path) -> int:
         f"{len(parks['pages'])} park pages (captured {parks['captured'][:8]}) from "
         "parks.qld.gov.au, via the Internet Archive"
     )
+    return True
+
+
+def qpws_pages_command(locations_dir: Path, fetch: bool) -> int:
+    if fetch and not save_qpws_pages(locations_dir):
+        return 1
+    if not has_qpws_pages(locations_dir):
+        print(f"No {QPWS_FILE} in {locations_dir}: run `qc qpws-pages --fetch` first.")
+        return 1
+    with psycopg.connect(psycopg_conninfo()) as conn:
+        link_campgrounds(conn, locations_dir)
+        for line in qpws_report(conn):
+            print(line)
     return 0
 
 
@@ -398,11 +412,19 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     qpws = commands.add_parser(
         "qpws-pages",
-        help="Download the QPWS page of every camping area and park, for links from each card.",
+        help="Link every campground to its QPWS camping area or park page, and list the rest.",
         description=(
-            "Read QPWS's camping areas and parks A to Z listings from their latest captures on "
-            "the Internet Archive (parks.qld.gov.au turns scripts away), and save each page's "
-            f"name and URL to {QPWS_FILE}."
+            "Match every campground to its camping area's page on parks.qld.gov.au, or its "
+            "park's page, from QPWS's two A to Z listings. qc load and qc refresh re-run the "
+            "matching from the downloaded file."
+        ),
+    )
+    qpws.add_argument(
+        "--fetch",
+        action="store_true",
+        help=(
+            "Download the listings first, from their latest captures on the Internet Archive "
+            "(parks.qld.gov.au turns scripts away)."
         ),
     )
     qpws.add_argument("--locations-dir", type=Path, default=DEFAULT_LOCATIONS_DIR)
@@ -450,7 +472,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         case "places":
             return places_command(args.locations_dir, args.fetch)
         case "qpws-pages":
-            return qpws_pages_command(args.locations_dir)
+            return qpws_pages_command(args.locations_dir, args.fetch)
         case "openapi":
             args.output.write_text(openapi_document())
             print(f"wrote {args.output}")

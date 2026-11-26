@@ -8,6 +8,7 @@ from psycopg.rows import TupleRow
 
 from quiet_camps.db.campgrounds import assign_campgrounds
 from quiet_camps.db.locations import has_sources, locate_campgrounds
+from quiet_camps.db.qpws import has_qpws_pages, link_campgrounds
 from quiet_camps.ingest.day_kinds import day_kinds
 from quiet_camps.timing import timed
 
@@ -55,10 +56,19 @@ def refresh_derived(conn: psycopg.Connection[TupleRow]) -> Iterator[str]:
 
 
 def refresh_locations(conn: psycopg.Connection[TupleRow], locations_dir: Path) -> Iterator[str]:
-    """Re-locate every campground from the downloaded files. Run after refresh_derived."""
-    if not has_sources(locations_dir):
+    """Re-locate every campground, and re-link its QPWS page, from the downloaded files.
+
+    Run after refresh_derived.
+    """
+    if has_sources(locations_dir):
+        with timed() as t:
+            n = len(locate_campgrounds(conn, locations_dir))
+        yield f"{'locations':<42} {n:>9,} {t.seconds:6.1f}s"
+    else:
         yield f"{'locations':<42} skipped: run `qc locations --fetch` first"
-        return
-    with timed() as t:
-        n = len(locate_campgrounds(conn, locations_dir))
-    yield f"{'locations':<42} {n:>9,} {t.seconds:6.1f}s"
+    if has_qpws_pages(locations_dir):
+        with timed() as t:
+            n = sum(link_campgrounds(conn, locations_dir).values())
+        yield f"{'QPWS pages':<42} {n:>9,} {t.seconds:6.1f}s"
+    else:
+        yield f"{'QPWS pages':<42} skipped: run `qc qpws-pages --fetch` first"

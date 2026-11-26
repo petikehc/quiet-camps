@@ -10,9 +10,11 @@ Internet Archive's latest captures. Both lay out an entry the same way:
     </h3><p>...</p></li>
 """
 
+import json
 import re
 from dataclasses import dataclass
 from html.parser import HTMLParser
+from pathlib import Path
 
 CAMPGROUNDS_A_Z = "https://parks.qld.gov.au/parks/campgrounds-a-z?list=all"
 PARKS_A_Z = "https://parks.qld.gov.au/parks/parks-a-z?list=all"
@@ -94,3 +96,10 @@ def camping_pages(html: str) -> list[CampingPage]:
 def park_pages(html: str) -> list[ParkPage]:
     """The parks A to Z (/parks/parks-a-z?list=all)."""
     return [ParkPage(e.url, e.name) for e in listing(html) if PARK_URL.match(e.url)]
+
+
+def load_pages(path: Path) -> tuple[list[CampingPage], list[ParkPage]]:
+    """The pages `qc qpws-pages --fetch` saved."""
+    saved = json.loads(path.read_text(encoding="utf-8"))
+    camping = [CampingPage(**p) for p in saved["camping"]["pages"]]
+    return camping, [ParkPage(**p) for p in saved["parks"]["pages"]]

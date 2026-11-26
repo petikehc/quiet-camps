@@ -712,6 +712,32 @@
             "title": "Park Name",
             "type": "string"
           },
+          "qpws_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qpws Url"
+          },
+          "qpws_url_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "camping",
+                  "park"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qpws Url Kind"
+          },
           "typical_sites": {
             "title": "Typical Sites",
             "type": "number"
@@ -731,6 +757,8 @@
           "location_flags",
           "osm_type",
           "osm_id",
+          "qpws_url",
+          "qpws_url_kind",
           "distance_km"
         ],
         "title": "QuietCampgroundOut",
