@@ -104,6 +104,26 @@ def test_asking_too_often_is_429(asking: TestClient) -> None:
     assert response.headers["retry-after"] == "3600"
 
 
+def viewer_asks(client: TestClient, text: str, address: str) -> int:
+    headers = {"CloudFront-Viewer-Address": address}
+    return client.post("/ask", json={"text": text}, headers=headers).status_code
+
+
+def test_behind_cloudfront_each_viewer_has_their_own_limit(asking: TestClient) -> None:
+    # Behind CloudFront and the Lambda adapter, every request comes from one local address.
+    app = cast(FastAPI, asking.app)
+    app.state.settings = app.state.settings.model_copy(
+        update={"client_ip_header": "cloudfront-viewer-address"}
+    )
+    ask_state: AskState = app.state.ask
+    ask_state.limiter.limit = 2
+    assert viewer_asks(asking, "this weekend near noosa", "203.0.113.9:1000") == 200
+    assert viewer_asks(asking, "easter near noosa", "203.0.113.9:1001") == 200
+
+    assert viewer_asks(asking, "christmas near noosa", "203.0.113.9:1002") == 429
+    assert viewer_asks(asking, "christmas near noosa", "198.51.100.7:1000") == 200
+
+
 @pytest.mark.parametrize("reader", [FakeReader(None)])
 def test_a_reader_that_is_down_is_503(asking: TestClient) -> None:
     response = asking.post("/ask", json={"text": "next weekend"})

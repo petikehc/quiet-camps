@@ -25,10 +25,10 @@ from quiet_camps.api.ask_service import (
     coming_school_holidays,
     long_weekends,
 )
-from quiet_camps.api.bedrock_reader import make_reader
 from quiet_camps.api.campground_repository import HOLIDAY_NIGHTS
 from quiet_camps.api.campground_service import HolidayNight, holiday_spans
 from quiet_camps.api.db import get_session
+from quiet_camps.api.origin import client_ip
 from quiet_camps.api.place_service import PlaceSource
 from quiet_camps.api.places import PlaceOut, get_place_source
 from quiet_camps.api.problems import INVALID, Problem
@@ -112,6 +112,9 @@ def reader_for(state: AskState, settings: Settings) -> Reader:
     """Made on the first ask, so a switched-off API never builds an AWS client. Tests put a
     fake reader in AskState instead."""
     if state.reader is None:
+        # Imported here too: boto3 and the Anthropic SDK are half of a cold start's imports.
+        from quiet_camps.api.bedrock_reader import make_reader
+
         state.reader = make_reader(settings)
     return state.reader
 
@@ -155,7 +158,7 @@ async def ask_in_plain_words(
     key = normalised(body.text)
     if key in state.answers:  # answered today already: free, and not counted
         return state.answers[key]
-    client = request.client.host if request.client else "unknown"
+    client = client_ip(request, settings.client_ip_header)
     if not state.limiter.allow(client, time.monotonic()):
         raise HTTPException(
             429, "That's a lot of asking: try again in an hour.", {"Retry-After": "3600"}

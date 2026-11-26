@@ -1,0 +1,237 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Quiet Camps: the web on S3 and the API on Lambda, both behind one CloudFront distribution;
+  Postgres is on Neon (ADR 0006). Deployed by deploy/aws/ship.sh.
+
+Parameters:
+  ImageUri:
+    Type: String
+    Description: The API image in ECR, tagged with its git commit
+  DatabaseUrl:
+    Type: String
+    NoEcho: true
+    Description: postgresql+psycopg://... for the Neon database
+  OriginSecret:
+    Type: String
+    NoEcho: true
+    MinLength: 32
+    Description: CloudFront sends it in X-Origin-Verify; the API turns away requests without it
+
+Resources:
+  # ---- The API: the step-16 image on Lambda, through a function URL ----
+
+  FunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        # POST /ask: Claude Haiku 4.5 through the Australian inference profile only. The
+        # profile sends each request to a model in Sydney or Melbourne, so both need allowing.
+        - PolicyName: ask-bedrock
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: bedrock:InvokeModel
+                Resource:
+                  - !Sub arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/au.anthropic.claude-haiku-4-5-20251001-v1:0
+                  - arn:aws:bedrock:ap-southeast-2::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0
+                  - arn:aws:bedrock:ap-southeast-4::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0
+
+  FunctionLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/quiet-camps-api
+      RetentionInDays: 14
+
+  Function:
+    Type: AWS::Lambda::Function
+    DependsOn: FunctionLogs
+    Properties:
+      FunctionName: quiet-camps-api
+      PackageType: Image
+      Code: { ImageUri: !Ref ImageUri }
+      Architectures: [arm64]
+      MemorySize: 1024 # CPU grows with memory; /trips/latest builds a 1.8 MB answer
+      Timeout: 30 # CloudFront waits 30 s for an origin
+      Role: !GetAtt FunctionRole.Arn
+      Environment:
+        Variables:
+          DATABASE_URL: !Ref DatabaseUrl
+          ORIGIN_SECRET: !Ref OriginSecret
+          CLIENT_IP_HEADER: cloudfront-viewer-address
+          ASK_ENABLED: "true"
+          AWS_LWA_REMOVE_BASE_PATH: /api
+
+  FunctionUrl:
+    Type: AWS::Lambda::Url
+    Properties:
+      TargetFunctionArn: !Ref Function
+      # No IAM check: the API itself turns away requests without CloudFront's secret header.
+      # (CloudFront's origin access control for Lambda would need viewers to sign POST bodies.)
+      AuthType: NONE
+
+  # A public function URL needs both permissions; the second only through the URL.
+  FunctionUrlPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref Function
+      Action: lambda:InvokeFunctionUrl
+      Principal: "*"
+      FunctionUrlAuthType: NONE
+
+  FunctionInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref Function
+      Action: lambda:InvokeFunction
+      Principal: "*"
+      InvokedViaFunctionUrl: true
+
+  # ---- The web: Vite's dist/ in a private bucket that only CloudFront reads ----
+
+  SiteBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules: [{ ObjectOwnership: BucketOwnerEnforced }]
+
+  SiteBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref SiteBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: cloudfront.amazonaws.com }
+            Action: s3:GetObject
+            Resource: !Sub ${SiteBucket.Arn}/*
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/${Distribution}
+
+  SiteAccess:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub ${AWS::StackName}-site
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  # /explore, /campgrounds/12: the app's own routes, which only index.html knows. A path
+  # whose last part has a dot is a file. (Not a custom 404 page: that would also turn the
+  # API's own 404s into index.html.)
+  SpaRoutes:
+    Type: AWS::CloudFront::Function
+    Properties:
+      Name: !Sub ${AWS::StackName}-spa-routes
+      AutoPublish: true
+      FunctionConfig:
+        Comment: App routes to /index.html
+        Runtime: cloudfront-js-2.0
+      FunctionCode: |
+        function handler(event) {
+          var request = event.request;
+          var last = request.uri.split('/').pop();
+          if (last.indexOf('.') === -1) {
+            request.uri = '/index.html';
+          }
+          return request;
+        }
+
+  # ---- CloudFront: / from S3, /api/* from the function ----
+
+  # The API says what may be cached (Cache-Control): /trips/latest and /year for a day, and
+  # nothing else. Answers without the header aren't cached (default TTL 0).
+  ApiCachePolicy:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        Name: !Sub ${AWS::StackName}-api
+        MinTTL: 0
+        DefaultTTL: 0
+        MaxTTL: 86400
+        ParametersInCacheKeyAndForwardedToOrigin:
+          EnableAcceptEncodingGzip: true
+          EnableAcceptEncodingBrotli: true
+          QueryStringsConfig: { QueryStringBehavior: all }
+          HeadersConfig: { HeaderBehavior: none }
+          CookiesConfig: { CookieBehavior: none }
+
+  # Forwarded, not cached on: the viewer's address for /ask's limit, and POST's body type.
+  ApiOriginRequestPolicy:
+    Type: AWS::CloudFront::OriginRequestPolicy
+    Properties:
+      OriginRequestPolicyConfig:
+        Name: !Sub ${AWS::StackName}-api
+        QueryStringsConfig: { QueryStringBehavior: all }
+        HeadersConfig:
+          HeaderBehavior: whitelist
+          Headers: [CloudFront-Viewer-Address, Content-Type, Accept]
+        CookiesConfig: { CookieBehavior: none }
+
+  Distribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Comment: Quiet Camps
+        Enabled: true
+        HttpVersion: http2and3
+        IPV6Enabled: true
+        PriceClass: PriceClass_All # the cheaper classes leave out Australia's edges
+        DefaultRootObject: index.html
+        Origins:
+          - Id: site
+            DomainName: !GetAtt SiteBucket.RegionalDomainName
+            OriginAccessControlId: !GetAtt SiteAccess.Id
+            S3OriginConfig: { OriginAccessIdentity: "" }
+          - Id: api
+            # https://abc.lambda-url.ap-southeast-2.on.aws/ -> abc.lambda-url.ap-southeast-2.on.aws
+            DomainName: !Select [2, !Split ["/", !GetAtt FunctionUrl.FunctionUrl]]
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+              OriginSSLProtocols: [TLSv1.2]
+            OriginCustomHeaders:
+              - HeaderName: X-Origin-Verify
+                HeaderValue: !Ref OriginSecret
+        DefaultCacheBehavior:
+          TargetOriginId: site
+          ViewerProtocolPolicy: redirect-to-https
+          Compress: true
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # managed: CachingOptimized
+          FunctionAssociations:
+            - EventType: viewer-request
+              FunctionARN: !GetAtt SpaRoutes.FunctionMetadata.FunctionARN
+        CacheBehaviors:
+          - PathPattern: /api/*
+            TargetOriginId: api
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD, OPTIONS, PUT, PATCH, POST, DELETE]
+            CachedMethods: [GET, HEAD]
+            Compress: true
+            CachePolicyId: !Ref ApiCachePolicy
+            OriginRequestPolicyId: !Ref ApiOriginRequestPolicy
+
+Outputs:
+  SiteUrl:
+    Value: !Sub https://${Distribution.DomainName}
+  DistributionId:
+    Value: !Ref Distribution
+  BucketName:
+    Value: !Ref SiteBucket
+  FunctionUrl:
+    Value: !GetAtt FunctionUrl.FunctionUrl

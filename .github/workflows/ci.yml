@@ -1,0 +1,112 @@
+name: CI
+
+# Every push, to any branch: a PR shows the run of its latest commit. (A pull_request trigger
+# as well would run everything twice.)
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A new push to the same branch or PR cancels the run it replaces.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The same database as docker-compose.yml; the tests create their own databases on it.
+  DATABASE_URL: postgresql+psycopg://quiet_camps:quiet_camps@localhost:5432/quiet_camps
+
+jobs:
+  api:
+    runs-on: ubuntu-24.04
+    services:
+      db:
+        image: postgres:18
+        env:
+          POSTGRES_USER: quiet_camps
+          POSTGRES_PASSWORD: quiet_camps # CI only
+          POSTGRES_DB: quiet_camps
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U quiet_camps -d quiet_camps"
+          --health-interval 2s --health-timeout 3s --health-retries 15
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+        with:
+          version: 0.12.23
+          working-directory: api
+          enable-cache: true
+          cache-dependency-glob: api/uv.lock
+      - run: uv sync --locked
+      - run: uv run ruff check
+      - run: uv run ruff format --check
+      - run: uv run pyright
+      - run: uv run pytest
+
+  web:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          package_json_file: web/package.json
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      # The type-drift check: schema.d.ts must match the committed api/openapi.json, which
+      # the api job's test_openapi checks against the code.
+      - run: pnpm api:check
+      - run: pnpm build
+
+  docker:
+    runs-on: ubuntu-24.04
+    services:
+      db:
+        image: postgres:18
+        env:
+          POSTGRES_USER: quiet_camps
+          POSTGRES_PASSWORD: quiet_camps # CI only
+          POSTGRES_DB: quiet_camps
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U quiet_camps -d quiet_camps"
+          --health-interval 2s --health-timeout 3s --health-retries 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: api
+          load: true
+          tags: quiet-camps-api:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Runs as a non-root user
+        run: test "$(docker run --rm --entrypoint id -u quiet-camps-api:ci)" != 0
+      # --network host: the service's port 5432 is on the runner's localhost.
+      - name: Migrates an empty database
+        run: docker run --rm --network host -e DATABASE_URL quiet-camps-api:ci alembic upgrade head
+      - name: Serves /health
+        run: |
+          docker run -d --name api --network host -e DATABASE_URL quiet-camps-api:ci
+          for _ in $(seq 1 30); do
+            curl -sf localhost:8000/health && exit 0
+            sleep 1
+          done
+          docker logs api
+          exit 1

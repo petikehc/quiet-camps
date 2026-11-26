@@ -6,6 +6,7 @@ from quiet_camps.api.ask import AskState, ask_router
 from quiet_camps.api.campgrounds import campground_router
 from quiet_camps.api.experiment import experiment_router
 from quiet_camps.api.health import health_router
+from quiet_camps.api.origin import require_origin_secret
 from quiet_camps.api.places import places_router
 from quiet_camps.api.problems import add_problem_handlers
 from quiet_camps.api.search import search_router
@@ -20,6 +21,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(debug=settings.debug)
     # Only when the client accepts gzip; a small response gains nothing.
     app.add_middleware(GZipMiddleware, minimum_size=1000)
+    if settings.origin_secret:
+        require_origin_secret(app, settings.origin_secret)
     add_problem_handlers(app)
     app.include_router(health_router)
     # Routes match in the order added: /campgrounds/{campground_id} would claim /campgrounds/quiet.
@@ -33,7 +36,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.include_router(experiment_router)
     app.state.settings = settings
     app.state.ask = AskState()  # /ask's rate limit, its day's answers, its reader
-    app.state.engine = create_async_engine(settings.database_url)
+    # pre_ping: a pooled connection can die unseen, when Lambda freezes the function between
+    # requests or Neon suspends; it's tested and replaced before a request gets it.
+    app.state.engine = create_async_engine(settings.database_url, pool_pre_ping=True)
     app.state.sessionmaker = async_sessionmaker(app.state.engine)
 
     return app
