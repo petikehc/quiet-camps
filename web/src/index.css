@@ -501,10 +501,13 @@ body:has(.home) {
   background: none;
 }
 
+/* The whole screen, however tall: the map is framed to fit the canvas, so a big screen gets a
+   big map. --left-width is the words' column, which the board stays clear of. */
 .home-stage {
+  --left-width: min(36rem, 44%);
   position: relative;
   isolation: isolate;
-  height: min(100svh, 60rem);
+  height: 100svh;
   min-height: 40rem;
   overflow: hidden;
   background: var(--night);
@@ -606,7 +609,7 @@ body:has(.home) {
   position: absolute;
   z-index: 2;
   inset: clamp(5.5rem, 14vh, 10rem) auto 1.5rem var(--stage-pad);
-  width: min(36rem, 44%);
+  width: var(--left-width);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -671,8 +674,10 @@ body:has(.home) {
   gap: 0.6rem;
 }
 
+/* 12rem: wide enough to read, narrow enough that the button stays beside it in the column; a
+   wrapped button would push the year off a short stage. A phone still wraps it. */
 .home-ask-row input {
-  flex: 1 1 16rem;
+  flex: 1 1 12rem;
   min-width: 0;
   padding: 0.8rem 0.9rem;
   border: 1px solid var(--night-line);
@@ -799,11 +804,13 @@ body:has(.home) {
   margin: 0 0 0.75rem;
 }
 
+/* Both sit along the stage's foot, so the board takes only what the words' column leaves: on
+   a laptop it would otherwise run under Pause. Its text grows a little on a very wide screen. */
 .home-board {
   right: var(--stage-pad);
   bottom: 1.5rem;
-  width: min(44rem, 58%);
-  font-size: 0.875rem;
+  width: min(44rem, 100% - var(--left-width) - 2 * var(--stage-pad) - 2.5rem);
+  font-size: clamp(0.875rem, 0.45rem + 0.35vw, 1.0625rem);
 }
 
 .home-board a {
@@ -1066,8 +1073,10 @@ body:has(.home) {
 
 /* Narrower than a laptop: one column on the night, in reading order: the words, the map, where
    the year is, then the week's board. The left column dissolves (display: contents) so its
-   two parts can sit either side of the map. */
-@media (max-width: 64rem) {
+   two parts can sit either side of the map. Side by side needs width and height: under 72rem
+   the board's names shrink to a word; under 80rem the map's key wraps and Pause drops a line,
+   which a short screen (under 46rem) can't fit, so the year would run off the stage. */
+@media (max-width: 72rem), (max-width: 79.99rem) and (max-height: 46rem) {
   /* The header may wrap here, so it takes its own space instead of floating over the words. */
   .site-header.over {
     position: static;
