@@ -23,6 +23,9 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 FROM python:3.14-slim
 RUN useradd --uid 10001 --no-create-home --shell /usr/sbin/nologin app
+# On AWS Lambda, this extension turns each invocation into an HTTP request to uvicorn, and
+# strips /api (AWS_LWA_REMOVE_BASE_PATH, set by deploy/aws). Anywhere else it never runs.
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:1.1.0 /lambda-adapter /opt/extensions/lambda-adapter
 WORKDIR /app
 COPY --from=build /app/.venv .venv
 # For `alembic upgrade head`, run as a one-off: docker run ... alembic upgrade head

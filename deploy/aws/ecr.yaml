@@ -1,0 +1,23 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Quiet Camps, the API image's repository (its own stack: the image must exist before the
+  function).
+
+Resources:
+  Repository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: quiet-camps-api
+      ImageTagMutability: IMMUTABLE # each tag is a git commit
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      EmptyOnDelete: true # teardown deletes the images with the repository
+      LifecyclePolicy:
+        LifecyclePolicyText: |
+          {"rules": [{"rulePriority": 1, "description": "Keep the last 3 images",
+            "selection": {"tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 3},
+            "action": {"type": "expire"}}]}
+
+Outputs:
+  RepositoryUri:
+    Value: !GetAtt Repository.RepositoryUri
