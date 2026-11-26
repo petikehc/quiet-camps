@@ -1,11 +1,11 @@
-// Night sounds for the homepage, off until switched on: a cricket chorus always, crickets by the
-// sea swelling in on busy stretches, and a quiet campfire. Recordings in public/sounds
-// (CREDITS.md). Every change is smoothed over seconds, so nothing jumps.
+// Night sounds, off until switched on: a Queensland rainforest gully at night always, a frog
+// chorus from the Glass House Mountains swelling in on busy stretches, and a quiet campfire.
+// Recordings in public/sounds (CREDITS.md). Every change is smoothed over seconds.
 
 const LAYERS = ['night', 'night-busy', 'campfire'] as const
 const VOLUME = 0.15 // the whole mix: about 16 dB down, a background under anything else playing
-const BED = 0.45 // the cricket chorus, always
-const BUSY = 0.6 // the busy chorus at full swell
+const BED = 0.45 // the rainforest night, always
+const BUSY = 0.6 // the frog chorus at full swell
 const FIRE = [0.12, 0.3] // the campfire, from a quiet stretch to a busy one
 const FADE = 0.35 // seconds: the time constant of a fade in or out
 const DRIFT = 2 // seconds: the time constant of the swell
