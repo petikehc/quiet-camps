@@ -6,7 +6,15 @@ import pytest
 from psycopg.rows import TupleRow
 
 from quiet_camps.api.openapi import openapi_document
-from quiet_camps.cli import download_all, fetch_package, is_transient, main
+from quiet_camps.cli import (
+    download_all,
+    fetch_latest_capture,
+    fetch_package,
+    fetch_qpws_pages,
+    is_transient,
+    main,
+)
+from quiet_camps.ingest.qpws import CAMPGROUNDS_A_Z, PARKS_A_Z
 
 GOOD = "https://data.example.org/files/qpws-permits-camping-jul26-sep26.csv"
 MISSING = "https://data.example.org/files/qpws-permits-camping-gone.csv"
@@ -66,6 +74,60 @@ def test_fetch_package_rejects_an_unsuccessful_response() -> None:
     )
     with httpx.Client(transport=transport) as client, pytest.raises(RuntimeError):
         fetch_package(client)
+
+
+def test_fetch_qpws_pages_reads_each_listings_latest_capture() -> None:
+    camping = (
+        '<li data-park-id="1"><h3><a href="https://parks.qld.gov.au/parks/amamoor/camping/'
+        'amamoor-creek">Amamoor Creek camping area</a><small>Amamoor State Forest</small></h3></li>'
+    )
+    parks = (
+        '<li data-park-id="2"><h3><a href="https://parks.qld.gov.au/parks/girringun">'
+        "Girringun National Park</a><small>Region: Townsville</small></h3></li>"
+    )
+    captures = {CAMPGROUNDS_A_Z: ("20261026034219", camping), PARKS_A_Z: ("20260915045150", parks)}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/cdx/search/cdx":
+            timestamp = captures[request.url.params["url"]][0]
+            return httpx.Response(200, json=[["timestamp"], [timestamp]])
+        timestamp, url = request.url.raw_path.decode().removeprefix("/web/").split("id_/", 1)
+        assert captures[url][0] == timestamp
+        return httpx.Response(200, text=captures[url][1])
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        pages = fetch_qpws_pages(client)
+
+    assert pages == {
+        "camping": {
+            "captured": "20261026034219",
+            "pages": [
+                {
+                    "url": "https://parks.qld.gov.au/parks/amamoor/camping/amamoor-creek",
+                    "name": "Amamoor Creek camping area",
+                    "park_name": "Amamoor State Forest",
+                }
+            ],
+        },
+        "parks": {
+            "captured": "20260915045150",
+            "pages": [
+                {
+                    "url": "https://parks.qld.gov.au/parks/girringun",
+                    "name": "Girringun National Park",
+                }
+            ],
+        },
+    }
+
+
+def test_fetch_latest_capture_fails_when_the_archive_has_none() -> None:
+    transport = httpx.MockTransport(lambda request: httpx.Response(200, json=[]))
+    with (
+        httpx.Client(transport=transport) as client,
+        pytest.raises(RuntimeError, match="no capture"),
+    ):
+        fetch_latest_capture(client, PARKS_A_Z)
 
 
 def test_qc_load_loads_into_the_database(
