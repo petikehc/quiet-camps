@@ -1,6 +1,7 @@
 import { getRouteApi } from '@tanstack/react-router'
 import type * as maplibregl from 'maplibre-gl'
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { countEvent } from '../analytics'
 import { useSoundScene } from '../sound/scene'
 import { fieldErrors } from '../api/errors'
 import { nightDate } from '../charts/dates'
@@ -75,6 +76,7 @@ export function ExplorePage() {
   }
 
   function setBand(next: Band) {
+    countEvent(`band: ${BAND_NAMES[next].toLowerCase()}`)
     setShown(SHOWN)
     void navigate({ search: (prev) => ({ ...prev, band: next, sel: undefined }) })
   }

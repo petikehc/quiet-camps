@@ -1,4 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
+import { countEvent } from '../analytics'
 import { api } from '../api/client'
 import type { components } from '../api/schema'
 import { ApiError, unwrap } from '../api/errors'
@@ -37,11 +38,29 @@ export function failedWords(error: Error): string {
     : "Plain words aren't working right now: pick dates and a place on the map."
 }
 
+// How an ask went, for GoatCounter: never the words, only whether they were understood or why
+// they couldn't be asked. The API's daily cap is the 503 that says "tomorrow".
+export function askOutcome(result: Answer | Error): string {
+  if (result instanceof Error) {
+    if (result instanceof ApiError && result.status === 429) return 'ask: hourly limit'
+    const daily = result instanceof ApiError && result.problem?.detail.includes('tomorrow')
+    return daily ? 'ask: daily cap' : 'ask: unavailable'
+  }
+  if (!result.arrive && !result.place) return 'ask: not understood'
+  return missedWords(result) ? 'ask: partly' : 'ask: understood'
+}
+
 // POST /ask, for the homepage's box and the explorer's.
 export function useAsk(onAnswer: (answer: Answer) => void, onFail: (error: Error) => void) {
   return useMutation({
     mutationFn: (text: string) => unwrap(api.POST('/ask', { body: { text } })),
-    onSuccess: onAnswer,
-    onError: onFail,
+    onSuccess: (answer) => {
+      countEvent(askOutcome(answer))
+      onAnswer(answer)
+    },
+    onError: (error) => {
+      countEvent(askOutcome(error))
+      onFail(error)
+    },
   })
 }

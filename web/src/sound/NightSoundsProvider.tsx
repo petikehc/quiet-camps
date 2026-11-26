@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react'
+import { countEvent } from '../analytics'
 import { QUIET, SceneContext, SwitchContext, useSoundSwitch } from './scene'
 import { useNightSounds } from './useNightSounds'
 
@@ -13,7 +14,10 @@ export function NightSoundsProvider({ children }: { children: ReactNode }) {
       on,
       supported,
       toggle: () => {
-        if (!on) unlock() // inside the click, as Safari needs
+        if (!on) {
+          unlock() // inside the click, as Safari needs
+          countEvent('sounds: on')
+        }
         setOn(!on)
       },
     }),
