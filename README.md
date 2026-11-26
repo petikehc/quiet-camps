@@ -123,9 +123,10 @@ or logs the words.
 ([ADR 0006](docs/adr/0006-deploy-on-lambda-cloudfront-and-neon.md)):
 
 ```sh
-cp deploy/aws/.env.example deploy/aws/.env   # AWS profile, Neon URL, a secret
+cp deploy/aws/.env.example deploy/aws/.env   # AWS profile, Neon URL, a secret, a domain
 deploy/aws/publish-db.sh build && deploy/aws/publish-db.sh load   # the snapshot into Neon
 deploy/aws/ship.sh bootstrap                 # once: the image repository
+deploy/aws/ship.sh cert                      # once, for a domain: prints a CNAME to add, waits
 deploy/aws/ship.sh deploy                    # image, stack and web; prints the URL
 deploy/aws/ship.sh status                    # health and this month's cost
 deploy/aws/ship.sh teardown                  # delete it all
@@ -137,8 +138,35 @@ tenth of a US cent. The deploy doesn't create a budget: set one for the account 
 above), so a surprise is an email, not a bill.
 
 **Real vs. trimmed:** the public database holds every derived number since 2011, but only the
-permit rows from October 2023 on, which is all the site reads (350 MB instead of 1.8 GB). It's
-a snapshot: it changes when it's rebuilt and loaded again.
+permit rows of the 3 years before the history's end (from October 2023, today), which is all
+the site reads: 350 MB instead of 1.8 GB. It's a snapshot: it changes when it's rebuilt and
+loaded again.
+
+### Updating the data
+
+QPWS publishes each quarter's permits after it ends, and the history runs to the last complete
+quarter. To bring the live site up to date (times measured on a laptop, 26 Nov 2026):
+
+```sh
+cd api
+uv run qc download                 # only files not on disk yet (delete one to fetch it again)
+uv run qc load                     # ~4 min: every file again, then everything derived
+cd ..
+deploy/aws/publish-db.sh build     # ~10 s: the trimmed snapshot; its cut-off moves by itself
+deploy/aws/publish-db.sh load      # ~30 s: into Neon, replacing what's there
+deploy/aws/ship.sh invalidate      # CloudFront keeps /trips/latest and /year for a day
+```
+
+- No redeploy: the API reads whatever the snapshot holds.
+- While `publish-db.sh load` runs, the API's searches fail (500) for about 30 seconds; pages
+  CloudFront has cached keep working. Run it at a quiet hour.
+- `qc load` rewrites all 7.8M rows, so leave a few GB free. Docker's disk grows into the Mac's
+  free space, and when that runs out Docker Desktop fails with I/O errors until it's
+  restarted. Each file loads in its own transaction, so a failed load leaves the data as it
+  was: free space, restart Docker, run it again.
+- Now and then: `qc locations --fetch` and `qc qpws-pages --fetch` pick up new campgrounds'
+  locations and QPWS pages, and list any that need a look. The school holidays are a reviewed
+  list that runs to 2029 (`api/src/quiet_camps/ingest/qld_school_holidays.csv`).
 
 ## How it was built
 

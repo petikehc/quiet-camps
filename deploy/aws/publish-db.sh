@@ -5,8 +5,10 @@
 #   deploy/aws/publish-db.sh load    # quiet_camps_public into NEON_DATABASE_URL (deploy/aws/.env)
 #
 # Trimmed: camp_night (a row per site per night, 1.7 GB in all) keeps only the nights the API
-# still reads, from KEEP_FROM: lead times read the 3 years before the history ends (30 Sep
-# 2026), and /trips/latest the 12 months before it plus a 31-day look-back. Everything else is
+# still reads, from keep_from: lead times read the 3 years up to the history's end (the last
+# complete quarter), and /trips/latest the 12 months before it plus a 31-day look-back, which
+# the 3 years include. Worked out from the data, so it moves with each quarter (KEEP_FROM
+# overrides it). Everything else is
 # copied whole, and the derived tables are frozen from the full data (freeze_derived), so
 # search, calendars and typical nights keep their history since 2011; only /trips/{year}
 # before 2024 comes back thin.
@@ -17,7 +19,6 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
-KEEP_FROM=${KEEP_FROM:-2023-10-01}
 SOURCE=quiet_camps
 PUBLIC=quiet_camps_public
 MAX_MB=800 # Neon's free plan holds 0.5–1 GB per project; leave room
@@ -26,8 +27,17 @@ MAX_MB=800 # Neon's free plan holds 0.5–1 GB per project; leave room
 in_db() { docker compose exec -T db "$@"; }
 psql_local() { in_db psql -U quiet_camps -v ON_ERROR_STOP=1 -q "$@"; }
 
+# The first night lead times read: the day after the history's end 3 years earlier, as in
+# campground_service.campground_lead_time, with the history's end as in api/queries.py.
+keep_from() {
+  psql_local -d "$SOURCE" -At -c "SELECT ((date_trunc('quarter', max(last_night)) \
+    - interval '1 day' - interval '3 years') + interval '1 day')::date FROM campground"
+}
+
 build() {
-  echo "Building $PUBLIC from $SOURCE, keeping camp_night from $KEEP_FROM"
+  local keep
+  keep=${KEEP_FROM:-$(keep_from)}
+  echo "Building $PUBLIC from $SOURCE, keeping camp_night from $keep"
   psql_local -d postgres -c "DROP DATABASE IF EXISTS $PUBLIC WITH (FORCE)" -c "CREATE DATABASE $PUBLIC"
   in_db pg_dump -U quiet_camps -Fc --exclude-table-data=camp_night \
     --exclude-table-data=ask_count -f /tmp/public.dump "$SOURCE"
@@ -35,7 +45,7 @@ build() {
   # index once over the copied rows is faster than keeping it up to date row by row.
   in_db pg_restore -U quiet_camps -d "$PUBLIC" --section=pre-data /tmp/public.dump
   in_db pg_restore -U quiet_camps -d "$PUBLIC" --section=data /tmp/public.dump
-  psql_local -d "$SOURCE" -c "\copy (SELECT * FROM camp_night WHERE night >= '$KEEP_FROM') TO STDOUT" |
+  psql_local -d "$SOURCE" -c "\copy (SELECT * FROM camp_night WHERE night >= '$keep') TO STDOUT" |
     psql_local -d "$PUBLIC" -c "\copy camp_night FROM STDIN"
   in_db pg_restore -U quiet_camps -d "$PUBLIC" --section=post-data /tmp/public.dump
   in_db rm /tmp/public.dump
@@ -46,14 +56,14 @@ build() {
   mb=$(psql_local -d "$PUBLIC" -At -c "SELECT pg_database_size(current_database()) / 1000000")
   echo "$PUBLIC: $mb MB, $(psql_local -d "$PUBLIC" -At -c "SELECT count(*) FROM camp_night") camp_night rows"
   if ((mb > MAX_MB)); then
-    echo "Over $MAX_MB MB: raise KEEP_FROM" >&2
+    echo "Over $MAX_MB MB: set a later KEEP_FROM" >&2
     exit 1
   fi
 }
 
 # area_night and campground_typical are materialized views over camp_night. A restore doesn't
 # copy their rows: it refreshes them, here from the trimmed rows, which would lose every year
-# before KEEP_FROM. So in the public copy they become plain tables of the same name, columns
+# before the cut-off. So in the public copy they become plain tables of the same name, columns
 # and indexes, filled from the full local database: a snapshot that no refresh can change.
 freeze_derived() {
   local views="area_night campground_typical" view indexes
